@@ -1,0 +1,13 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/mztrend}
+    username: ${POSTGRES_USERNAME:mztrend}
+    password: ${POSTGRES_PASSWORD:mztrend}
+  cache:
+    type: redis
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}

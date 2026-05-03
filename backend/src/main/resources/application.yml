@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: mztrend-backend
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/mztrend}
+    username: ${POSTGRES_USERNAME:mztrend}
+    password: ${POSTGRES_PASSWORD:mztrend}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: true
+  cache:
+    type: simple
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+
+server:
+  port: ${PORT:8080}
+
+external:
+  youtube:
+    api-key: ${YOUTUBE_API_KEY:}
+  naver:
+    client-id: ${NAVER_CLIENT_ID:}
+    client-secret: ${NAVER_CLIENT_SECRET:}
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
