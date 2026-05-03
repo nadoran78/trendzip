@@ -1,0 +1,13 @@
+-- Generation domain notes.
+-- Flyway migrations are the source of truth.
+--
+-- Current implementation:
+--   - Generation is stored as VARCHAR in keywords.generation.
+--   - Application enum values are defined in com.mztrend.domain.Generation.
+--
+-- Allowed values:
+--   - TEEN
+--   - TWENTY
+--
+-- There is no separate generations table at this stage.
+
