@@ -18,6 +18,32 @@ const TOKENS = {
 const ROUND = '"Quicksand", "Pretendard", system-ui';
 const KOR = 'Pretendard, system-ui';
 
+function getGenerationFromUrl(fallback = 'teen') {
+  const generation = new URLSearchParams(window.location.search).get('generation') || fallback;
+  return generation === 'twenty' ? 'twenty' : 'teen';
+}
+
+function getKeywordFromUrl() {
+  const keyword = new URLSearchParams(window.location.search).get('keyword');
+  return keyword || null;
+}
+
+function goToFeed(generation) {
+  window.location.href = `trendzip-feed.html?generation=${generation}`;
+}
+
+function goToTrends(generation) {
+  window.location.href = `trendzip-trends.html?generation=${generation}`;
+}
+
+function goToKeyword(generation, keyword) {
+  window.location.href = `trendzip-keyword.html?generation=${generation}&keyword=${encodeURIComponent(keyword)}`;
+}
+
+function openYouTubeSearch(keyword, title) {
+  window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(`${keyword} ${title}`)}`, '_blank');
+}
+
 const TICKER_TEEN = ['뉴진스 직캠', '챌린지', 'RIIZE 리액션', '신조어', 'Y2K', '아이브 무대', '편의점 디저트', '지락실3', '플레이브'];
 const TICKER_TWENTY = ['주식초보', '도쿄 vlog', '자취 인테리어', '아침 루틴', '재테크', '취준', '플레이리스트', 'KBO', '스우파2'];
 
@@ -48,7 +74,7 @@ const KEYWORD = {
 // ──────────────────────────────────────────────
 // Header
 // ──────────────────────────────────────────────
-function Header({ generation }) {
+function Header({ generation, onBack, onOpenFeed, onOpenTrends }) {
   return (
     <div style={{
       position: 'sticky', top: 60, zIndex: 10,
@@ -62,15 +88,16 @@ function Header({ generation }) {
         alignItems: 'center',
         padding: '0 16px', gap: 12,
       }}>
-        <div style={{
+        <div onClick={() => { window.location.href = 'trendzip.html'; }} style={{
           fontFamily: ROUND, fontSize: 18, fontWeight: 700,
           letterSpacing: '-0.02em', color: TOKENS.text,
           display: 'flex', alignItems: 'baseline', gap: 1,
+          cursor: 'pointer',
         }}>
           tz<span style={{ color: TOKENS.cyan }}>♡</span>
         </div>
 
-        <button style={{
+        <button type="button" onClick={onBack} style={{
           justifySelf: 'start',
           marginLeft: 14,
           border: `1px solid ${TOKENS.border}`,
@@ -112,6 +139,41 @@ function Header({ generation }) {
       </div>
 
       <Ticker generation={generation} />
+      <ScreenTabs onOpenFeed={onOpenFeed} onOpenTrends={onOpenTrends} />
+    </div>
+  );
+}
+
+function ScreenTabs({ onOpenFeed, onOpenTrends }) {
+  const tabs = [
+    { id: 'feed', label: '피드', onClick: onOpenFeed },
+    { id: 'trends', label: '랭킹', onClick: onOpenTrends },
+  ];
+
+  return (
+    <div style={{
+      height: 42,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      background: TOKENS.bg,
+      borderTop: '1px solid #151515',
+    }}>
+      {tabs.map((tab) => (
+        <button key={tab.id} type="button" onClick={tab.onClick}
+          style={{
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(255,255,255,0.03)',
+            color: TOKENS.textDim,
+            borderRadius: 999,
+            padding: '7px 18px',
+            fontFamily: KOR,
+            fontSize: 12.5,
+            fontWeight: 800,
+            cursor: 'pointer',
+            letterSpacing: '-0.01em',
+          }}>
+          {tab.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -373,15 +435,21 @@ function TrendChart({ data }) {
 // ──────────────────────────────────────────────
 // Related video card (horizontal scroll)
 // ──────────────────────────────────────────────
-function VideoMiniCard({ video }) {
+function VideoMiniCard({ video, onOpen }) {
   return (
-    <div style={{
+    <div role="button" tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') onOpen();
+      }}
+      style={{
       flexShrink: 0,
       width: 188,
       background: TOKENS.card,
       border: `1px solid ${TOKENS.border}`,
       borderRadius: 16,
       overflow: 'hidden',
+      cursor: 'pointer',
     }}>
       <div style={{
         aspectRatio: '16 / 9',
@@ -462,7 +530,15 @@ function Watermark() {
 // Page
 // ──────────────────────────────────────────────
 function KeywordPage({ tweaks }) {
-  const generation = tweaks.generation || 'teen';
+  const generation = getGenerationFromUrl(tweaks.generation || 'teen');
+  const keyword = { ...KEYWORD, name: getKeywordFromUrl() || KEYWORD.name };
+  const goBack = () => {
+    if (document.referrer.includes('trendzip-feed.html') || document.referrer.includes('trendzip-trends.html')) {
+      window.history.back();
+      return;
+    }
+    goToFeed(generation);
+  };
 
   return (
     <div style={{
@@ -471,20 +547,25 @@ function KeywordPage({ tweaks }) {
       overflowY: 'auto', overflowX: 'hidden',
       fontFamily: KOR, color: TOKENS.text,
     }}>
-      <Header generation={generation} />
+      <Header
+        generation={generation}
+        onBack={goBack}
+        onOpenFeed={() => goToFeed(generation)}
+        onOpenTrends={() => goToTrends(generation)}
+      />
 
       <div style={{ padding: '20px 16px 0' }}>
-        <KeywordHero keyword={KEYWORD} generation={generation} />
+        <KeywordHero keyword={keyword} generation={generation} />
       </div>
 
       <div style={{ padding: '24px 16px 0' }}>
         <SectionTitle>왜 뜨고 있나? 🔥</SectionTitle>
-        <WhyCard keyword={KEYWORD} />
+        <WhyCard keyword={keyword} />
       </div>
 
       <div style={{ padding: '24px 16px 0' }}>
         <SectionTitle>트렌드 그래프 📈</SectionTitle>
-        <TrendChart data={KEYWORD.graph} />
+        <TrendChart data={keyword.graph} />
       </div>
 
       <div style={{ padding: '24px 0 0' }}>
@@ -497,9 +578,9 @@ function KeywordPage({ tweaks }) {
           overflowX: 'auto',
           scrollSnapType: 'x mandatory',
         }}>
-          {KEYWORD.related.map((v, i) => (
+          {keyword.related.map((v, i) => (
             <div key={i} style={{ scrollSnapAlign: 'start' }}>
-              <VideoMiniCard video={v} />
+              <VideoMiniCard video={v} onOpen={() => openYouTubeSearch(keyword.name, v.title)} />
             </div>
           ))}
         </div>
@@ -514,8 +595,9 @@ function KeywordPage({ tweaks }) {
           padding: '0 16px 4px',
           overflowX: 'auto',
         }}>
-          {KEYWORD.tags.map((tag, i) => (
-            <span key={i} style={{
+          {keyword.tags.map((tag, i) => (
+            <button key={i} type="button" onClick={() => goToKeyword(generation, tag)}
+              style={{
               flexShrink: 0,
               padding: '8px 14px',
               border: `1px solid ${TOKENS.cyan}`,
@@ -525,9 +607,10 @@ function KeywordPage({ tweaks }) {
               fontSize: 12.5, fontWeight: 700,
               color: TOKENS.text,
               letterSpacing: '-0.01em',
+              cursor: 'pointer',
             }}>
               #{tag}
-            </span>
+            </button>
           ))}
         </div>
       </div>

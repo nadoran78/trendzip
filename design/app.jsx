@@ -19,6 +19,10 @@ const ACCENTS = {
 const ROUND = '"Quicksand", "Pretendard", system-ui';
 const KOR   = 'Pretendard, system-ui';
 
+function goToFeed(generation) {
+  window.location.href = `trendzip-feed.html?generation=${generation}`;
+}
+
 // ──────────────────────────────────────────────
 // Trending ticker
 // ──────────────────────────────────────────────
@@ -278,7 +282,7 @@ function TrendzipLanding({ tweaks }) {
 
   const handlePick = (gen) => {
     setPicked(gen);
-    setTimeout(() => setPicked(null), 1100);
+    setTimeout(() => goToFeed(gen), 520);
   };
 
   // 10대: pink → mint   |   20대: orange → yellow
@@ -464,7 +468,7 @@ function TrendzipLanding({ tweaks }) {
         }}>
           <span>나중에 바꿀 수 있어요</span>
           <span style={{ width: 3, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.3)' }} />
-          <span style={{ color: 'rgba(255,255,255,0.7)' }}>1초만에 시작 ✨</span>
+          <span style={{ color: 'rgba(255,255,255,0.7)' }}>피드로 바로 이동 ✨</span>
         </div>
       </div>
 

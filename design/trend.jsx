@@ -19,6 +19,23 @@ const TOKENS = {
 const ROUND = '"Quicksand", "Pretendard", system-ui';
 const KOR   = 'Pretendard, system-ui';
 
+function getGenerationFromUrl(fallback = 'teen') {
+  const generation = new URLSearchParams(window.location.search).get('generation') || fallback;
+  return generation === 'twenty' ? 'twenty' : 'teen';
+}
+
+function updateGenerationUrl(page, generation) {
+  window.history.replaceState({}, '', `${page}?generation=${generation}`);
+}
+
+function goToFeed(generation) {
+  window.location.href = `trendzip-feed.html?generation=${generation}`;
+}
+
+function goToKeyword(generation, keyword) {
+  window.location.href = `trendzip-keyword.html?generation=${generation}&keyword=${encodeURIComponent(keyword)}`;
+}
+
 // Mock rankings
 const TEEN_TRENDS = [
   { rank: 1,  keyword: '뉴진스 슈퍼내추럴', category: '음악',     change: 'up',   delta: 4,    score: '1.2M' },
@@ -48,7 +65,7 @@ const TICKER_TWENTY = ['주식초보', '도쿄 vlog', '자취 인테리어', '�
 // ──────────────────────────────────────────────
 // Header (matches feed page)
 // ──────────────────────────────────────────────
-function Header({ generation, onChange }) {
+function Header({ generation, onChange, onOpenFeed }) {
   return (
     <div style={{
       position: 'sticky', top: 60, zIndex: 10,
@@ -62,10 +79,11 @@ function Header({ generation, onChange }) {
         alignItems: 'center',
         padding: '0 16px', gap: 12,
       }}>
-        <div style={{
+        <div onClick={() => { window.location.href = 'trendzip.html'; }} style={{
           fontFamily: ROUND, fontSize: 18, fontWeight: 700,
           letterSpacing: '-0.02em', color: TOKENS.text,
           display: 'flex', alignItems: 'baseline', gap: 1,
+          cursor: 'pointer',
         }}>
           tz<span style={{ color: TOKENS.cyan }}>♡</span>
         </div>
@@ -135,6 +153,44 @@ function Header({ generation, onChange }) {
       </div>
 
       <Ticker generation={generation} />
+      <ScreenTabs active="trends" generation={generation} onOpenFeed={onOpenFeed} />
+    </div>
+  );
+}
+
+function ScreenTabs({ active, generation, onOpenFeed }) {
+  const tabs = [
+    { id: 'feed', label: '피드', onClick: onOpenFeed },
+    { id: 'trends', label: '랭킹', onClick: () => updateGenerationUrl('trendzip-trends.html', generation) },
+  ];
+
+  return (
+    <div style={{
+      height: 42,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      background: TOKENS.bg,
+      borderTop: '1px solid #151515',
+    }}>
+      {tabs.map((tab) => {
+        const selected = active === tab.id;
+        return (
+          <button key={tab.id} type="button" onClick={tab.onClick}
+            style={{
+              border: `1px solid ${selected ? TOKENS.cyan : 'rgba(255,255,255,0.08)'}`,
+              background: selected ? 'rgba(0,229,255,0.10)' : 'rgba(255,255,255,0.03)',
+              color: selected ? TOKENS.text : TOKENS.textDim,
+              borderRadius: 999,
+              padding: '7px 18px',
+              fontFamily: KOR,
+              fontSize: 12.5,
+              fontWeight: 800,
+              cursor: 'pointer',
+              letterSpacing: '-0.01em',
+            }}>
+            {tab.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -235,15 +291,21 @@ function CategoryBadge({ label }) {
 // ──────────────────────────────────────────────
 // Ranking row
 // ──────────────────────────────────────────────
-function RankingRow({ item, isLast }) {
+function RankingRow({ item, isLast, onOpenKeyword }) {
   return (
-    <div style={{
+    <div role="button" tabIndex={0}
+      onClick={() => onOpenKeyword(item.keyword)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') onOpenKeyword(item.keyword);
+      }}
+      style={{
       display: 'grid',
       gridTemplateColumns: '46px 1fr auto',
       alignItems: 'center',
       gap: 12,
       padding: '14px 4px',
       borderBottom: isLast ? 'none' : `1px solid ${TOKENS.border}`,
+      cursor: 'pointer',
     }}>
       {/* rank number */}
       <div style={{
@@ -351,9 +413,17 @@ function Watermark() {
 // Trend page
 // ──────────────────────────────────────────────
 function TrendPage({ tweaks, setTweak }) {
-  const [generation, setGeneration] = React.useState(tweaks.generation || 'teen');
-  const onSwitch = (g) => { setGeneration(g); setTweak('generation', g); };
+  const [generation, setGeneration] = React.useState(getGenerationFromUrl(tweaks.generation || 'teen'));
+
+  const onSwitch = (g) => {
+    setGeneration(g);
+    setTweak('generation', g);
+    updateGenerationUrl('trendzip-trends.html', g);
+  };
+
   const trends = generation === 'teen' ? TEEN_TRENDS : TWENTY_TRENDS;
+  const openFeed = () => goToFeed(generation);
+  const openKeyword = (keyword) => goToKeyword(generation, keyword);
 
   return (
     <div style={{
@@ -362,7 +432,7 @@ function TrendPage({ tweaks, setTweak }) {
       overflowY: 'auto', overflowX: 'hidden',
       fontFamily: KOR, color: TOKENS.text,
     }}>
-      <Header generation={generation} onChange={onSwitch} />
+      <Header generation={generation} onChange={onSwitch} onOpenFeed={openFeed} />
 
       <div style={{ padding: '22px 18px 6px' }}>
         <SectionTitle />
@@ -370,7 +440,7 @@ function TrendPage({ tweaks, setTweak }) {
 
       <div style={{ padding: '0 18px' }}>
         {trends.map((item, i) => (
-          <RankingRow key={item.rank} item={item} isLast={i === trends.length - 1} />
+          <RankingRow key={item.rank} item={item} isLast={i === trends.length - 1} onOpenKeyword={openKeyword} />
         ))}
       </div>
 

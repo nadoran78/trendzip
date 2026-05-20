@@ -18,6 +18,23 @@ const TOKENS = {
 const ROUND = '"Quicksand", "Pretendard", system-ui';
 const KOR   = 'Pretendard, system-ui';
 
+function getGenerationFromUrl(fallback = 'teen') {
+  const generation = new URLSearchParams(window.location.search).get('generation') || fallback;
+  return generation === 'twenty' ? 'twenty' : 'teen';
+}
+
+function updateGenerationUrl(page, generation) {
+  window.history.replaceState({}, '', `${page}?generation=${generation}`);
+}
+
+function goToTrends(generation) {
+  window.location.href = `trendzip-trends.html?generation=${generation}`;
+}
+
+function goToKeyword(generation, keyword) {
+  window.location.href = `trendzip-keyword.html?generation=${generation}&keyword=${encodeURIComponent(keyword)}`;
+}
+
 // ──────────────────────────────────────────────
 // Mock data
 // ──────────────────────────────────────────────
@@ -38,7 +55,7 @@ const TWENTY_FEED = [
 ];
 
 // Header
-function Header({ generation, onChange }) {
+function Header({ generation, onChange, onOpenTrends }) {
   return (
     <div style={{
       position: 'sticky', top: 60, zIndex: 10,
@@ -52,10 +69,11 @@ function Header({ generation, onChange }) {
         alignItems: 'center',
         padding: '0 16px', gap: 12,
       }}>
-        <div style={{
+        <div onClick={() => { window.location.href = 'trendzip.html'; }} style={{
           fontFamily: ROUND, fontSize: 18, fontWeight: 700,
           letterSpacing: '-0.02em', color: TOKENS.text,
           display: 'flex', alignItems: 'baseline', gap: 1,
+          cursor: 'pointer',
         }}>
           tz<span style={{ color: TOKENS.cyan }}>♡</span>
         </div>
@@ -125,6 +143,44 @@ function Header({ generation, onChange }) {
       </div>
 
       <Ticker generation={generation} />
+      <ScreenTabs active="feed" generation={generation} onOpenTrends={onOpenTrends} />
+    </div>
+  );
+}
+
+function ScreenTabs({ active, generation, onOpenTrends }) {
+  const tabs = [
+    { id: 'feed', label: '피드', onClick: () => updateGenerationUrl('trendzip-feed.html', generation) },
+    { id: 'trends', label: '랭킹', onClick: onOpenTrends },
+  ];
+
+  return (
+    <div style={{
+      height: 42,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      background: TOKENS.bg,
+      borderTop: '1px solid #151515',
+    }}>
+      {tabs.map((tab) => {
+        const selected = active === tab.id;
+        return (
+          <button key={tab.id} type="button" onClick={tab.onClick}
+            style={{
+              border: `1px solid ${selected ? TOKENS.cyan : 'rgba(255,255,255,0.08)'}`,
+              background: selected ? 'rgba(0,229,255,0.10)' : 'rgba(255,255,255,0.03)',
+              color: selected ? TOKENS.text : TOKENS.textDim,
+              borderRadius: 999,
+              padding: '7px 18px',
+              fontFamily: KOR,
+              fontSize: 12.5,
+              fontWeight: 800,
+              cursor: 'pointer',
+              letterSpacing: '-0.01em',
+            }}>
+            {tab.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -167,7 +223,7 @@ function Ticker({ generation }) {
   );
 }
 
-function VideoCard({ video, generation }) {
+function VideoCard({ video, generation, onKeywordClick }) {
   const accentEmoji = generation === 'teen' ? '🎀' : '🍑';
 
   return (
@@ -255,8 +311,9 @@ function VideoCard({ video, generation }) {
           lineHeight: 1.35,
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
           overflow: 'hidden', textWrap: 'pretty',
+          cursor: 'pointer',
         }}>
-          {video.title}
+          <span onClick={() => onKeywordClick(video.tags[0])}>{video.title}</span>
         </div>
 
         <div style={{
@@ -272,7 +329,8 @@ function VideoCard({ video, generation }) {
 
         <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {video.tags.map((tag, i) => (
-            <span key={i} style={{
+            <button key={i} type="button" onClick={() => onKeywordClick(tag)}
+              style={{
               padding: '4px 10px',
               border: `1px solid ${TOKENS.cyan}`,
               color: TOKENS.cyan,
@@ -280,9 +338,10 @@ function VideoCard({ video, generation }) {
               fontFamily: KOR, fontSize: 11, fontWeight: 600,
               letterSpacing: '-0.005em',
               background: 'rgba(0,229,255,0.06)',
+              cursor: 'pointer',
             }}>
               #{tag}
-            </span>
+            </button>
           ))}
         </div>
 
@@ -332,7 +391,7 @@ function Watermark() {
   );
 }
 
-function SectionHeader({ emoji, title, subtitle }) {
+function SectionHeader({ emoji, title, subtitle, actionLabel, onAction }) {
   return (
     <div style={{ padding: '4px 4px 2px' }}>
       <div style={{
@@ -342,6 +401,23 @@ function SectionHeader({ emoji, title, subtitle }) {
       }}>
         <span style={{ fontSize: 18 }}>{emoji}</span>
         {title}
+        {actionLabel && (
+          <button type="button" onClick={onAction}
+            style={{
+              marginLeft: 'auto',
+              border: `1px solid ${TOKENS.cyan}`,
+              background: 'rgba(0,229,255,0.08)',
+              color: TOKENS.text,
+              borderRadius: 999,
+              padding: '6px 10px',
+              fontFamily: KOR,
+              fontSize: 11,
+              fontWeight: 800,
+              cursor: 'pointer',
+            }}>
+            {actionLabel}
+          </button>
+        )}
       </div>
       {subtitle && (
         <div style={{
@@ -357,14 +433,17 @@ function SectionHeader({ emoji, title, subtitle }) {
 }
 
 function FeedPage({ tweaks, setTweak }) {
-  const [generation, setGeneration] = React.useState(tweaks.generation || 'teen');
+  const [generation, setGeneration] = React.useState(getGenerationFromUrl(tweaks.generation || 'teen'));
 
   const onSwitch = (g) => {
     setGeneration(g);
     setTweak('generation', g);
+    updateGenerationUrl('trendzip-feed.html', g);
   };
 
   const feed = generation === 'teen' ? TEEN_FEED : TWENTY_FEED;
+  const openTrends = () => goToTrends(generation);
+  const openKeyword = (keyword) => goToKeyword(generation, keyword);
 
   return (
     <div style={{
@@ -373,7 +452,7 @@ function FeedPage({ tweaks, setTweak }) {
       overflowY: 'auto', overflowX: 'hidden',
       fontFamily: KOR, color: TOKENS.text,
     }}>
-      <Header generation={generation} onChange={onSwitch} />
+      <Header generation={generation} onChange={onSwitch} onOpenTrends={openTrends} />
 
       <div style={{ padding: '20px 16px 8px' }}>
         <SectionHeader
@@ -388,15 +467,21 @@ function FeedPage({ tweaks, setTweak }) {
         display: 'flex', flexDirection: 'column', gap: 14,
       }}>
         {feed.slice(0, 2).map((v) => (
-          <VideoCard key={v.id} video={v} generation={generation} />
+          <VideoCard key={v.id} video={v} generation={generation} onKeywordClick={openKeyword} />
         ))}
 
         <div style={{ paddingTop: 6 }}>
-          <SectionHeader emoji="🔥" title="급상승 트렌드" subtitle="지난 24시간 가장 많이 본 영상" />
+          <SectionHeader
+            emoji="🔥"
+            title="급상승 트렌드"
+            subtitle="지난 24시간 가장 많이 본 영상"
+            actionLabel="랭킹 보기"
+            onAction={openTrends}
+          />
         </div>
 
         {feed.slice(2).map((v) => (
-          <VideoCard key={v.id} video={v} generation={generation} />
+          <VideoCard key={v.id} video={v} generation={generation} onKeywordClick={openKeyword} />
         ))}
       </div>
 
