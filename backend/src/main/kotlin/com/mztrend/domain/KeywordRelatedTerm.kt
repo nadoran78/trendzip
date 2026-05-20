@@ -9,19 +9,23 @@ import jakarta.persistence.Table
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "trend_logs")
-class TrendLog(
+@Table(name = "keyword_related_terms")
+class KeywordRelatedTerm(
     @Column(name = "keyword_id", nullable = false)
     var keywordId: Long = 0,
+    @Column(nullable = false, length = 100)
+    var term: String = "",
+    @Column(name = "display_order", nullable = false)
+    var displayOrder: Int = 0,
     @Column
-    var rank: Int? = null,
-    @Column
-    var score: Long? = null,
+    var score: Int? = null,
+    @Column(length = 30)
+    var source: String? = null,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
 
-    @Column(name = "recorded_at", nullable = false)
-    var recordedAt: LocalDateTime = LocalDateTime.now()
+    @Column(name = "created_at", nullable = false)
+    var createdAt: LocalDateTime = LocalDateTime.now()
 }

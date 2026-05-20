@@ -22,8 +22,19 @@ class Keyword(
     var generation: Generation = Generation.TEEN,
     @Column(length = 50)
     var category: String? = null,
-    @Column(name = "rank")
-    var rank: Int? = null,
+    @Column(name = "current_rank")
+    var currentRank: Int? = null,
+    @Column(name = "trend_score")
+    var trendScore: Long? = null,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rank_trend", length = 10)
+    var rankTrend: RankTrend? = null,
+    @Column(name = "rank_delta")
+    var rankDelta: Int? = null,
+    @Column(columnDefinition = "TEXT")
+    var explain: String? = null,
+    @Column(name = "explained_at")
+    var explainedAt: LocalDateTime? = null,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

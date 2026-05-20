@@ -70,12 +70,12 @@ com.mztrend
 ├── service
 │   ├── FeedService
 │   ├── KeywordService
-│   ├── TrendExplainService
 │   └── CrawlingService
 ├── repository
 │   ├── command
 │   │   ├── KeywordRepository
-│   │   ├── TrendExplainRepository
+│   │   ├── KeywordRelatedTermRepository
+│   │   ├── TrendFeedRepository
 │   │   └── TrendLogRepository
 │   └── query
 │       ├── KeywordQueryRepository
@@ -83,6 +83,9 @@ com.mztrend
 │           └── KeywordSummaryQueryResult
 ├── domain
 │   ├── Keyword
+│   ├── KeywordRelatedTerm
+│   ├── RankTrend
+│   ├── TrendFeed
 │   ├── Generation (enum: TEEN, TWENTY)
 │   └── TrendLog
 ├── client
@@ -103,27 +106,57 @@ com.mztrend
 
 ```sql
 CREATE TABLE keywords (
-    id          BIGSERIAL PRIMARY KEY,
-    word        VARCHAR(100) NOT NULL,
-    generation  VARCHAR(10) NOT NULL,   -- 'TEEN' | 'TWENTY'
-    category    VARCHAR(50),
-    rank        INT,
-    created_at  TIMESTAMP DEFAULT NOW(),
-    updated_at  TIMESTAMP DEFAULT NOW()
+    id             BIGSERIAL PRIMARY KEY,
+    word           VARCHAR(100) NOT NULL,
+    generation     VARCHAR(10) NOT NULL,   -- 'TEEN' | 'TWENTY'
+    category       VARCHAR(50),
+    current_rank   INT,
+    trend_score    BIGINT,
+    rank_trend     VARCHAR(10),            -- 'UP' | 'DOWN' | 'NEW' | 'SAME'
+    rank_delta     INT,
+    explain        TEXT,
+    explained_at   TIMESTAMP,
+    created_at     TIMESTAMP DEFAULT NOW(),
+    updated_at     TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE trend_explains (
-    id           BIGSERIAL PRIMARY KEY,
-    keyword_id   BIGINT NOT NULL,
-    explain      TEXT NOT NULL,
-    source_urls  TEXT[],
-    generated_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE keyword_related_terms (
+    id             BIGSERIAL PRIMARY KEY,
+    keyword_id     BIGINT NOT NULL,
+    term           VARCHAR(100) NOT NULL,
+    display_order  INT DEFAULT 0,
+    score          INT,
+    source         VARCHAR(30),
+    created_at     TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE trend_feeds (
+    id                         BIGSERIAL PRIMARY KEY,
+    keyword_id                 BIGINT NOT NULL,
+    youtube_video_id           VARCHAR(50) NOT NULL,
+    title                      VARCHAR(300) NOT NULL,
+    channel_id                 VARCHAR(100),
+    channel_name               VARCHAR(150) NOT NULL,
+    channel_category           VARCHAR(50),
+    channel_subscriber_count   BIGINT,
+    thumbnail_url              VARCHAR(500),
+    view_count                 BIGINT,
+    published_at               TIMESTAMP,
+    duration_seconds           INT,
+    tags                       TEXT[],
+    badge                      VARCHAR(30),
+    feed_section               VARCHAR(30),
+    display_order              INT DEFAULT 0,
+    collected_at               TIMESTAMP DEFAULT NOW(),
+    created_at                 TIMESTAMP DEFAULT NOW(),
+    updated_at                 TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE trend_logs (
     id          BIGSERIAL PRIMARY KEY,
     keyword_id  BIGINT NOT NULL,
-    score       INT,
+    rank        INT,
+    score       BIGINT,
     recorded_at TIMESTAMP DEFAULT NOW()
 );
 ```
@@ -152,10 +185,11 @@ CREATE TABLE trend_logs (
 @Scheduled(cron = "0 0 3 * * MON")
 fun crawlAndUpdateKeywords() {
     // 1. Google Trends + 네이버 DataLab에서 연령대별 급상승 키워드 수집
-    // 2. keywords 테이블 rank 갱신, 신규 키워드 INSERT
-    // 3. 신규 키워드에 대해서만 Gemini API 호출 → 설명 생성
-    // 4. trend_explains 테이블 저장
-    // 5. Redis 캐시 무효화
+    // 2. keywords 테이블 current_rank, trend_score, rank_trend 갱신
+    // 3. 신규/변경 키워드에 대해서만 Gemini API 호출 → 설명 생성 후 keywords.explain 저장
+    // 4. 관련어는 keyword_related_terms, 연결 영상은 trend_feeds 저장
+    // 5. trend_logs에 순위/점수 스냅샷 저장
+    // 6. Redis 캐시 무효화
 }
 ```
 
@@ -186,7 +220,7 @@ fun crawlAndUpdateKeywords() {
 ```
 Week 1-2: 백엔드 기반
   [ ] Spring Boot + Kotlin 프로젝트 세팅
-  [ ] Flyway 마이그레이션 스크립트 작성 (keywords, trend_explains, trend_logs)
+  [ ] Flyway 마이그레이션 스크립트 작성 (keywords, keyword_related_terms, trend_feeds, trend_logs)
   [ ] Redis 연동 및 캐싱 유틸 구현
   [ ] YoutubeApiClient 구현 (검색, 채널 정보)
   [ ] FeedService + FeedController 구현 (/api/feed)
@@ -200,6 +234,6 @@ Week 3: 크롤링 스케줄러
 
 Week 4: 키워드 API
   [ ] KeywordService + KeywordController 구현 (/api/keywords)
-  [ ] TrendExplainService 구현 (/api/keywords/{id}/explain)
+  [ ] KeywordService 상세 조회 구현 (/api/keywords/{id}/explain)
   [ ] Oracle Cloud 배포 설정
 ```
