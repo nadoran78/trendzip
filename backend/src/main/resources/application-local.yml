@@ -11,3 +11,7 @@ spring:
   data:
     redis:
       url: ${REDIS_URL:redis://localhost:6379}
+
+app:
+  local-data:
+    enabled: ${APP_LOCAL_DATA_ENABLED:false}

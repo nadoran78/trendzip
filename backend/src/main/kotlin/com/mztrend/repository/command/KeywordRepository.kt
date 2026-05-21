@@ -10,5 +10,10 @@ interface KeywordRepository : JpaRepository<Keyword, Long> {
         word: String,
     ): Keyword?
 
+    fun findAllByGenerationAndWordIn(
+        generation: Generation,
+        words: Collection<String>,
+    ): List<Keyword>
+
     fun findByGenerationOrderByCurrentRankAsc(generation: Generation): List<Keyword>
 }

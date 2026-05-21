@@ -31,6 +31,14 @@ SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
 - `local` profile은 PostgreSQL `localhost:5432`, Redis `localhost:6379`를 사용한다.
 - `test` profile은 빠른 테스트를 위해 H2 인메모리 DB와 simple cache를 사용한다.
 - PostgreSQL 데이터를 초기화해야 할 때만 `docker compose down -v`를 사용한다. 이 명령은 DB volume도 삭제한다.
+- 로컬 확인용 seed 데이터가 필요할 때만 `APP_LOCAL_DATA_ENABLED=true`를 함께 지정한다.
+
+```bash
+APP_LOCAL_DATA_ENABLED=true SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
+curl "http://localhost:8080/api/health"
+curl "http://localhost:8080/api/keywords?generation=TEEN"
+curl "http://localhost:8080/api/keywords?generation=TWENTY"
+```
 
 ---
 
