@@ -252,7 +252,7 @@ Week 1-2: 백엔드 기반
   [ ] Spring Boot + Kotlin 프로젝트 세팅
   [x] Flyway 마이그레이션 스크립트 작성 (keywords, keyword_relations, trend_feeds, trend_feed_keywords, trend_logs)
   [x] Redis 연동 및 캐싱 유틸 구현
-  [ ] YoutubeApiClient 구현 (검색, 채널 정보)
+  [x] YoutubeApiClient 구현 (검색, 영상 상세, 채널 정보)
   [ ] FeedService + FeedController 구현 (/api/feed)
 
 Week 3: 크롤링 스케줄러

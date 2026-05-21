@@ -9,7 +9,10 @@ data class ExternalApiProperties(
     val gemini: Gemini = Gemini(),
 ) {
     data class Youtube(
+        val baseUrl: String = "https://www.googleapis.com/youtube/v3",
         val apiKey: String = "",
+        val connectTimeoutSeconds: Long = 3,
+        val readTimeoutSeconds: Long = 5,
     )
 
     data class Naver(
