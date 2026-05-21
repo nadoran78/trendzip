@@ -72,7 +72,13 @@ com.mztrend
 ├── service
 │   ├── FeedService
 │   ├── KeywordService
-│   └── CrawlingService
+│   ├── TrendCrawlingService
+│   └── crawling
+│       ├── CollectedTrendBatch
+│       ├── CollectedKeyword
+│       ├── CollectedVideo
+│       ├── CollectedKeywordVideoMapping
+│       └── CollectedKeywordRelation
 ├── repository
 │   ├── command
 │   │   ├── KeywordRepository
@@ -208,6 +214,15 @@ fun crawlAndUpdateKeywords() {
 }
 ```
 
+### 크롤링 저장 파이프라인
+
+- 외부 API 응답을 Entity에 직접 저장하지 않는다.
+- 네이버 DataLab, YouTube, Google Trends, Gemini 결과는 먼저 `CollectedTrendBatch`와 하위 수집 DTO로 정규화한다.
+- `TrendCrawlingService`는 정규화된 수집 DTO만 입력받아 저장한다.
+- 저장 순서는 `keywords` upsert → `trend_logs` insert → `trend_feeds` upsert → `trend_feed_keywords` upsert → `keyword_relations` upsert 순서로 처리한다.
+- 수집 저장이 끝나면 `keywords`, `feed` 캐시를 무효화한다.
+- 실제 외부 API 호출 클라이언트 구현은 저장 파이프라인 검증 이후 별도 작업 단위로 진행한다.
+
 ---
 
 ## 제약사항
@@ -241,6 +256,7 @@ Week 1-2: 백엔드 기반
   [ ] FeedService + FeedController 구현 (/api/feed)
 
 Week 3: 크롤링 스케줄러
+  [x] 수집 DTO + TrendCrawlingService 저장 파이프라인 구현
   [ ] GoogleTrendsClient 구현 (비공식 API, 요청 간격 준수)
   [ ] NaverDataLabClient 구현 (공식 API)
   [ ] GeminiApiClient 구현 (설명 생성)
