@@ -64,6 +64,8 @@ SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
 ```
 com.mztrend
 ├── controller
+│   ├── dto
+│   │   └── KeywordListResponse
 │   ├── FeedController
 │   ├── KeywordController
 │   └── TrendController
@@ -96,7 +98,7 @@ com.mztrend
 ├── scheduler
 │   └── TrendCrawlingScheduler
 └── config
-    ├── RedisConfig
+    ├── CacheConfig
     └── SchedulerConfig
 ```
 
@@ -221,7 +223,7 @@ fun crawlAndUpdateKeywords() {
 Week 1-2: 백엔드 기반
   [ ] Spring Boot + Kotlin 프로젝트 세팅
   [ ] Flyway 마이그레이션 스크립트 작성 (keywords, keyword_related_terms, trend_feeds, trend_logs)
-  [ ] Redis 연동 및 캐싱 유틸 구현
+  [x] Redis 연동 및 캐싱 유틸 구현
   [ ] YoutubeApiClient 구현 (검색, 채널 정보)
   [ ] FeedService + FeedController 구현 (/api/feed)
 
@@ -233,7 +235,7 @@ Week 3: 크롤링 스케줄러
   [ ] 초기 시드 키워드 SQL 작성 (10대/20대 각 50개)
 
 Week 4: 키워드 API
-  [ ] KeywordService + KeywordController 구현 (/api/keywords)
+  [x] KeywordService + KeywordController 구현 (/api/keywords)
   [ ] KeywordService 상세 조회 구현 (/api/keywords/{id}/explain)
   [ ] Oracle Cloud 배포 설정
 ```

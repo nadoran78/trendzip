@@ -3,8 +3,10 @@ package com.mztrend.exception
 import com.mztrend.common.ResponseWrapper
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -26,6 +28,18 @@ class GlobalExceptionHandler {
             .status(ErrorCode.INVALID_REQUEST.status)
             .body(ResponseWrapper.fail(ErrorCode.INVALID_REQUEST.name, message))
     }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class)
+    fun handleTypeMismatchException(exception: MethodArgumentTypeMismatchException): ResponseEntity<ResponseWrapper<Unit>> =
+        ResponseEntity
+            .status(ErrorCode.INVALID_REQUEST.status)
+            .body(ResponseWrapper.fail(ErrorCode.INVALID_REQUEST.name, ErrorCode.INVALID_REQUEST.defaultMessage))
+
+    @ExceptionHandler(MissingServletRequestParameterException::class)
+    fun handleMissingRequestParameterException(exception: MissingServletRequestParameterException): ResponseEntity<ResponseWrapper<Unit>> =
+        ResponseEntity
+            .status(ErrorCode.INVALID_REQUEST.status)
+            .body(ResponseWrapper.fail(ErrorCode.INVALID_REQUEST.name, ErrorCode.INVALID_REQUEST.defaultMessage))
 
     @ExceptionHandler(Exception::class)
     fun handleException(exception: Exception): ResponseEntity<ResponseWrapper<Unit>> =

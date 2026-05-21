@@ -15,10 +15,12 @@ spring:
   flyway:
     enabled: true
   cache:
-    type: simple
+    type: redis
   data:
     redis:
       url: ${REDIS_URL:redis://localhost:6379}
+      repositories:
+        enabled: false
 
 server:
   port: ${PORT:8080}
