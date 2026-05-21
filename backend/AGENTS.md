@@ -76,7 +76,8 @@ com.mztrend
 ├── repository
 │   ├── command
 │   │   ├── KeywordRepository
-│   │   ├── KeywordRelatedTermRepository
+│   │   ├── KeywordRelationRepository
+│   │   ├── TrendFeedKeywordRepository
 │   │   ├── TrendFeedRepository
 │   │   └── TrendLogRepository
 │   └── query
@@ -85,9 +86,12 @@ com.mztrend
 │           └── KeywordSummaryQueryResult
 ├── domain
 │   ├── Keyword
-│   ├── KeywordRelatedTerm
+│   ├── KeywordRelation
 │   ├── RankTrend
+│   ├── TrendFeedKeyword
 │   ├── TrendFeed
+│   ├── TrendFeedKeywordRelationType (enum: PRIMARY, TAG, RELATED)
+│   ├── FeedSection (enum: TODAY_PICK, RISING, RELATED)
 │   ├── Generation (enum: TEEN, TWENTY)
 │   └── TrendLog
 ├── client
@@ -110,11 +114,11 @@ com.mztrend
 CREATE TABLE keywords (
     id             BIGSERIAL PRIMARY KEY,
     word           VARCHAR(100) NOT NULL,
-    generation     VARCHAR(10) NOT NULL,   -- 'TEEN' | 'TWENTY'
+    generation     VARCHAR(10) NOT NULL CHECK (generation IN ('TEEN', 'TWENTY')),
     category       VARCHAR(50),
     current_rank   INT,
     trend_score    BIGINT,
-    rank_trend     VARCHAR(10),            -- 'UP' | 'DOWN' | 'NEW' | 'SAME'
+    rank_trend     VARCHAR(10) CHECK (rank_trend IN ('UP', 'DOWN', 'NEW', 'SAME')),
     rank_delta     INT,
     explain        TEXT,
     explained_at   TIMESTAMP,
@@ -122,19 +126,19 @@ CREATE TABLE keywords (
     updated_at     TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE keyword_related_terms (
-    id             BIGSERIAL PRIMARY KEY,
-    keyword_id     BIGINT NOT NULL,
-    term           VARCHAR(100) NOT NULL,
-    display_order  INT DEFAULT 0,
-    score          INT,
-    source         VARCHAR(30),
-    created_at     TIMESTAMP DEFAULT NOW()
+CREATE TABLE keyword_relations (
+    id                  BIGSERIAL PRIMARY KEY,
+    keyword_id          BIGINT NOT NULL,
+    related_keyword_id  BIGINT NOT NULL,
+    display_order       INT DEFAULT 0,
+    score               INT,
+    source              VARCHAR(30),
+    created_at          TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT ck_keyword_relations_not_self CHECK (keyword_id <> related_keyword_id)
 );
 
 CREATE TABLE trend_feeds (
     id                         BIGSERIAL PRIMARY KEY,
-    keyword_id                 BIGINT NOT NULL,
     youtube_video_id           VARCHAR(50) NOT NULL,
     title                      VARCHAR(300) NOT NULL,
     channel_id                 VARCHAR(100),
@@ -145,13 +149,22 @@ CREATE TABLE trend_feeds (
     view_count                 BIGINT,
     published_at               TIMESTAMP,
     duration_seconds           INT,
-    tags                       TEXT[],
     badge                      VARCHAR(30),
-    feed_section               VARCHAR(30),
-    display_order              INT DEFAULT 0,
     collected_at               TIMESTAMP DEFAULT NOW(),
     created_at                 TIMESTAMP DEFAULT NOW(),
     updated_at                 TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE trend_feed_keywords (
+    id              BIGSERIAL PRIMARY KEY,
+    trend_feed_id   BIGINT NOT NULL,
+    keyword_id      BIGINT NOT NULL,
+    relation_type   VARCHAR(20) NOT NULL CHECK (relation_type IN ('PRIMARY', 'TAG', 'RELATED')),
+    feed_section    VARCHAR(30) CHECK (feed_section IN ('TODAY_PICK', 'RISING', 'RELATED')),
+    display_order   INT DEFAULT 0,
+    score           INT,
+    source          VARCHAR(30),
+    created_at      TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE trend_logs (
@@ -189,7 +202,7 @@ fun crawlAndUpdateKeywords() {
     // 1. Google Trends + 네이버 DataLab에서 연령대별 급상승 키워드 수집
     // 2. keywords 테이블 current_rank, trend_score, rank_trend 갱신
     // 3. 신규/변경 키워드에 대해서만 Gemini API 호출 → 설명 생성 후 keywords.explain 저장
-    // 4. 관련어는 keyword_related_terms, 연결 영상은 trend_feeds 저장
+    // 4. 관련 키워드는 keyword_relations, 영상은 trend_feeds, 영상-키워드 연결은 trend_feed_keywords 저장
     // 5. trend_logs에 순위/점수 스냅샷 저장
     // 6. Redis 캐시 무효화
 }
@@ -222,7 +235,7 @@ fun crawlAndUpdateKeywords() {
 ```
 Week 1-2: 백엔드 기반
   [ ] Spring Boot + Kotlin 프로젝트 세팅
-  [ ] Flyway 마이그레이션 스크립트 작성 (keywords, keyword_related_terms, trend_feeds, trend_logs)
+  [x] Flyway 마이그레이션 스크립트 작성 (keywords, keyword_relations, trend_feeds, trend_feed_keywords, trend_logs)
   [x] Redis 연동 및 캐싱 유틸 구현
   [ ] YoutubeApiClient 구현 (검색, 채널 정보)
   [ ] FeedService + FeedController 구현 (/api/feed)

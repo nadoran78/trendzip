@@ -35,33 +35,36 @@ COMMENT ON COLUMN keywords.explained_at IS '설명이 생성되거나 갱신된 
 COMMENT ON COLUMN keywords.created_at IS '레코드 생성 시각';
 COMMENT ON COLUMN keywords.updated_at IS '레코드 마지막 수정 시각';
 
-CREATE TABLE IF NOT EXISTS keyword_related_terms (
-    id             BIGSERIAL PRIMARY KEY,
-    keyword_id     BIGINT NOT NULL,
-    term           VARCHAR(100) NOT NULL,
-    display_order  INT NOT NULL DEFAULT 0,
-    score          INT,
-    source         VARCHAR(30),
-    created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS keyword_relations (
+    id                  BIGSERIAL PRIMARY KEY,
+    keyword_id          BIGINT NOT NULL,
+    related_keyword_id  BIGINT NOT NULL,
+    display_order       INT NOT NULL DEFAULT 0,
+    score               INT,
+    source              VARCHAR(30),
+    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ck_keyword_relations_not_self CHECK (keyword_id <> related_keyword_id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS uk_keyword_related_terms_keyword_term
-    ON keyword_related_terms (keyword_id, term);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_keyword_relations_keyword_related
+    ON keyword_relations (keyword_id, related_keyword_id);
 
-CREATE INDEX IF NOT EXISTS idx_keyword_related_terms_keyword_display_order
-    ON keyword_related_terms (keyword_id, display_order);
+CREATE INDEX IF NOT EXISTS idx_keyword_relations_keyword_display_order
+    ON keyword_relations (keyword_id, display_order);
 
-COMMENT ON COLUMN keyword_related_terms.id IS '관련어 고유 ID';
-COMMENT ON COLUMN keyword_related_terms.keyword_id IS '관련어가 연결된 키워드 ID';
-COMMENT ON COLUMN keyword_related_terms.term IS '화면에 표시할 관련 키워드 문구';
-COMMENT ON COLUMN keyword_related_terms.display_order IS '관련어 표시 순서';
-COMMENT ON COLUMN keyword_related_terms.score IS '관련도 또는 수집 기준 점수';
-COMMENT ON COLUMN keyword_related_terms.source IS '관련어 수집 출처 또는 생성 방식';
-COMMENT ON COLUMN keyword_related_terms.created_at IS '레코드 생성 시각';
+CREATE INDEX IF NOT EXISTS idx_keyword_relations_related_keyword
+    ON keyword_relations (related_keyword_id);
+
+COMMENT ON COLUMN keyword_relations.id IS '키워드 관계 고유 ID';
+COMMENT ON COLUMN keyword_relations.keyword_id IS '기준 키워드 ID';
+COMMENT ON COLUMN keyword_relations.related_keyword_id IS '연결된 관련 키워드 ID';
+COMMENT ON COLUMN keyword_relations.display_order IS '관련 키워드 표시 순서';
+COMMENT ON COLUMN keyword_relations.score IS '관련도 또는 수집 기준 점수';
+COMMENT ON COLUMN keyword_relations.source IS '관계 수집 출처 또는 생성 방식';
+COMMENT ON COLUMN keyword_relations.created_at IS '레코드 생성 시각';
 
 CREATE TABLE IF NOT EXISTS trend_feeds (
     id                         BIGSERIAL PRIMARY KEY,
-    keyword_id                 BIGINT NOT NULL,
     youtube_video_id           VARCHAR(50) NOT NULL,
     title                      VARCHAR(300) NOT NULL,
     channel_id                 VARCHAR(100),
@@ -72,23 +75,22 @@ CREATE TABLE IF NOT EXISTS trend_feeds (
     view_count                 BIGINT,
     published_at               TIMESTAMP,
     duration_seconds           INT,
-    tags                       TEXT ARRAY,
     badge                      VARCHAR(30),
-    feed_section               VARCHAR(30),
-    display_order              INT NOT NULL DEFAULT 0,
     collected_at               TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at                 TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at                 TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS uk_trend_feeds_keyword_video
-    ON trend_feeds (keyword_id, youtube_video_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_trend_feeds_youtube_video
+    ON trend_feeds (youtube_video_id);
 
-CREATE INDEX IF NOT EXISTS idx_trend_feeds_keyword_display_order
-    ON trend_feeds (keyword_id, display_order);
+CREATE INDEX IF NOT EXISTS idx_trend_feeds_published_at
+    ON trend_feeds (published_at);
+
+CREATE INDEX IF NOT EXISTS idx_trend_feeds_view_count
+    ON trend_feeds (view_count);
 
 COMMENT ON COLUMN trend_feeds.id IS '피드 영상 고유 ID';
-COMMENT ON COLUMN trend_feeds.keyword_id IS '영상이 연결된 키워드 ID';
 COMMENT ON COLUMN trend_feeds.youtube_video_id IS 'YouTube 영상 ID';
 COMMENT ON COLUMN trend_feeds.title IS '영상 제목';
 COMMENT ON COLUMN trend_feeds.channel_id IS 'YouTube 채널 ID';
@@ -99,13 +101,41 @@ COMMENT ON COLUMN trend_feeds.thumbnail_url IS '영상 썸네일 URL';
 COMMENT ON COLUMN trend_feeds.view_count IS '영상 조회수';
 COMMENT ON COLUMN trend_feeds.published_at IS '영상 게시 시각';
 COMMENT ON COLUMN trend_feeds.duration_seconds IS '영상 길이(초)';
-COMMENT ON COLUMN trend_feeds.tags IS '피드 카드에 표시할 태그 목록';
 COMMENT ON COLUMN trend_feeds.badge IS 'HOT, RISING 등 화면 표시용 배지';
-COMMENT ON COLUMN trend_feeds.feed_section IS 'TODAY_PICK, RISING 등 피드 섹션 구분';
-COMMENT ON COLUMN trend_feeds.display_order IS '같은 키워드 안에서의 영상 표시 순서';
 COMMENT ON COLUMN trend_feeds.collected_at IS '외부 API 또는 크롤러로 수집한 시각';
 COMMENT ON COLUMN trend_feeds.created_at IS '레코드 생성 시각';
 COMMENT ON COLUMN trend_feeds.updated_at IS '레코드 마지막 수정 시각';
+
+CREATE TABLE IF NOT EXISTS trend_feed_keywords (
+    id              BIGSERIAL PRIMARY KEY,
+    trend_feed_id   BIGINT NOT NULL,
+    keyword_id      BIGINT NOT NULL,
+    relation_type   VARCHAR(20) NOT NULL CHECK (relation_type IN ('PRIMARY', 'TAG', 'RELATED')),
+    feed_section    VARCHAR(30) CHECK (feed_section IN ('TODAY_PICK', 'RISING', 'RELATED')),
+    display_order   INT NOT NULL DEFAULT 0,
+    score           INT,
+    source          VARCHAR(30),
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_trend_feed_keywords_feed_keyword
+    ON trend_feed_keywords (trend_feed_id, keyword_id);
+
+CREATE INDEX IF NOT EXISTS idx_trend_feed_keywords_keyword_section_order
+    ON trend_feed_keywords (keyword_id, feed_section, display_order);
+
+CREATE INDEX IF NOT EXISTS idx_trend_feed_keywords_feed
+    ON trend_feed_keywords (trend_feed_id);
+
+COMMENT ON COLUMN trend_feed_keywords.id IS '피드-키워드 매핑 고유 ID';
+COMMENT ON COLUMN trend_feed_keywords.trend_feed_id IS '연결된 피드 영상 ID';
+COMMENT ON COLUMN trend_feed_keywords.keyword_id IS '연결된 키워드 ID';
+COMMENT ON COLUMN trend_feed_keywords.relation_type IS '영상과 키워드의 연결 유형(PRIMARY, TAG, RELATED)';
+COMMENT ON COLUMN trend_feed_keywords.feed_section IS '피드 노출 섹션(TODAY_PICK, RISING, RELATED)';
+COMMENT ON COLUMN trend_feed_keywords.display_order IS '같은 키워드와 섹션 안에서의 영상 표시 순서';
+COMMENT ON COLUMN trend_feed_keywords.score IS '영상과 키워드의 관련도 또는 수집 기준 점수';
+COMMENT ON COLUMN trend_feed_keywords.source IS '매핑 수집 출처 또는 생성 방식';
+COMMENT ON COLUMN trend_feed_keywords.created_at IS '레코드 생성 시각';
 
 CREATE TABLE IF NOT EXISTS trend_logs (
     id          BIGSERIAL PRIMARY KEY,

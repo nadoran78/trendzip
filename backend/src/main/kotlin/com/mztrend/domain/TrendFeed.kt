@@ -8,15 +8,11 @@ import jakarta.persistence.Id
 import jakarta.persistence.PrePersist
 import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
-import org.hibernate.annotations.JdbcTypeCode
-import org.hibernate.type.SqlTypes
 import java.time.LocalDateTime
 
 @Entity
 @Table(name = "trend_feeds")
 class TrendFeed(
-    @Column(name = "keyword_id", nullable = false)
-    var keywordId: Long = 0,
     @Column(name = "youtube_video_id", nullable = false, length = 50)
     var youtubeVideoId: String = "",
     @Column(nullable = false, length = 300)
@@ -37,15 +33,8 @@ class TrendFeed(
     var publishedAt: LocalDateTime? = null,
     @Column(name = "duration_seconds")
     var durationSeconds: Int? = null,
-    @JdbcTypeCode(SqlTypes.ARRAY)
-    @Column(columnDefinition = "TEXT ARRAY")
-    var tags: Array<String> = emptyArray(),
     @Column(length = 30)
     var badge: String? = null,
-    @Column(name = "feed_section", length = 30)
-    var feedSection: String? = null,
-    @Column(name = "display_order", nullable = false)
-    var displayOrder: Int = 0,
     @Column(name = "collected_at", nullable = false)
     var collectedAt: LocalDateTime = LocalDateTime.now(),
 ) {
