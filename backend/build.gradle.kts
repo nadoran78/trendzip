@@ -44,7 +44,6 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     runtimeOnly("org.postgresql:postgresql")
-    runtimeOnly("com.h2database:h2")
 
     jooqCodegen("org.jooq:jooq-codegen")
     jooqCodegen("org.postgresql:postgresql")
