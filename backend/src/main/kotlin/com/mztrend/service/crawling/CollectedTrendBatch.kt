@@ -3,14 +3,15 @@ package com.mztrend.service.crawling
 import com.mztrend.domain.FeedSection
 import com.mztrend.domain.Generation
 import com.mztrend.domain.RankTrend
-import com.mztrend.domain.TrendFeedKeywordRelationType
+import com.mztrend.domain.TrendVideoKeywordRelationType
 import java.time.LocalDateTime
 
 data class CollectedTrendBatch(
     val generation: Generation,
     val keywords: List<CollectedKeyword>,
     val videos: List<CollectedVideo>,
-    val keywordVideoMappings: List<CollectedKeywordVideoMapping>,
+    val feedItems: List<CollectedFeedItem>,
+    val videoKeywords: List<CollectedVideoKeyword> = emptyList(),
     val keywordRelations: List<CollectedKeywordRelation> = emptyList(),
 )
 
@@ -40,7 +41,6 @@ data class CollectedVideo(
     val viewCount: Long? = null,
     val publishedAt: LocalDateTime? = null,
     val durationSeconds: Int? = null,
-    val badge: String? = null,
     val collectedAt: LocalDateTime = LocalDateTime.now(),
 ) {
     init {
@@ -50,18 +50,33 @@ data class CollectedVideo(
     }
 }
 
-data class CollectedKeywordVideoMapping(
+data class CollectedFeedItem(
     val keywordWord: String,
     val youtubeVideoId: String,
-    val relationType: TrendFeedKeywordRelationType,
     val feedSection: FeedSection? = null,
+    val displayOrder: Int = 0,
+    val score: Int? = null,
+    val badge: String? = null,
+    val source: String? = null,
+    val collectedAt: LocalDateTime = LocalDateTime.now(),
+) {
+    init {
+        require(keywordWord.isNotBlank()) { "Collected feed item keyword word must not be blank." }
+        require(youtubeVideoId.isNotBlank()) { "Collected feed item video id must not be blank." }
+    }
+}
+
+data class CollectedVideoKeyword(
+    val keywordWord: String,
+    val youtubeVideoId: String,
+    val relationType: TrendVideoKeywordRelationType,
     val displayOrder: Int = 0,
     val score: Int? = null,
     val source: String? = null,
 ) {
     init {
-        require(keywordWord.isNotBlank()) { "Collected mapping keyword word must not be blank." }
-        require(youtubeVideoId.isNotBlank()) { "Collected mapping video id must not be blank." }
+        require(keywordWord.isNotBlank()) { "Collected video keyword word must not be blank." }
+        require(youtubeVideoId.isNotBlank()) { "Collected video keyword video id must not be blank." }
     }
 }
 

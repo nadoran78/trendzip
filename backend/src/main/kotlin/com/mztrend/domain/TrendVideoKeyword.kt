@@ -11,18 +11,15 @@ import jakarta.persistence.Table
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "trend_feed_keywords")
-class TrendFeedKeyword(
-    @Column(name = "trend_feed_id", nullable = false)
-    var trendFeedId: Long = 0,
+@Table(name = "trend_video_keywords")
+class TrendVideoKeyword(
+    @Column(name = "trend_video_id", nullable = false)
+    var trendVideoId: Long = 0,
     @Column(name = "keyword_id", nullable = false)
     var keywordId: Long = 0,
     @Enumerated(EnumType.STRING)
     @Column(name = "relation_type", nullable = false, length = 20)
-    var relationType: TrendFeedKeywordRelationType = TrendFeedKeywordRelationType.PRIMARY,
-    @Enumerated(EnumType.STRING)
-    @Column(name = "feed_section", length = 30)
-    var feedSection: FeedSection? = null,
+    var relationType: TrendVideoKeywordRelationType = TrendVideoKeywordRelationType.TAG,
     @Column(name = "display_order", nullable = false)
     var displayOrder: Int = 0,
     @Column

@@ -14,4 +14,4 @@ This directory documents the current database schema by loose domain groups.
 
 - `generation`: generation value rules such as `TEEN` and `TWENTY`.
 - `keyword`: keyword and related keyword relation tables.
-- `trend`: trend feed, feed-keyword mapping, and time-series style tables.
+- `trend`: trend video, feed item, video-keyword mapping, and time-series style tables.

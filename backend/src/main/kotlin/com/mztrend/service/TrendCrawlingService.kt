@@ -1,23 +1,27 @@
 package com.mztrend.service
 
+import com.mztrend.common.logger
 import com.mztrend.config.CacheNames
 import com.mztrend.domain.Generation
 import com.mztrend.domain.Keyword
 import com.mztrend.domain.KeywordRelation
 import com.mztrend.domain.RankTrend
-import com.mztrend.domain.TrendFeed
-import com.mztrend.domain.TrendFeedKeyword
+import com.mztrend.domain.TrendFeedItem
 import com.mztrend.domain.TrendLog
+import com.mztrend.domain.TrendVideo
+import com.mztrend.domain.TrendVideoKeyword
 import com.mztrend.repository.command.KeywordRelationRepository
 import com.mztrend.repository.command.KeywordRepository
-import com.mztrend.repository.command.TrendFeedKeywordRepository
-import com.mztrend.repository.command.TrendFeedRepository
+import com.mztrend.repository.command.TrendFeedItemRepository
 import com.mztrend.repository.command.TrendLogRepository
+import com.mztrend.repository.command.TrendVideoKeywordRepository
+import com.mztrend.repository.command.TrendVideoRepository
+import com.mztrend.service.crawling.CollectedFeedItem
 import com.mztrend.service.crawling.CollectedKeyword
 import com.mztrend.service.crawling.CollectedKeywordRelation
-import com.mztrend.service.crawling.CollectedKeywordVideoMapping
 import com.mztrend.service.crawling.CollectedTrendBatch
 import com.mztrend.service.crawling.CollectedVideo
+import com.mztrend.service.crawling.CollectedVideoKeyword
 import com.mztrend.service.crawling.TrendCrawlingResult
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.Caching
@@ -29,8 +33,9 @@ import kotlin.math.abs
 class TrendCrawlingService(
     private val keywordRepository: KeywordRepository,
     private val trendLogRepository: TrendLogRepository,
-    private val trendFeedRepository: TrendFeedRepository,
-    private val trendFeedKeywordRepository: TrendFeedKeywordRepository,
+    private val trendVideoRepository: TrendVideoRepository,
+    private val trendFeedItemRepository: TrendFeedItemRepository,
+    private val trendVideoKeywordRepository: TrendVideoKeywordRepository,
     private val keywordRelationRepository: KeywordRelationRepository,
 ) {
     @Caching(
@@ -41,19 +46,38 @@ class TrendCrawlingService(
     )
     @Transactional
     fun saveCollectedTrends(batch: CollectedTrendBatch): TrendCrawlingResult {
+        validateFeedItems(batch)
+
         val keywordsByWord = upsertKeywords(batch.generation, batch.keywords)
         val trendLogCount = saveTrendLogs(keywordsByWord, batch.keywords)
         val videosByYoutubeVideoId = upsertVideos(batch.videos)
-        val mappingCount = upsertKeywordVideoMappings(batch, keywordsByWord, videosByYoutubeVideoId)
+        val feedItemCount = replaceActiveFeedItems(batch, keywordsByWord, videosByYoutubeVideoId)
+        val videoKeywordCount = upsertVideoKeywords(batch, keywordsByWord, videosByYoutubeVideoId)
         val relationCount = upsertKeywordRelations(batch.generation, batch.keywordRelations, keywordsByWord)
 
         return TrendCrawlingResult(
             keywordCount = keywordsByWord.size,
             trendLogCount = trendLogCount,
             videoCount = videosByYoutubeVideoId.size,
-            keywordVideoMappingCount = mappingCount,
+            feedItemCount = feedItemCount,
+            videoKeywordCount = videoKeywordCount,
             keywordRelationCount = relationCount,
         )
+    }
+
+    private fun validateFeedItems(batch: CollectedTrendBatch) {
+        val duplicatedYoutubeVideoIds =
+            batch.feedItems
+                .groupingBy { it.youtubeVideoId }
+                .eachCount()
+                .filterValues { it > 1 }
+                .keys
+                .sorted()
+
+        require(duplicatedYoutubeVideoIds.isEmpty()) {
+            "Collected feed items must contain one representative item per YouTube video. " +
+                "generation=${batch.generation}, duplicatedYoutubeVideoIds=$duplicatedYoutubeVideoIds"
+        }
     }
 
     private fun upsertKeywords(
@@ -131,21 +155,21 @@ class TrendCrawlingService(
         return logs.size
     }
 
-    private fun upsertVideos(collectedVideos: List<CollectedVideo>): Map<String, TrendFeed> =
+    private fun upsertVideos(collectedVideos: List<CollectedVideo>): Map<String, TrendVideo> =
         collectedVideos
             .distinctBy { it.youtubeVideoId }
             .associate { collectedVideo ->
-                val trendFeed =
-                    trendFeedRepository
+                val trendVideo =
+                    trendVideoRepository
                         .findByYoutubeVideoId(collectedVideo.youtubeVideoId)
                         ?.applyCollectedVideo(collectedVideo)
-                        ?: collectedVideo.toTrendFeed()
+                        ?: collectedVideo.toTrendVideo()
 
-                val savedTrendFeed = trendFeedRepository.save(trendFeed)
-                collectedVideo.youtubeVideoId to savedTrendFeed
+                val savedTrendVideo = trendVideoRepository.save(trendVideo)
+                collectedVideo.youtubeVideoId to savedTrendVideo
             }
 
-    private fun TrendFeed.applyCollectedVideo(collectedVideo: CollectedVideo): TrendFeed {
+    private fun TrendVideo.applyCollectedVideo(collectedVideo: CollectedVideo): TrendVideo {
         title = collectedVideo.title
         channelId = collectedVideo.channelId ?: channelId
         channelName = collectedVideo.channelName
@@ -155,14 +179,13 @@ class TrendCrawlingService(
         viewCount = collectedVideo.viewCount ?: viewCount
         publishedAt = collectedVideo.publishedAt ?: publishedAt
         durationSeconds = collectedVideo.durationSeconds ?: durationSeconds
-        badge = collectedVideo.badge ?: badge
         collectedAt = collectedVideo.collectedAt
 
         return this
     }
 
-    private fun CollectedVideo.toTrendFeed(): TrendFeed =
-        TrendFeed(
+    private fun CollectedVideo.toTrendVideo(): TrendVideo =
+        TrendVideo(
             youtubeVideoId = youtubeVideoId,
             title = title,
             channelId = channelId,
@@ -173,56 +196,115 @@ class TrendCrawlingService(
             viewCount = viewCount,
             publishedAt = publishedAt,
             durationSeconds = durationSeconds,
-            badge = badge,
             collectedAt = collectedAt,
         )
 
-    private fun upsertKeywordVideoMappings(
-        batch: CollectedTrendBatch,
-        keywordsByWord: Map<String, Keyword>,
-        videosByYoutubeVideoId: Map<String, TrendFeed>,
-    ): Int {
-        val mappings =
-            batch.keywordVideoMappings
-                .distinctBy { it.youtubeVideoId to it.keywordWord }
-                .map { mapping ->
-                    val keyword = resolveKeyword(batch.generation, mapping.keywordWord, keywordsByWord)
-                    val trendFeed =
-                        videosByYoutubeVideoId[mapping.youtubeVideoId]
-                            ?: error("Collected mapping references unknown video: ${mapping.youtubeVideoId}")
-
-                    upsertKeywordVideoMapping(mapping, trendFeed, keyword)
-                }
-
-        trendFeedKeywordRepository.saveAll(mappings)
-        return mappings.size
+    private fun deactivateActiveFeedItems(generation: Generation) {
+        val activeFeedItems = trendFeedItemRepository.findAllByGenerationAndIsActiveTrue(generation)
+        activeFeedItems.forEach { it.isActive = false }
+        trendFeedItemRepository.saveAll(activeFeedItems)
+        trendFeedItemRepository.flush()
     }
 
-    private fun upsertKeywordVideoMapping(
-        mapping: CollectedKeywordVideoMapping,
-        trendFeed: TrendFeed,
+    private fun replaceActiveFeedItems(
+        batch: CollectedTrendBatch,
+        keywordsByWord: Map<String, Keyword>,
+        videosByYoutubeVideoId: Map<String, TrendVideo>,
+    ): Int {
+        if (batch.feedItems.isEmpty()) {
+            log.warn(
+                "Skip feed item replacement because collected feed items are empty. generation={}",
+                batch.generation,
+            )
+            return 0
+        }
+
+        deactivateActiveFeedItems(batch.generation)
+        return createFeedItems(batch, keywordsByWord, videosByYoutubeVideoId)
+    }
+
+    private fun createFeedItems(
+        batch: CollectedTrendBatch,
+        keywordsByWord: Map<String, Keyword>,
+        videosByYoutubeVideoId: Map<String, TrendVideo>,
+    ): Int {
+        val feedItems =
+            batch.feedItems
+                .map { feedItem ->
+                    val keyword = resolveKeyword(batch.generation, feedItem.keywordWord, keywordsByWord)
+                    val trendVideo =
+                        videosByYoutubeVideoId[feedItem.youtubeVideoId]
+                            ?: error("Collected feed item references unknown video: ${feedItem.youtubeVideoId}")
+
+                    feedItem.toTrendFeedItem(batch.generation, trendVideo, keyword)
+                }
+
+        trendFeedItemRepository.saveAll(feedItems)
+        return feedItems.size
+    }
+
+    private fun CollectedFeedItem.toTrendFeedItem(
+        generation: Generation,
+        trendVideo: TrendVideo,
         keyword: Keyword,
-    ): TrendFeedKeyword {
-        val trendFeedId = requireNotNull(trendFeed.id)
+    ): TrendFeedItem =
+        TrendFeedItem(
+            generation = generation,
+            trendVideoId = requireNotNull(trendVideo.id),
+            primaryKeywordId = requireNotNull(keyword.id),
+            feedSection = feedSection,
+            displayOrder = displayOrder,
+            score = score,
+            badge = badge,
+            source = source,
+            isActive = true,
+            collectedAt = collectedAt,
+        )
+
+    private fun upsertVideoKeywords(
+        batch: CollectedTrendBatch,
+        keywordsByWord: Map<String, Keyword>,
+        videosByYoutubeVideoId: Map<String, TrendVideo>,
+    ): Int {
+        val videoKeywords =
+            batch.videoKeywords
+                .distinctBy { it.youtubeVideoId to it.keywordWord }
+                .map { videoKeyword ->
+                    val keyword = resolveKeyword(batch.generation, videoKeyword.keywordWord, keywordsByWord)
+                    val trendVideo =
+                        videosByYoutubeVideoId[videoKeyword.youtubeVideoId]
+                            ?: error("Collected video keyword references unknown video: ${videoKeyword.youtubeVideoId}")
+
+                    upsertVideoKeyword(videoKeyword, trendVideo, keyword)
+                }
+
+        trendVideoKeywordRepository.saveAll(videoKeywords)
+        return videoKeywords.size
+    }
+
+    private fun upsertVideoKeyword(
+        videoKeyword: CollectedVideoKeyword,
+        trendVideo: TrendVideo,
+        keyword: Keyword,
+    ): TrendVideoKeyword {
+        val trendVideoId = requireNotNull(trendVideo.id)
         val keywordId = requireNotNull(keyword.id)
 
-        return trendFeedKeywordRepository
-            .findByTrendFeedIdAndKeywordId(trendFeedId, keywordId)
+        return trendVideoKeywordRepository
+            .findByTrendVideoIdAndKeywordId(trendVideoId, keywordId)
             ?.apply {
-                relationType = mapping.relationType
-                feedSection = mapping.feedSection
-                displayOrder = mapping.displayOrder
-                score = mapping.score
-                source = mapping.source
+                relationType = videoKeyword.relationType
+                displayOrder = videoKeyword.displayOrder
+                score = videoKeyword.score
+                source = videoKeyword.source
             }
-            ?: TrendFeedKeyword(
-                trendFeedId = trendFeedId,
+            ?: TrendVideoKeyword(
+                trendVideoId = trendVideoId,
                 keywordId = keywordId,
-                relationType = mapping.relationType,
-                feedSection = mapping.feedSection,
-                displayOrder = mapping.displayOrder,
-                score = mapping.score,
-                source = mapping.source,
+                relationType = videoKeyword.relationType,
+                displayOrder = videoKeyword.displayOrder,
+                score = videoKeyword.score,
+                source = videoKeyword.source,
             )
     }
 
@@ -299,5 +381,9 @@ class TrendCrawlingService(
     ): Int? {
         if (previousRank == null || currentRank == null) return null
         return abs(previousRank - currentRank)
+    }
+
+    companion object {
+        private val log = logger<TrendCrawlingService>()
     }
 }

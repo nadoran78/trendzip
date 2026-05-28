@@ -29,7 +29,7 @@ SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
 ```
 
 - `local` profile은 PostgreSQL `localhost:5432`, Redis `localhost:6379`를 사용한다.
-- `test` profile은 빠른 테스트를 위해 H2 인메모리 DB와 simple cache를 사용한다.
+- `test` profile은 로컬 PostgreSQL의 `mztrend_test` DB와 simple cache를 사용한다.
 - PostgreSQL 데이터를 초기화해야 할 때만 `docker compose down -v`를 사용한다. 이 명령은 DB volume도 삭제한다.
 - 로컬 확인용 seed 데이터가 필요할 때만 `APP_LOCAL_DATA_ENABLED=true`를 함께 지정한다.
 
@@ -67,6 +67,17 @@ curl "http://localhost:8080/api/keywords?generation=TWENTY"
 
 ---
 
+## 테스트 DB 원칙
+
+- DB 통합 테스트는 PostgreSQL 기준으로 작성한다.
+- H2 호환성을 위해 운영 스키마, Flyway migration, 인덱스 설계를 변경하지 않는다.
+- PostgreSQL 전용 기능(partial index, COMMENT ON, enum CHECK 등)은 필요하면 그대로 사용한다.
+- DB가 필요한 테스트는 로컬 Docker PostgreSQL 또는 Testcontainers 기반으로 검증한다.
+- H2는 순수 단위 테스트처럼 DB 방언 차이가 없는 경우에만 제한적으로 사용한다.
+- `test` profile은 기본적으로 `jdbc:postgresql://localhost:5432/mztrend_test`를 사용하며, 필요하면 `TEST_POSTGRES_URL`, `TEST_POSTGRES_USERNAME`, `TEST_POSTGRES_PASSWORD`로 오버라이드한다.
+
+---
+
 ## 패키지 구조
 
 ```
@@ -85,26 +96,31 @@ com.mztrend
 │       ├── CollectedTrendBatch
 │       ├── CollectedKeyword
 │       ├── CollectedVideo
-│       ├── CollectedKeywordVideoMapping
+│       ├── CollectedFeedItem
+│       ├── CollectedVideoKeyword
 │       └── CollectedKeywordRelation
 ├── repository
 │   ├── command
 │   │   ├── KeywordRepository
 │   │   ├── KeywordRelationRepository
-│   │   ├── TrendFeedKeywordRepository
-│   │   ├── TrendFeedRepository
+│   │   ├── TrendFeedItemRepository
+│   │   ├── TrendVideoKeywordRepository
+│   │   ├── TrendVideoRepository
 │   │   └── TrendLogRepository
 │   └── query
+│       ├── FeedQueryRepository
 │       ├── KeywordQueryRepository
 │       └── dto
+│           ├── FeedVideoQueryResult
 │           └── KeywordSummaryQueryResult
 ├── domain
 │   ├── Keyword
 │   ├── KeywordRelation
 │   ├── RankTrend
-│   ├── TrendFeedKeyword
-│   ├── TrendFeed
-│   ├── TrendFeedKeywordRelationType (enum: PRIMARY, TAG, RELATED)
+│   ├── TrendVideo
+│   ├── TrendFeedItem
+│   ├── TrendVideoKeyword
+│   ├── TrendVideoKeywordRelationType (enum: TAG, RELATED)
 │   ├── FeedSection (enum: TODAY_PICK, RISING, RELATED)
 │   ├── Generation (enum: TEEN, TWENTY)
 │   └── TrendLog
@@ -151,7 +167,7 @@ CREATE TABLE keyword_relations (
     CONSTRAINT ck_keyword_relations_not_self CHECK (keyword_id <> related_keyword_id)
 );
 
-CREATE TABLE trend_feeds (
+CREATE TABLE trend_videos (
     id                         BIGSERIAL PRIMARY KEY,
     youtube_video_id           VARCHAR(50) NOT NULL,
     title                      VARCHAR(300) NOT NULL,
@@ -163,18 +179,32 @@ CREATE TABLE trend_feeds (
     view_count                 BIGINT,
     published_at               TIMESTAMP,
     duration_seconds           INT,
-    badge                      VARCHAR(30),
     collected_at               TIMESTAMP DEFAULT NOW(),
     created_at                 TIMESTAMP DEFAULT NOW(),
     updated_at                 TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE trend_feed_keywords (
+CREATE TABLE trend_feed_items (
+    id                  BIGSERIAL PRIMARY KEY,
+    generation          VARCHAR(10) NOT NULL CHECK (generation IN ('TEEN', 'TWENTY')),
+    trend_video_id      BIGINT NOT NULL,
+    primary_keyword_id  BIGINT NOT NULL,
+    feed_section        VARCHAR(30) CHECK (feed_section IN ('TODAY_PICK', 'RISING', 'RELATED')),
+    display_order       INT DEFAULT 0,
+    score               INT,
+    badge               VARCHAR(30),
+    source              VARCHAR(30),
+    is_active           BOOLEAN NOT NULL DEFAULT TRUE,
+    collected_at        TIMESTAMP DEFAULT NOW(),
+    created_at          TIMESTAMP DEFAULT NOW(),
+    updated_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE trend_video_keywords (
     id              BIGSERIAL PRIMARY KEY,
-    trend_feed_id   BIGINT NOT NULL,
+    trend_video_id  BIGINT NOT NULL,
     keyword_id      BIGINT NOT NULL,
-    relation_type   VARCHAR(20) NOT NULL CHECK (relation_type IN ('PRIMARY', 'TAG', 'RELATED')),
-    feed_section    VARCHAR(30) CHECK (feed_section IN ('TODAY_PICK', 'RISING', 'RELATED')),
+    relation_type   VARCHAR(20) NOT NULL CHECK (relation_type IN ('TAG', 'RELATED')),
     display_order   INT DEFAULT 0,
     score           INT,
     source          VARCHAR(30),
@@ -216,9 +246,10 @@ fun crawlAndUpdateKeywords() {
     // 1. Google Trends + 네이버 DataLab에서 연령대별 급상승 키워드 수집
     // 2. keywords 테이블 current_rank, trend_score, rank_trend 갱신
     // 3. 신규/변경 키워드에 대해서만 Gemini API 호출 → 설명 생성 후 keywords.explain 저장
-    // 4. 관련 키워드는 keyword_relations, 영상은 trend_feeds, 영상-키워드 연결은 trend_feed_keywords 저장
-    // 5. trend_logs에 순위/점수 스냅샷 저장
-    // 6. Redis 캐시 무효화
+    // 4. 영상은 trend_videos, 피드 편성은 trend_feed_items, 영상 보조 키워드는 trend_video_keywords 저장
+    // 5. 관련 키워드는 keyword_relations 저장
+    // 6. trend_logs에 순위/점수 스냅샷 저장
+    // 7. Redis 캐시 무효화
 }
 ```
 
@@ -227,7 +258,9 @@ fun crawlAndUpdateKeywords() {
 - 외부 API 응답을 Entity에 직접 저장하지 않는다.
 - 네이버 DataLab, YouTube, Google Trends, Gemini 결과는 먼저 `CollectedTrendBatch`와 하위 수집 DTO로 정규화한다.
 - `TrendCrawlingService`는 정규화된 수집 DTO만 입력받아 저장한다.
-- 저장 순서는 `keywords` upsert → `trend_logs` insert → `trend_feeds` upsert → `trend_feed_keywords` upsert → `keyword_relations` upsert 순서로 처리한다.
+- 저장 순서는 `keywords` upsert → `trend_logs` insert → `trend_videos` upsert → 기존 활성 `trend_feed_items` 비활성화 → 새 `trend_feed_items` insert → `trend_video_keywords` upsert → `keyword_relations` upsert 순서로 처리한다.
+- `trend_feed_items`는 현재 피드에 노출할 대표 키워드와 섹션/정렬/배지 정보를 가진다.
+- `trend_video_keywords`는 대표 피드 편성과 별개로, 영상 상세나 관련 키워드 탐색에 사용할 보조 키워드 연결만 가진다.
 - 수집 저장이 끝나면 `keywords`, `feed` 캐시를 무효화한다.
 - 실제 외부 API 호출 클라이언트 구현은 저장 파이프라인 검증 이후 별도 작업 단위로 진행한다.
 
@@ -258,10 +291,10 @@ fun crawlAndUpdateKeywords() {
 ```
 Week 1-2: 백엔드 기반
   [ ] Spring Boot + Kotlin 프로젝트 세팅
-  [x] Flyway 마이그레이션 스크립트 작성 (keywords, keyword_relations, trend_feeds, trend_feed_keywords, trend_logs)
+  [x] Flyway 마이그레이션 스크립트 작성 (keywords, keyword_relations, trend_videos, trend_feed_items, trend_video_keywords, trend_logs)
   [x] Redis 연동 및 캐싱 유틸 구현
   [x] YoutubeApiClient 구현 (검색, 영상 상세, 채널 정보)
-  [ ] FeedService + FeedController 구현 (/api/feed)
+  [x] FeedService + FeedController 구현 (/api/feed)
 
 Week 3: 크롤링 스케줄러
   [x] 수집 DTO + TrendCrawlingService 저장 파이프라인 구현

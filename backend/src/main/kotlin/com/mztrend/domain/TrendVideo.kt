@@ -11,8 +11,8 @@ import jakarta.persistence.Table
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "trend_feeds")
-class TrendFeed(
+@Table(name = "trend_videos")
+class TrendVideo(
     @Column(name = "youtube_video_id", nullable = false, length = 50)
     var youtubeVideoId: String = "",
     @Column(nullable = false, length = 300)
@@ -33,8 +33,6 @@ class TrendFeed(
     var publishedAt: LocalDateTime? = null,
     @Column(name = "duration_seconds")
     var durationSeconds: Int? = null,
-    @Column(length = 30)
-    var badge: String? = null,
     @Column(name = "collected_at", nullable = false)
     var collectedAt: LocalDateTime = LocalDateTime.now(),
 ) {

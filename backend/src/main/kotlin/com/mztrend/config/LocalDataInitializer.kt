@@ -3,15 +3,16 @@ package com.mztrend.config
 import com.mztrend.domain.FeedSection
 import com.mztrend.domain.Generation
 import com.mztrend.domain.RankTrend
-import com.mztrend.domain.TrendFeedKeywordRelationType
+import com.mztrend.domain.TrendVideoKeywordRelationType
 import com.mztrend.repository.command.KeywordRepository
 import com.mztrend.repository.command.TrendLogRepository
 import com.mztrend.service.TrendCrawlingService
+import com.mztrend.service.crawling.CollectedFeedItem
 import com.mztrend.service.crawling.CollectedKeyword
 import com.mztrend.service.crawling.CollectedKeywordRelation
-import com.mztrend.service.crawling.CollectedKeywordVideoMapping
 import com.mztrend.service.crawling.CollectedTrendBatch
 import com.mztrend.service.crawling.CollectedVideo
+import com.mztrend.service.crawling.CollectedVideoKeyword
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -113,7 +114,6 @@ class LocalDataInitializer(
                         viewCount = 1_240_000L,
                         publishedAt = LocalDateTime.of(2026, 5, 18, 19, 30),
                         durationSeconds = 212,
-                        badge = "HOT",
                         collectedAt = FIXED_COLLECTED_AT,
                     ),
                     CollectedVideo(
@@ -127,7 +127,6 @@ class LocalDataInitializer(
                         viewCount = 620_000L,
                         publishedAt = LocalDateTime.of(2026, 5, 17, 8, 10),
                         durationSeconds = 489,
-                        badge = "NEW",
                         collectedAt = FIXED_COLLECTED_AT,
                     ),
                     CollectedVideo(
@@ -144,42 +143,46 @@ class LocalDataInitializer(
                         collectedAt = FIXED_COLLECTED_AT,
                     ),
                 ),
-            keywordVideoMappings =
+            feedItems =
                 listOf(
-                    CollectedKeywordVideoMapping(
+                    CollectedFeedItem(
                         keywordWord = "밤양갱 챌린지",
                         youtubeVideoId = "local-teen-video-1",
-                        relationType = TrendFeedKeywordRelationType.PRIMARY,
                         feedSection = FeedSection.TODAY_PICK,
                         displayOrder = 1,
                         score = 98,
+                        badge = "HOT",
                         source = LOCAL_SEED_SOURCE,
+                        collectedAt = FIXED_COLLECTED_AT,
                     ),
-                    CollectedKeywordVideoMapping(
-                        keywordWord = "시험기간 플레이리스트",
-                        youtubeVideoId = "local-teen-video-1",
-                        relationType = TrendFeedKeywordRelationType.RELATED,
-                        feedSection = FeedSection.RELATED,
-                        displayOrder = 2,
-                        score = 64,
-                        source = LOCAL_SEED_SOURCE,
-                    ),
-                    CollectedKeywordVideoMapping(
+                    CollectedFeedItem(
                         keywordWord = "학교 브이로그",
                         youtubeVideoId = "local-teen-video-2",
-                        relationType = TrendFeedKeywordRelationType.PRIMARY,
                         feedSection = FeedSection.RISING,
                         displayOrder = 1,
                         score = 91,
+                        badge = "NEW",
                         source = LOCAL_SEED_SOURCE,
+                        collectedAt = FIXED_COLLECTED_AT,
                     ),
-                    CollectedKeywordVideoMapping(
+                    CollectedFeedItem(
                         keywordWord = "탕후루",
                         youtubeVideoId = "local-teen-video-3",
-                        relationType = TrendFeedKeywordRelationType.PRIMARY,
                         feedSection = FeedSection.RELATED,
                         displayOrder = 1,
                         score = 82,
+                        source = LOCAL_SEED_SOURCE,
+                        collectedAt = FIXED_COLLECTED_AT,
+                    ),
+                ),
+            videoKeywords =
+                listOf(
+                    CollectedVideoKeyword(
+                        keywordWord = "시험기간 플레이리스트",
+                        youtubeVideoId = "local-teen-video-1",
+                        relationType = TrendVideoKeywordRelationType.RELATED,
+                        displayOrder = 2,
+                        score = 64,
                         source = LOCAL_SEED_SOURCE,
                     ),
                 ),
@@ -260,7 +263,6 @@ class LocalDataInitializer(
                         viewCount = 930_000L,
                         publishedAt = LocalDateTime.of(2026, 5, 18, 21, 0),
                         durationSeconds = 642,
-                        badge = "HOT",
                         collectedAt = FIXED_COLLECTED_AT,
                     ),
                     CollectedVideo(
@@ -274,7 +276,6 @@ class LocalDataInitializer(
                         viewCount = 540_000L,
                         publishedAt = LocalDateTime.of(2026, 5, 15, 18, 40),
                         durationSeconds = 518,
-                        badge = "NEW",
                         collectedAt = FIXED_COLLECTED_AT,
                     ),
                     CollectedVideo(
@@ -291,42 +292,46 @@ class LocalDataInitializer(
                         collectedAt = FIXED_COLLECTED_AT,
                     ),
                 ),
-            keywordVideoMappings =
+            feedItems =
                 listOf(
-                    CollectedKeywordVideoMapping(
+                    CollectedFeedItem(
                         keywordWord = "퇴근 후 루틴",
                         youtubeVideoId = "local-twenty-video-1",
-                        relationType = TrendFeedKeywordRelationType.PRIMARY,
                         feedSection = FeedSection.TODAY_PICK,
                         displayOrder = 1,
                         score = 95,
+                        badge = "HOT",
                         source = LOCAL_SEED_SOURCE,
+                        collectedAt = FIXED_COLLECTED_AT,
                     ),
-                    CollectedKeywordVideoMapping(
-                        keywordWord = "러닝크루",
-                        youtubeVideoId = "local-twenty-video-1",
-                        relationType = TrendFeedKeywordRelationType.RELATED,
-                        feedSection = FeedSection.RELATED,
-                        displayOrder = 2,
-                        score = 70,
-                        source = LOCAL_SEED_SOURCE,
-                    ),
-                    CollectedKeywordVideoMapping(
+                    CollectedFeedItem(
                         keywordWord = "가성비 데이트",
                         youtubeVideoId = "local-twenty-video-2",
-                        relationType = TrendFeedKeywordRelationType.PRIMARY,
                         feedSection = FeedSection.RISING,
                         displayOrder = 1,
                         score = 89,
+                        badge = "NEW",
                         source = LOCAL_SEED_SOURCE,
+                        collectedAt = FIXED_COLLECTED_AT,
                     ),
-                    CollectedKeywordVideoMapping(
+                    CollectedFeedItem(
                         keywordWord = "취준 브이로그",
                         youtubeVideoId = "local-twenty-video-3",
-                        relationType = TrendFeedKeywordRelationType.PRIMARY,
                         feedSection = FeedSection.RELATED,
                         displayOrder = 1,
                         score = 84,
+                        source = LOCAL_SEED_SOURCE,
+                        collectedAt = FIXED_COLLECTED_AT,
+                    ),
+                ),
+            videoKeywords =
+                listOf(
+                    CollectedVideoKeyword(
+                        keywordWord = "러닝크루",
+                        youtubeVideoId = "local-twenty-video-1",
+                        relationType = TrendVideoKeywordRelationType.RELATED,
+                        displayOrder = 2,
+                        score = 70,
                         source = LOCAL_SEED_SOURCE,
                     ),
                 ),
