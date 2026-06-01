@@ -13,6 +13,11 @@ data class ExternalApiProperties(
         val apiKey: String = "",
         val connectTimeoutSeconds: Long = 3,
         val readTimeoutSeconds: Long = 5,
+        val regionCode: String = "KR",
+        val relevanceLanguage: String = "ko",
+        val safeSearch: String = "moderate",
+        val popularVideoMaxResults: Int = 50,
+        val popularVideoCategoryId: String = "",
     )
 
     data class Naver(

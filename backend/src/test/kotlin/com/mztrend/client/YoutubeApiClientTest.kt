@@ -16,6 +16,7 @@ import org.springframework.test.web.client.response.MockRestResponseCreators.wit
 import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
 import org.springframework.web.client.RestTemplate
 import java.time.LocalDateTime
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -73,6 +74,8 @@ class YoutubeApiClientTest {
         assertEquals(1, videos.size)
         assertEquals("video-1", videos[0].videoId)
         assertEquals("상세 영상", videos[0].title)
+        assertEquals("상세 설명 #아이브", videos[0].description)
+        assertContentEquals(listOf("아이브", "IVE", "official"), videos[0].tags)
         assertEquals("channel-1", videos[0].channelId)
         assertEquals("상세 채널", videos[0].channelName)
         assertEquals("https://img.example/max.jpg", videos[0].thumbnailUrl)
@@ -80,6 +83,26 @@ class YoutubeApiClientTest {
         assertEquals(LocalDateTime.of(2026, 5, 19, 18, 0), videos[0].publishedAt)
         assertEquals(205, videos[0].durationSeconds)
         assertEquals("10", videos[0].categoryId)
+        server.verify()
+    }
+
+    @Test
+    fun `getPopularVideos requests korea most popular videos`() {
+        server
+            .expect(requestTo(containsString("/videos")))
+            .andExpect(method(GET))
+            .andExpect(queryParam("key", TEST_API_KEY))
+            .andExpect(queryParam("part", "snippet,statistics,contentDetails"))
+            .andExpect(queryParam("chart", "mostPopular"))
+            .andExpect(queryParam("regionCode", "KR"))
+            .andExpect(queryParam("maxResults", "10"))
+            .andRespond(withSuccess(videoDetailResponse(), MediaType.APPLICATION_JSON))
+
+        val videos = client.getPopularVideos(maxResults = 10)
+
+        assertEquals(1, videos.size)
+        assertEquals("video-1", videos[0].videoId)
+        assertEquals("상세 영상", videos[0].title)
         server.verify()
     }
 
@@ -212,10 +235,12 @@ class YoutubeApiClientTest {
               "id": "video-1",
               "snippet": {
                 "title": "상세 영상",
+                "description": "상세 설명 #아이브",
                 "channelId": "channel-1",
                 "channelTitle": "상세 채널",
                 "publishedAt": "2026-05-19T09:00:00Z",
                 "categoryId": "10",
+                "tags": ["아이브", "IVE", "official"],
                 "thumbnails": {
                   "medium": { "url": "https://img.example/medium.jpg" },
                   "maxres": { "url": "https://img.example/max.jpg" }

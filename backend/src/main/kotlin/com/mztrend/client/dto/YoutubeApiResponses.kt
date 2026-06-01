@@ -37,6 +37,8 @@ internal data class YoutubeChannelItem(
 
 internal data class YoutubeSnippet(
     val title: String? = null,
+    val description: String? = null,
+    val tags: List<String> = emptyList(),
     val channelId: String? = null,
     val channelTitle: String? = null,
     val publishedAt: String? = null,

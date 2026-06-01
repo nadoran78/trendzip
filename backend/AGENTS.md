@@ -98,7 +98,12 @@ com.mztrend
 │       ├── CollectedVideo
 │       ├── CollectedFeedItem
 │       ├── CollectedVideoKeyword
-│       └── CollectedKeywordRelation
+│       ├── CollectedKeywordRelation
+│       └── candidate
+│           ├── TrendCandidate
+│           ├── TrendCandidateSource
+│           ├── YoutubePopularVideoCandidateSource
+│           └── YoutubeVideoCandidateExtractor
 ├── repository
 │   ├── command
 │   │   ├── KeywordRepository
@@ -126,7 +131,6 @@ com.mztrend
 │   └── TrendLog
 ├── client
 │   ├── YoutubeApiClient
-│   ├── GoogleTrendsClient
 │   ├── NaverDataLabClient
 │   └── GeminiApiClient
 ├── scheduler
@@ -243,35 +247,39 @@ CREATE TABLE trend_logs (
 // 매주 월요일 오전 3시 실행
 @Scheduled(cron = "0 0 3 * * MON")
 fun crawlAndUpdateKeywords() {
-    // 1. Google Trends + 네이버 DataLab에서 연령대별 급상승 키워드 수집
-    // 2. keywords 테이블 current_rank, trend_score, rank_trend 갱신
-    // 3. 신규/변경 키워드에 대해서만 Gemini API 호출 → 설명 생성 후 keywords.explain 저장
-    // 4. 영상은 trend_videos, 피드 편성은 trend_feed_items, 영상 보조 키워드는 trend_video_keywords 저장
-    // 5. 관련 키워드는 keyword_relations 저장
-    // 6. trend_logs에 순위/점수 스냅샷 저장
-    // 7. Redis 캐시 무효화
+    // 1. YouTube 현재 인기 영상에서 후보 키워드 수집
+    // 2. 네이버 DataLab에서 후보 키워드의 연령대별 관심도 검증
+    // 3. keywords 테이블 current_rank, trend_score, rank_trend 갱신
+    // 4. 신규/변경 키워드에 대해서만 Gemini API 호출 → 설명 생성 후 keywords.explain 저장
+    // 5. 영상은 trend_videos, 피드 편성은 trend_feed_items, 영상 보조 키워드는 trend_video_keywords 저장
+    // 6. 관련 키워드는 keyword_relations 저장
+    // 7. trend_logs에 순위/점수 스냅샷 저장
+    // 8. Redis 캐시 무효화
 }
 ```
 
 ### 크롤링 저장 파이프라인
 
 - 외부 API 응답을 Entity에 직접 저장하지 않는다.
-- 네이버 DataLab, YouTube, Google Trends, Gemini 결과는 먼저 `CollectedTrendBatch`와 하위 수집 DTO로 정규화한다.
+- YouTube, 네이버 DataLab, Gemini 결과는 먼저 후보 DTO와 `CollectedTrendBatch` 하위 수집 DTO로 정규화한다.
+- Google Trends는 MVP 크롤링 파이프라인에서 제외한다. 공식 API는 Alpha 단계이고 비공식 크롤링은 운영 안정성이 낮으므로 도입하지 않는다.
+- 후보 키워드 발견은 `TrendCandidateSource` 인터페이스 뒤에 두고, 기본 구현은 `YoutubePopularVideoCandidateSource`를 사용한다.
 - `TrendCrawlingService`는 정규화된 수집 DTO만 입력받아 저장한다.
 - 저장 순서는 `keywords` upsert → `trend_logs` insert → `trend_videos` upsert → 기존 활성 `trend_feed_items` 비활성화 → 새 `trend_feed_items` insert → `trend_video_keywords` upsert → `keyword_relations` upsert 순서로 처리한다.
 - `trend_feed_items`는 현재 피드에 노출할 대표 키워드와 섹션/정렬/배지 정보를 가진다.
 - `trend_video_keywords`는 대표 피드 편성과 별개로, 영상 상세나 관련 키워드 탐색에 사용할 보조 키워드 연결만 가진다.
 - 수집 저장이 끝나면 `keywords`, `feed` 캐시를 무효화한다.
-- 실제 외부 API 호출 클라이언트 구현은 저장 파이프라인 검증 이후 별도 작업 단위로 진행한다.
+- 네이버 DataLab, Gemini 연동과 스케줄러 조립은 후보 수집 구조 검증 이후 별도 작업 단위로 진행한다.
 
 ---
 
 ## 제약사항
 
-1. **YouTube API 할당량**: 일 10,000 유닛 엄수. 검색 1회 = 100 유닛. Redis 캐싱 없이 절대 호출 금지
+1. **YouTube API 할당량**: 일 10,000 유닛 엄수. 검색 1회 = 100 유닛. 인기 영상 조회와 검색 호출 수를 스케줄러 단위로 제한
 2. **Gemini API**: 스케줄러에서만 호출. 유저 요청 경로에서 호출 절대 금지
-3. **Google Trends**: 비공식 API이므로 요청 간격 최소 1초 이상 유지
-4. **인증 없음**: MVP에서 사용자 인증 구현하지 않음. 모든 API 퍼블릭
+3. **네이버 DataLab**: YouTube 후보 키워드의 세대별 검증/점수화에 사용. 키워드 발견 소스로 단독 사용하지 않음
+4. **Google Trends 제외**: MVP에서는 공식 Alpha API와 비공식 크롤링을 모두 사용하지 않음
+5. **인증 없음**: MVP에서 사용자 인증 구현하지 않음. 모든 API 퍼블릭
 
 ---
 
@@ -298,7 +306,7 @@ Week 1-2: 백엔드 기반
 
 Week 3: 크롤링 스케줄러
   [x] 수집 DTO + TrendCrawlingService 저장 파이프라인 구현
-  [ ] GoogleTrendsClient 구현 (비공식 API, 요청 간격 준수)
+  [x] YouTube 인기 영상 기반 후보 키워드 수집 구조 구현
   [ ] NaverDataLabClient 구현 (공식 API)
   [ ] GeminiApiClient 구현 (설명 생성)
   [ ] TrendCrawlingScheduler 구현

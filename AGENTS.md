@@ -42,9 +42,8 @@
 
 | API | 용도 |
 |-----|------|
-| YouTube Data API v3 | 세대별 영상/채널 검색 |
-| Google Trends (비공식) | 급상승 키워드 수집 |
-| 네이버 DataLab API | 연령대별 검색 트렌드 (공식 API) |
+| YouTube Data API v3 | 현재 인기 영상 조회, 후보 키워드 추출, 키워드별 영상 검색 |
+| 네이버 DataLab API | YouTube 후보 키워드의 연령대별 검색 트렌드 검증 |
 | Gemini API (무료 티어) | 키워드 "왜 뜨는지" 설명 자동 생성 |
 
 ---
@@ -156,7 +155,7 @@ REDIS_TOKEN=
 
 ```
 Week 1-2  백엔드 기반 (Spring Boot + YouTube API + Redis)
-Week 3    크롤링 스케줄러 (Google Trends + 네이버 DataLab + Gemini)
+Week 3    크롤링 스케줄러 (YouTube 후보 수집 + 네이버 DataLab + Gemini)
 Week 4    키워드 API + 프론트 기반 세팅
 Week 5-6  프론트 전체 페이지 구현 + 배포
 ```

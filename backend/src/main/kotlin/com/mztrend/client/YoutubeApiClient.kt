@@ -49,14 +49,39 @@ class YoutubeApiClient(
                         "q" to buildSearchQuery(keyword, generation),
                         "maxResults" to maxResults.toString(),
                         "order" to "relevance",
-                        "regionCode" to "KR",
-                        "relevanceLanguage" to "ko",
-                        "safeSearch" to "moderate",
+                        "regionCode" to properties.youtube.regionCode,
+                        "relevanceLanguage" to properties.youtube.relevanceLanguage,
+                        "safeSearch" to properties.youtube.safeSearch,
                         "videoEmbeddable" to "true",
                     ),
             )
 
         return response.items.mapNotNull { it.toSearchVideo() }
+    }
+
+    fun getPopularVideos(maxResults: Int = properties.youtube.popularVideoMaxResults): List<YoutubeVideoDetail> {
+        require(maxResults in 1..MAX_SEARCH_SIZE) { "YouTube popular video maxResults must be between 1 and 50." }
+
+        val params =
+            mutableMapOf(
+                "part" to "snippet,statistics,contentDetails",
+                "chart" to "mostPopular",
+                "regionCode" to properties.youtube.regionCode,
+                "maxResults" to maxResults.toString(),
+            )
+
+        properties.youtube.popularVideoCategoryId
+            .takeIf { it.isNotBlank() }
+            ?.let { params["videoCategoryId"] = it }
+
+        val response =
+            get(
+                path = "/videos",
+                responseType = YoutubeVideoListResponse::class.java,
+                params = params,
+            )
+
+        return response.items.mapNotNull { it.toVideoDetail() }
     }
 
     fun getVideoDetails(videoIds: Collection<String>): List<YoutubeVideoDetail> =
@@ -162,6 +187,8 @@ class YoutubeApiClient(
         return YoutubeVideoDetail(
             videoId = videoId,
             title = title,
+            description = snippet.description?.takeIf { it.isNotBlank() },
+            tags = snippet.tags.filter { it.isNotBlank() },
             channelId = snippet.channelId?.takeIf { it.isNotBlank() },
             channelName = channelName,
             thumbnailUrl = snippet.thumbnails?.bestUrl(),
