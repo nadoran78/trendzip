@@ -37,7 +37,16 @@ external:
     popular-video-max-results: ${YOUTUBE_POPULAR_VIDEO_MAX_RESULTS:50}
     popular-video-category-id: ${YOUTUBE_POPULAR_VIDEO_CATEGORY_ID:}
   naver:
+    base-url: ${NAVER_BASE_URL:https://openapi.naver.com/v1/datalab}
     client-id: ${NAVER_CLIENT_ID:}
     client-secret: ${NAVER_CLIENT_SECRET:}
+    connect-timeout-seconds: ${NAVER_CONNECT_TIMEOUT_SECONDS:3}
+    read-timeout-seconds: ${NAVER_READ_TIMEOUT_SECONDS:5}
+    trend-period-days: ${NAVER_TREND_PERIOD_DAYS:30}
+    time-unit: ${NAVER_TIME_UNIT:date}
+    device: ${NAVER_DEVICE:mo}
+    max-keyword-group-size: ${NAVER_MAX_KEYWORD_GROUP_SIZE:5}
+    max-candidate-count: ${NAVER_MAX_CANDIDATE_COUNT:50}
+    min-search-ratio: ${NAVER_MIN_SEARCH_RATIO:1.0}
   gemini:
     api-key: ${GEMINI_API_KEY:}

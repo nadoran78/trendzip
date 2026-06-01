@@ -102,8 +102,10 @@ com.mztrend
 │       └── candidate
 │           ├── TrendCandidate
 │           ├── TrendCandidateSource
+│           ├── ScoredTrendKeyword
 │           ├── YoutubePopularVideoCandidateSource
-│           └── YoutubeVideoCandidateExtractor
+│           ├── YoutubeVideoCandidateExtractor
+│           └── NaverDataLabTrendScorer
 ├── repository
 │   ├── command
 │   │   ├── KeywordRepository
@@ -264,6 +266,7 @@ fun crawlAndUpdateKeywords() {
 - YouTube, 네이버 DataLab, Gemini 결과는 먼저 후보 DTO와 `CollectedTrendBatch` 하위 수집 DTO로 정규화한다.
 - Google Trends는 MVP 크롤링 파이프라인에서 제외한다. 공식 API는 Alpha 단계이고 비공식 크롤링은 운영 안정성이 낮으므로 도입하지 않는다.
 - 후보 키워드 발견은 `TrendCandidateSource` 인터페이스 뒤에 두고, 기본 구현은 `YoutubePopularVideoCandidateSource`를 사용한다.
+- 세대별 후보 검증은 네이버 DataLab Search Trend API로 수행하고, `TEEN`은 `ages=["2"]`, `TWENTY`는 `ages=["3","4"]`로 조회한다.
 - `TrendCrawlingService`는 정규화된 수집 DTO만 입력받아 저장한다.
 - 저장 순서는 `keywords` upsert → `trend_logs` insert → `trend_videos` upsert → 기존 활성 `trend_feed_items` 비활성화 → 새 `trend_feed_items` insert → `trend_video_keywords` upsert → `keyword_relations` upsert 순서로 처리한다.
 - `trend_feed_items`는 현재 피드에 노출할 대표 키워드와 섹션/정렬/배지 정보를 가진다.
@@ -307,7 +310,8 @@ Week 1-2: 백엔드 기반
 Week 3: 크롤링 스케줄러
   [x] 수집 DTO + TrendCrawlingService 저장 파이프라인 구현
   [x] YouTube 인기 영상 기반 후보 키워드 수집 구조 구현
-  [ ] NaverDataLabClient 구현 (공식 API)
+  [x] NaverDataLabClient 구현 (공식 API)
+  [x] NaverDataLabTrendScorer 구현 (세대별 후보 점수화)
   [ ] GeminiApiClient 구현 (설명 생성)
   [ ] TrendCrawlingScheduler 구현
   [ ] 초기 시드 키워드 SQL 작성 (10대/20대 각 50개)

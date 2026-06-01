@@ -21,8 +21,17 @@ data class ExternalApiProperties(
     )
 
     data class Naver(
+        val baseUrl: String = "https://openapi.naver.com/v1/datalab",
         val clientId: String = "",
         val clientSecret: String = "",
+        val connectTimeoutSeconds: Long = 3,
+        val readTimeoutSeconds: Long = 5,
+        val trendPeriodDays: Long = 30,
+        val timeUnit: String = "date",
+        val device: String = "mo",
+        val maxKeywordGroupSize: Int = 5,
+        val maxCandidateCount: Int = 50,
+        val minSearchRatio: Double = 1.0,
     )
 
     data class Gemini(
