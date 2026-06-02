@@ -94,11 +94,15 @@ com.mztrend
 │   ├── TrendCrawlingService
 │   └── crawling
 │       ├── CollectedTrendBatch
+│       ├── CollectedKeywordVideoBatch
 │       ├── CollectedKeyword
 │       ├── CollectedVideo
 │       ├── CollectedFeedItem
 │       ├── CollectedVideoKeyword
 │       ├── CollectedKeywordRelation
+│       ├── KeywordVideoCollector
+│       ├── YoutubeKeywordVideoCollector
+│       ├── TrendCrawlingBatchAssembler
 │       └── candidate
 │           ├── TrendCandidate
 │           ├── TrendCandidateSource
@@ -312,6 +316,7 @@ Week 3: 크롤링 스케줄러
   [x] YouTube 인기 영상 기반 후보 키워드 수집 구조 구현
   [x] NaverDataLabClient 구현 (공식 API)
   [x] NaverDataLabTrendScorer 구현 (세대별 후보 점수화)
+  [x] 점수화 키워드 기반 YouTube 영상 보강 + 수집 배치 조립
   [ ] GeminiApiClient 구현 (설명 생성)
   [ ] TrendCrawlingScheduler 구현
   [ ] 초기 시드 키워드 SQL 작성 (10대/20대 각 50개)

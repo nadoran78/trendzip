@@ -18,6 +18,8 @@ data class ExternalApiProperties(
         val safeSearch: String = "moderate",
         val popularVideoMaxResults: Int = 50,
         val popularVideoCategoryId: String = "",
+        val keywordSearchMaxKeywords: Int = 10,
+        val keywordSearchMaxResults: Int = 5,
     )
 
     data class Naver(

@@ -16,6 +16,8 @@ class HttpClientConfig {
         val youtube = properties.youtube
         require(youtube.connectTimeoutSeconds > 0) { "YouTube connect timeout must be positive." }
         require(youtube.readTimeoutSeconds > 0) { "YouTube read timeout must be positive." }
+        require(youtube.keywordSearchMaxKeywords > 0) { "YouTube keyword search max keywords must be positive." }
+        require(youtube.keywordSearchMaxResults in 1..50) { "YouTube keyword search max results must be between 1 and 50." }
 
         return restTemplateBuilder
             .connectTimeout(Duration.ofSeconds(youtube.connectTimeoutSeconds))

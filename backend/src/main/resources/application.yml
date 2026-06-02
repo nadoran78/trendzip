@@ -36,6 +36,8 @@ external:
     safe-search: ${YOUTUBE_SAFE_SEARCH:moderate}
     popular-video-max-results: ${YOUTUBE_POPULAR_VIDEO_MAX_RESULTS:50}
     popular-video-category-id: ${YOUTUBE_POPULAR_VIDEO_CATEGORY_ID:}
+    keyword-search-max-keywords: ${YOUTUBE_KEYWORD_SEARCH_MAX_KEYWORDS:10}
+    keyword-search-max-results: ${YOUTUBE_KEYWORD_SEARCH_MAX_RESULTS:5}
   naver:
     base-url: ${NAVER_BASE_URL:https://openapi.naver.com/v1/datalab}
     client-id: ${NAVER_CLIENT_ID:}
