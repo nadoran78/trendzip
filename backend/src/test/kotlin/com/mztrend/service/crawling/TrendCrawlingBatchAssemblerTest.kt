@@ -15,36 +15,34 @@ class TrendCrawlingBatchAssemblerTest {
     @Test
     fun `assemble converts scored keywords and collected videos to crawling batch`() {
         val assembler =
-            TrendCrawlingBatchAssembler(
-                keywordVideoCollector =
-                    FakeKeywordVideoCollector(
-                        CollectedKeywordVideoBatch(
-                            videos =
-                                listOf(
-                                    CollectedVideo(
-                                        youtubeVideoId = "video-1",
-                                        title = "영상 1",
-                                        channelName = "채널 1",
-                                    ),
+            assembler(
+                batch =
+                    CollectedKeywordVideoBatch(
+                        videos =
+                            listOf(
+                                CollectedVideo(
+                                    youtubeVideoId = "video-1",
+                                    title = "영상 1",
+                                    channelName = "채널 1",
                                 ),
-                            feedItems =
-                                listOf(
-                                    CollectedFeedItem(
-                                        keywordWord = "아이브",
-                                        youtubeVideoId = "video-1",
-                                        feedSection = FeedSection.TODAY_PICK,
-                                        displayOrder = 1,
-                                    ),
+                            ),
+                        feedItems =
+                            listOf(
+                                CollectedFeedItem(
+                                    keywordWord = "아이브",
+                                    youtubeVideoId = "video-1",
+                                    feedSection = FeedSection.TODAY_PICK,
+                                    displayOrder = 1,
                                 ),
-                            videoKeywords =
-                                listOf(
-                                    CollectedVideoKeyword(
-                                        keywordWord = "아이브",
-                                        youtubeVideoId = "video-1",
-                                        relationType = TrendVideoKeywordRelationType.RELATED,
-                                    ),
+                            ),
+                        videoKeywords =
+                            listOf(
+                                CollectedVideoKeyword(
+                                    keywordWord = "아이브",
+                                    youtubeVideoId = "video-1",
+                                    relationType = TrendVideoKeywordRelationType.RELATED,
                                 ),
-                        ),
+                            ),
                     ),
             )
 
@@ -63,6 +61,7 @@ class TrendCrawlingBatchAssemblerTest {
         assertEquals(listOf(1, 2), batch.keywords.map { it.currentRank })
         assertEquals(listOf(90_000L, 70_000L), batch.keywords.map { it.trendScore })
         assertNull(batch.keywords[0].rankTrend)
+        assertEquals(listOf(null, null), batch.keywords.map { it.explain })
         assertEquals(1, batch.videos.size)
         assertEquals(1, batch.feedItems.size)
         assertEquals(1, batch.videoKeywords.size)
@@ -71,7 +70,7 @@ class TrendCrawlingBatchAssemblerTest {
 
     @Test
     fun `assemble rejects scored keywords from another generation`() {
-        val assembler = TrendCrawlingBatchAssembler(FakeKeywordVideoCollector(EMPTY_VIDEO_BATCH))
+        val assembler = assembler()
 
         val exception =
             assertFailsWith<IllegalArgumentException> {
@@ -83,6 +82,11 @@ class TrendCrawlingBatchAssemblerTest {
 
         assertEquals("Scored trend keywords must belong to the requested generation. generation=TEEN", exception.message)
     }
+
+    private fun assembler(batch: CollectedKeywordVideoBatch = EMPTY_VIDEO_BATCH): TrendCrawlingBatchAssembler =
+        TrendCrawlingBatchAssembler(
+            keywordVideoCollector = FakeKeywordVideoCollector(batch),
+        )
 
     private fun scoredKeyword(
         word: String,

@@ -25,6 +25,7 @@ class TrendCrawlingBatchAssembler(
             videos = videoBatch.videos,
             feedItems = videoBatch.feedItems,
             videoKeywords = videoBatch.videoKeywords,
+            // Keyword relation generation policy is not defined yet. Add a dedicated collector before populating this.
             keywordRelations = emptyList(),
         )
     }

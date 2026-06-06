@@ -56,9 +56,11 @@ curl "http://localhost:8080/api/keywords?generation=TWENTY"
 
 - Command/write 경로는 JPA Entity와 `JpaRepository`를 우선 사용한다.
 - Query/read 경로는 jOOQ `DSLContext`를 우선 사용하고 DTO projection으로 응답한다.
+- command 흐름의 정책 판단에 필요한 조회는 command-side repository에 둘 수 있다. 이 경우에도 복잡한 join/projection은 jOOQ를 사용할 수 있으며, jOOQ 사용 여부만으로 `repository/query`에 배치하지 않는다.
+- `repository/query`는 사용자 API 응답, 화면 조회, read model projection 중심으로 사용한다.
 - JPA Entity 간 `@ManyToOne`, `@OneToMany`, `@OneToOne`, `@ManyToMany` 연관관계는 사용하지 않는다.
 - DB foreign key constraint는 생성하지 않는다. 참조 관계는 `keyword_id` 같은 ID 컬럼과 인덱스로 관리한다.
-- 연관 데이터 조회는 query layer에서 ID 기반 명시적 join으로 처리한다.
+- 연관 데이터 조회는 조회 목적에 맞는 repository에서 ID 기반 명시적 join으로 처리한다.
 - API 응답이나 조회 전용 모델에 JPA Entity를 직접 반환하지 않는다.
 - jOOQ generated source는 `build/generated-src/jooq/main` 아래에 생성하며 커밋하지 않는다.
 - clean checkout 또는 `./gradlew clean` 이후에는 `docker compose up -d` 후 `cd backend && ./gradlew prepareJooq build`로 검증한다.
@@ -92,6 +94,7 @@ com.mztrend
 │   ├── FeedService
 │   ├── KeywordService
 │   ├── TrendCrawlingService
+│   ├── TrendCrawlingPersistenceService
 │   └── crawling
 │       ├── CollectedTrendBatch
 │       ├── CollectedKeywordVideoBatch
@@ -103,6 +106,14 @@ com.mztrend
 │       ├── KeywordVideoCollector
 │       ├── YoutubeKeywordVideoCollector
 │       ├── TrendCrawlingBatchAssembler
+│       ├── KeywordExplainGenerator
+│       ├── GeminiKeywordExplainGenerator
+│       ├── KeywordExplainRefreshPolicy
+│       ├── KeywordExplainRefreshAppender
+│       ├── KeywordExplainRefreshDecision
+│       ├── KeywordExplainRefreshReason
+│       ├── KeywordExplainRequest
+│       ├── KeywordExplainResult
 │       └── candidate
 │           ├── TrendCandidate
 │           ├── TrendCandidateSource
@@ -117,7 +128,9 @@ com.mztrend
 │   │   ├── TrendFeedItemRepository
 │   │   ├── TrendVideoKeywordRepository
 │   │   ├── TrendVideoRepository
-│   │   └── TrendLogRepository
+│   │   ├── TrendLogRepository
+│   │   ├── TrendLogLookupRepository
+│   │   └── TrendCrawlRunRepository
 │   └── query
 │       ├── FeedQueryRepository
 │       ├── KeywordQueryRepository
@@ -128,6 +141,8 @@ com.mztrend
 │   ├── Keyword
 │   ├── KeywordRelation
 │   ├── RankTrend
+│   ├── TrendCrawlRun
+│   ├── TrendCrawlRunStatus (enum: RUNNING, COMPLETED, FAILED)
 │   ├── TrendVideo
 │   ├── TrendFeedItem
 │   ├── TrendVideoKeyword
@@ -268,15 +283,24 @@ fun crawlAndUpdateKeywords() {
 
 - 외부 API 응답을 Entity에 직접 저장하지 않는다.
 - YouTube, 네이버 DataLab, Gemini 결과는 먼저 후보 DTO와 `CollectedTrendBatch` 하위 수집 DTO로 정규화한다.
+- `CollectedTrendBatch` 검증은 크롤링 회차 생성 및 Gemini 호출 전에 먼저 수행한다. 검증에는 feed 중복뿐 아니라 `feedItems`, `videoKeywords`, `keywordRelations`가 batch 내부의 `keywords`, `videos`를 올바르게 참조하는지도 포함한다. 저장 서비스 내부에서도 방어적으로 동일 검증을 유지할 수 있다.
 - Google Trends는 MVP 크롤링 파이프라인에서 제외한다. 공식 API는 Alpha 단계이고 비공식 크롤링은 운영 안정성이 낮으므로 도입하지 않는다.
 - 후보 키워드 발견은 `TrendCandidateSource` 인터페이스 뒤에 두고, 기본 구현은 `YoutubePopularVideoCandidateSource`를 사용한다.
 - 세대별 후보 검증은 네이버 DataLab Search Trend API로 수행하고, `TEEN`은 `ages=["2"]`, `TWENTY`는 `ages=["3","4"]`로 조회한다.
-- `TrendCrawlingService`는 정규화된 수집 DTO만 입력받아 저장한다.
-- 저장 순서는 `keywords` upsert → `trend_logs` insert → `trend_videos` upsert → 기존 활성 `trend_feed_items` 비활성화 → 새 `trend_feed_items` insert → `trend_video_keywords` upsert → `keyword_relations` upsert 순서로 처리한다.
+- `TrendCrawlingService`는 정규화된 수집 DTO를 입력받아 크롤링 회차 생성, 최근 완료 회차/로그 조회, 설명 갱신 대상 판정, Gemini 호출, 저장 서비스 호출을 오케스트레이션한다.
+- `TrendCrawlingPersistenceService`는 DB 저장만 담당하며 `@Transactional` 범위 안에서 `keywords` upsert → `trend_logs` insert → `trend_videos` upsert → 기존 활성 `trend_feed_items` 비활성화 → 새 `trend_feed_items` insert → `trend_video_keywords` upsert → `keyword_relations` upsert 순서로 처리한다.
+- `trend_crawl_runs`는 세대별 크롤링 실행 회차와 상태를 기록하고, `trend_logs.crawl_run_id`는 해당 로그가 생성된 회차를 가리킨다. 외래키 제약은 두지 않고 id 기반으로 관리한다.
 - `trend_feed_items`는 현재 피드에 노출할 대표 키워드와 섹션/정렬/배지 정보를 가진다.
 - `trend_video_keywords`는 대표 피드 편성과 별개로, 영상 상세나 관련 키워드 탐색에 사용할 보조 키워드 연결만 가진다.
+- 현재 `TrendCrawlingBatchAssembler`는 keyword relation 생성 정책이 없으므로 `keywordRelations`를 `emptyList()`로 둔다. 임의 관계를 만들지 않는다.
+- 향후 같은 영상에 함께 연결된 키워드, 제목/설명 동시 등장, 검색 트렌드 동행성 등을 기준으로 `KeywordRelationCollector`를 추가한 뒤 `keywordRelations`를 채운다.
+- Gemini 설명 생성은 유저 요청 경로에서 호출하지 않고, `TrendCrawlingService`의 persistence 트랜잭션 밖에서만 수행한다.
+- Gemini 호출 대상은 신규 키워드, 기존 설명 없음, 최근 완료 회차 기준 2주 연속 최초 달성, 장기 지속 기준 달성, 재진입, 급상승 이벤트가 발생한 키워드로 제한한다.
+- 재진입은 직전 완료 회차에는 없고 과거 완료된 crawl run의 ranked `trend_logs`에는 등장한 키워드로 판정한다. 과거 등장 여부는 최근 회차 조회 범위에만 의존하지 않으며, 실패 회차나 `crawl_run_id=0` 보정 로그는 재진입 근거로 사용하지 않는다.
+- Gemini 생성 실패 또는 빈 응답은 해당 키워드 설명만 스킵하고, 기존 설명은 덮어쓰지 않는다.
 - 수집 저장이 끝나면 `keywords`, `feed` 캐시를 무효화한다.
-- 네이버 DataLab, Gemini 연동과 스케줄러 조립은 후보 수집 구조 검증 이후 별도 작업 단위로 진행한다.
+- local seed 초기화는 확인용 실행 이력을 깔끔하게 보기 위해 `trend_logs`와 `trend_crawl_runs`를 함께 정리한 뒤 다시 저장한다.
+- 스케줄러 조립은 후보 수집, 네이버 DataLab 점수화, Gemini 설명 생성 구조 검증 이후 별도 작업 단위로 진행한다.
 
 ---
 
@@ -317,7 +341,8 @@ Week 3: 크롤링 스케줄러
   [x] NaverDataLabClient 구현 (공식 API)
   [x] NaverDataLabTrendScorer 구현 (세대별 후보 점수화)
   [x] 점수화 키워드 기반 YouTube 영상 보강 + 수집 배치 조립
-  [ ] GeminiApiClient 구현 (설명 생성)
+  [x] GeminiApiClient 구현 (설명 생성)
+  [ ] KeywordRelationCollector 구현 및 TrendCrawlingBatchAssembler 연결
   [ ] TrendCrawlingScheduler 구현
   [ ] 초기 시드 키워드 SQL 작성 (10대/20대 각 50개)
 
