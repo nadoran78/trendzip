@@ -4,7 +4,7 @@ import com.mztrend.domain.FeedSection
 import com.mztrend.domain.Generation
 import com.mztrend.domain.RankTrend
 import com.mztrend.domain.TrendVideoKeywordRelationType
-import com.mztrend.repository.command.KeywordRepository
+import com.mztrend.repository.command.TrendCrawlRunRepository
 import com.mztrend.repository.command.TrendLogRepository
 import com.mztrend.service.TrendCrawlingService
 import com.mztrend.service.crawling.CollectedFeedItem
@@ -18,7 +18,6 @@ import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
 @Component
@@ -26,34 +25,19 @@ import java.time.LocalDateTime
 @ConditionalOnProperty(prefix = "app.local-data", name = ["enabled"], havingValue = "true")
 class LocalDataInitializer(
     private val trendCrawlingService: TrendCrawlingService,
-    private val keywordRepository: KeywordRepository,
     private val trendLogRepository: TrendLogRepository,
+    private val trendCrawlRunRepository: TrendCrawlRunRepository,
 ) : ApplicationRunner {
-    @Transactional
     override fun run(args: ApplicationArguments) {
         val batches = listOf(teenBatch(), twentyBatch())
 
-        deleteSeedTrendLogs(batches)
+        deleteSeedTrendHistory()
         batches.forEach(trendCrawlingService::saveCollectedTrends)
     }
 
-    private fun deleteSeedTrendLogs(batches: List<CollectedTrendBatch>) {
-        val keywordIds =
-            batches
-                .flatMap { batch ->
-                    val words = batch.keywords.map { it.word }.toSet()
-
-                    keywordRepository
-                        .findAllByGenerationAndWordIn(batch.generation, words)
-                        .mapNotNull { it.id }
-                }
-
-        if (keywordIds.isEmpty()) {
-            return
-        }
-
-        val trendLogs = trendLogRepository.findAllByKeywordIdIn(keywordIds)
-        trendLogRepository.deleteAllInBatch(trendLogs)
+    private fun deleteSeedTrendHistory() {
+        trendLogRepository.deleteAllInBatch()
+        trendCrawlRunRepository.deleteAllInBatch()
     }
 
     private fun teenBatch(): CollectedTrendBatch =

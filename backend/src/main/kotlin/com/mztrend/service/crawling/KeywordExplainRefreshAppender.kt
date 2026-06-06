@@ -1,0 +1,99 @@
+package com.mztrend.service.crawling
+
+import com.mztrend.common.logger
+import org.springframework.stereotype.Service
+import java.time.Clock
+import java.time.LocalDateTime
+
+@Service
+class KeywordExplainRefreshAppender(
+    private val keywordExplainGenerator: KeywordExplainGenerator,
+    private val clock: Clock,
+) {
+    fun appendExplains(
+        batch: CollectedTrendBatch,
+        refreshDecisions: List<KeywordExplainRefreshDecision>,
+    ): CollectedTrendBatch {
+        if (refreshDecisions.isEmpty()) return batch
+
+        val videosById = batch.videos.associateBy { it.youtubeVideoId }
+        val videoIdsByKeyword = batch.videoIdsByKeyword()
+        val explainedAt = LocalDateTime.now(clock)
+        val explainsByWord =
+            refreshDecisions
+                .mapNotNull { decision ->
+                    val videos =
+                        videoIdsByKeyword[decision.keyword.word]
+                            ?.mapNotNull(videosById::get)
+                            ?: emptyList()
+
+                    generateExplain(batch, decision, videos, explainedAt)
+                }.toMap()
+
+        if (explainsByWord.isEmpty()) return batch
+
+        return batch.copy(
+            keywords =
+                batch.keywords.map { keyword ->
+                    explainsByWord[keyword.word]
+                        ?.let { keyword.copy(explain = it.explain, explainedAt = it.explainedAt) }
+                        ?: keyword
+                },
+        )
+    }
+
+    private fun generateExplain(
+        batch: CollectedTrendBatch,
+        decision: KeywordExplainRefreshDecision,
+        videos: List<CollectedVideo>,
+        explainedAt: LocalDateTime,
+    ): Pair<String, KeywordExplainResult>? =
+        runCatching {
+            val generatedText =
+                keywordExplainGenerator.generate(
+                    KeywordExplainRequest(
+                        generation = batch.generation,
+                        keyword = decision.keyword,
+                        refreshReason = decision.reason,
+                        previousExplain = decision.previousExplain,
+                        previousRank = decision.previousRank,
+                        consecutiveWeeks = decision.consecutiveWeeks,
+                        videos = videos,
+                    ),
+                )
+            val explain = generatedText.trim()
+
+            explain
+                .takeIf { it.isNotBlank() }
+                ?.let { decision.keyword.word to KeywordExplainResult(decision.keyword.word, it, explainedAt) }
+        }.onFailure { exception ->
+            log.warn(
+                "Skip keyword explain generation because Gemini request failed. generation={}, keyword={}, reason={}, message={}",
+                batch.generation,
+                decision.keyword.word,
+                decision.reason,
+                exception.message,
+            )
+        }.getOrNull()
+
+    private fun CollectedTrendBatch.videoIdsByKeyword(): Map<String, List<String>> {
+        val videoIdsByKeyword = linkedMapOf<String, MutableList<String>>()
+
+        feedItems.forEach { feedItem ->
+            videoIdsByKeyword
+                .getOrPut(feedItem.keywordWord) { mutableListOf() }
+                .add(feedItem.youtubeVideoId)
+        }
+        videoKeywords.forEach { videoKeyword ->
+            videoIdsByKeyword
+                .getOrPut(videoKeyword.keywordWord) { mutableListOf() }
+                .add(videoKeyword.youtubeVideoId)
+        }
+
+        return videoIdsByKeyword.mapValues { (_, videoIds) -> videoIds.distinct() }
+    }
+
+    companion object {
+        private val log = logger<KeywordExplainRefreshAppender>()
+    }
+}
