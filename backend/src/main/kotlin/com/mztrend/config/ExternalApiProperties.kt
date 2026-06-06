@@ -37,6 +37,16 @@ data class ExternalApiProperties(
     )
 
     data class Gemini(
+        val baseUrl: String = "https://generativelanguage.googleapis.com/v1beta",
         val apiKey: String = "",
+        val model: String = "gemini-3.5-flash",
+        val connectTimeoutSeconds: Long = 3,
+        val readTimeoutSeconds: Long = 10,
+        val maxExplainKeywordCount: Int = 10,
+        val maxPromptVideoCount: Int = 3,
+        val rankSurgeThreshold: Int = 3,
+        val longRunningWeeks: Int = 4,
+        val temperature: Double = 0.3,
+        val maxOutputTokens: Int = 512,
     )
 }

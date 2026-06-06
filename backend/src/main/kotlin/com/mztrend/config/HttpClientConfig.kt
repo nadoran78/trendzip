@@ -43,4 +43,27 @@ class HttpClientConfig {
             .readTimeout(Duration.ofSeconds(naver.readTimeoutSeconds))
             .build()
     }
+
+    @Bean
+    fun geminiRestTemplate(
+        restTemplateBuilder: RestTemplateBuilder,
+        properties: ExternalApiProperties,
+    ): RestTemplate {
+        val gemini = properties.gemini
+        require(gemini.baseUrl.isNotBlank()) { "Gemini base URL must not be blank." }
+        require(gemini.model.isNotBlank()) { "Gemini model must not be blank." }
+        require(gemini.connectTimeoutSeconds > 0) { "Gemini connect timeout must be positive." }
+        require(gemini.readTimeoutSeconds > 0) { "Gemini read timeout must be positive." }
+        require(gemini.maxExplainKeywordCount > 0) { "Gemini max explain keyword count must be positive." }
+        require(gemini.maxPromptVideoCount >= 0) { "Gemini max prompt video count must not be negative." }
+        require(gemini.rankSurgeThreshold > 0) { "Gemini rank surge threshold must be positive." }
+        require(gemini.longRunningWeeks > 1) { "Gemini long running weeks must be greater than 1." }
+        require(gemini.maxOutputTokens > 0) { "Gemini max output tokens must be positive." }
+        require(gemini.temperature in 0.0..2.0) { "Gemini temperature must be between 0.0 and 2.0." }
+
+        return restTemplateBuilder
+            .connectTimeout(Duration.ofSeconds(gemini.connectTimeoutSeconds))
+            .readTimeout(Duration.ofSeconds(gemini.readTimeoutSeconds))
+            .build()
+    }
 }

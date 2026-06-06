@@ -51,4 +51,14 @@ external:
     max-candidate-count: ${NAVER_MAX_CANDIDATE_COUNT:50}
     min-search-ratio: ${NAVER_MIN_SEARCH_RATIO:1.0}
   gemini:
+    base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
     api-key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-3.5-flash}
+    connect-timeout-seconds: ${GEMINI_CONNECT_TIMEOUT_SECONDS:3}
+    read-timeout-seconds: ${GEMINI_READ_TIMEOUT_SECONDS:10}
+    max-explain-keyword-count: ${GEMINI_MAX_EXPLAIN_KEYWORD_COUNT:10}
+    max-prompt-video-count: ${GEMINI_MAX_PROMPT_VIDEO_COUNT:3}
+    rank-surge-threshold: ${GEMINI_RANK_SURGE_THRESHOLD:3}
+    long-running-weeks: ${GEMINI_LONG_RUNNING_WEEKS:4}
+    temperature: ${GEMINI_TEMPERATURE:0.3}
+    max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:512}
