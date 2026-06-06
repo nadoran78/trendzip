@@ -11,6 +11,8 @@ import java.time.LocalDateTime
 @Entity
 @Table(name = "trend_logs")
 class TrendLog(
+    @Column(name = "crawl_run_id", nullable = false)
+    var crawlRunId: Long = 0,
     @Column(name = "keyword_id", nullable = false)
     var keywordId: Long = 0,
     @Column
