@@ -16,8 +16,6 @@ import com.mztrend.service.crawling.KeywordExplainRefreshPolicy
 import com.mztrend.service.crawling.TrendCrawlingResult
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
-import java.time.Clock
-import java.time.LocalDateTime
 import kotlin.math.max
 
 @Service
@@ -26,52 +24,38 @@ class TrendCrawlingService(
     private val trendLogRepository: TrendLogRepository,
     private val trendLogLookupRepository: TrendLogLookupRepository,
     private val trendCrawlRunRepository: TrendCrawlRunRepository,
+    private val trendCrawlRunRecorder: TrendCrawlRunRecorder,
     private val trendCrawlingPersistenceService: TrendCrawlingPersistenceService,
     private val collectedTrendBatchValidator: CollectedTrendBatchValidator,
     private val keywordExplainRefreshPolicy: KeywordExplainRefreshPolicy,
     private val keywordExplainRefreshAppender: KeywordExplainRefreshAppender,
     private val properties: ExternalApiProperties,
-    private val clock: Clock,
 ) {
     fun saveCollectedTrends(batch: CollectedTrendBatch): TrendCrawlingResult {
         collectedTrendBatchValidator.validate(batch)
-        val crawlRun = startCrawlRun(batch.generation)
+        val crawlRun = trendCrawlRunRecorder.start(batch.generation)
 
         return runCatching {
-            val batchWithExplains = appendKeywordExplains(batch)
-            val result =
-                trendCrawlingPersistenceService.saveCollectedTrends(
-                    crawlRunId = requireNotNull(crawlRun.id),
-                    batch = batchWithExplains,
-                )
-
-            completeCrawlRun(crawlRun)
+            val result = saveCollectedTrends(requireNotNull(crawlRun.id), batch)
+            trendCrawlRunRecorder.complete(crawlRun)
             result
         }.getOrElse { exception ->
-            failCrawlRun(crawlRun)
+            trendCrawlRunRecorder.fail(crawlRun)
             throw exception
         }
     }
 
-    private fun startCrawlRun(generation: Generation): TrendCrawlRun =
-        trendCrawlRunRepository.save(
-            TrendCrawlRun(
-                generation = generation,
-                status = TrendCrawlRunStatus.RUNNING,
-                startedAt = LocalDateTime.now(clock),
-            ),
+    fun saveCollectedTrends(
+        crawlRunId: Long,
+        batch: CollectedTrendBatch,
+    ): TrendCrawlingResult {
+        collectedTrendBatchValidator.validate(batch)
+        val batchWithExplains = appendKeywordExplains(batch)
+
+        return trendCrawlingPersistenceService.saveCollectedTrends(
+            crawlRunId = crawlRunId,
+            batch = batchWithExplains,
         )
-
-    private fun completeCrawlRun(crawlRun: TrendCrawlRun) {
-        crawlRun.status = TrendCrawlRunStatus.COMPLETED
-        crawlRun.completedAt = LocalDateTime.now(clock)
-        trendCrawlRunRepository.save(crawlRun)
-    }
-
-    private fun failCrawlRun(crawlRun: TrendCrawlRun) {
-        crawlRun.status = TrendCrawlRunStatus.FAILED
-        crawlRun.completedAt = LocalDateTime.now(clock)
-        trendCrawlRunRepository.save(crawlRun)
     }
 
     private fun appendKeywordExplains(batch: CollectedTrendBatch): CollectedTrendBatch {

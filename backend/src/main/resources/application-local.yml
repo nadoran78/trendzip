@@ -15,3 +15,6 @@ spring:
 app:
   local-data:
     enabled: ${APP_LOCAL_DATA_ENABLED:false}
+  crawling-scheduler:
+    enabled: ${APP_CRAWLING_SCHEDULER_ENABLED:false}
+    run-on-startup: ${APP_CRAWLING_SCHEDULER_RUN_ON_STARTUP:false}

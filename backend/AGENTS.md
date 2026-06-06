@@ -32,12 +32,31 @@ SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
 - `test` profile은 로컬 PostgreSQL의 `mztrend_test` DB와 simple cache를 사용한다.
 - PostgreSQL 데이터를 초기화해야 할 때만 `docker compose down -v`를 사용한다. 이 명령은 DB volume도 삭제한다.
 - 로컬 확인용 seed 데이터가 필요할 때만 `APP_LOCAL_DATA_ENABLED=true`를 함께 지정한다.
+- 크롤링 스케줄러는 `local`, `test` profile에서 기본 비활성화한다. 로컬에서 수동 검증이 필요할 때만 `APP_CRAWLING_SCHEDULER_ENABLED=true`를 지정한다.
+- 크롤링 수동 검증은 controller를 열지 않고 startup runner로 실행한다.
 
 ```bash
 APP_LOCAL_DATA_ENABLED=true SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
 curl "http://localhost:8080/api/health"
 curl "http://localhost:8080/api/keywords?generation=TEEN"
 curl "http://localhost:8080/api/keywords?generation=TWENTY"
+```
+
+### 크롤링 수동 검증
+
+- `.env` 파일은 Spring Boot가 자동으로 읽지 않을 수 있으므로, 로컬 shell에서 명시적으로 export한 뒤 실행한다.
+- 수동 검증 시에도 실제 YouTube, 네이버 DataLab, Gemini API 호출이 발생한다.
+- cron 반복 실행과 startup runner를 동시에 켜지 않는다. 수동 1회 검증은 `APP_CRAWLING_SCHEDULER_RUN_ON_STARTUP=true`만 사용한다.
+
+```bash
+cd backend
+set -a
+source .env
+set +a
+APP_CRAWLING_SCHEDULER_ENABLED=true \
+APP_CRAWLING_SCHEDULER_RUN_ON_STARTUP=true \
+SPRING_PROFILES_ACTIVE=local \
+./gradlew bootRun
 ```
 
 ---
@@ -93,6 +112,7 @@ com.mztrend
 ├── service
 │   ├── FeedService
 │   ├── KeywordService
+│   ├── TrendCrawlRunRecorder
 │   ├── TrendCrawlingService
 │   ├── TrendCrawlingPersistenceService
 │   └── crawling
@@ -155,8 +175,10 @@ com.mztrend
 │   ├── NaverDataLabClient
 │   └── GeminiApiClient
 ├── scheduler
-│   └── TrendCrawlingScheduler
+│   ├── TrendCrawlingScheduler
+│   └── TrendCrawlingStartupRunner
 └── config
+    ├── CrawlingSchedulerProperties
     ├── CacheConfig
     └── SchedulerConfig
 ```
@@ -265,9 +287,12 @@ CREATE TABLE trend_logs (
 ## 스케줄러 명세
 
 ```kotlin
-// 매주 월요일 오전 3시 실행
-@Scheduled(cron = "0 0 3 * * MON")
-fun crawlAndUpdateKeywords() {
+// 기본값: 매주 월요일 오전 3시, Asia/Seoul 기준
+@Scheduled(
+    cron = "\${app.crawling-scheduler.cron:0 0 3 * * MON}",
+    zone = "\${app.crawling-scheduler.zone:Asia/Seoul}",
+)
+fun crawlTrends() {
     // 1. YouTube 현재 인기 영상에서 후보 키워드 수집
     // 2. 네이버 DataLab에서 후보 키워드의 연령대별 관심도 검증
     // 3. keywords 테이블 current_rank, trend_score, rank_trend 갱신
@@ -279,6 +304,18 @@ fun crawlAndUpdateKeywords() {
 }
 ```
 
+### 스케줄러 설정
+
+- 운영 기본 실행 시간은 `APP_CRAWLING_SCHEDULER_CRON`으로 조정하고, 기본값은 `0 0 3 * * MON`이다.
+- 실행 시간대는 `APP_CRAWLING_SCHEDULER_ZONE`으로 조정하고, 기본값은 `Asia/Seoul`이다.
+- `APP_CRAWLING_SCHEDULER_ENABLED=false`이면 스케줄러 메서드는 실행되더라도 실제 후보 수집/저장 작업을 수행하지 않는다.
+- `APP_CRAWLING_SCHEDULER_RUN_ON_STARTUP=true`이면 애플리케이션 시작 시 `TrendCrawlingStartupRunner`가 `crawlTrends()`를 1회 호출한다.
+- `application.yml`은 운영 기본값 기준으로 스케줄러를 활성화하고, `application-local.yml`, `application-test.yml`은 API 할당량과 테스트 안정성을 위해 비활성화한다.
+- 후보 수집은 스케줄러 실행 단위에서 1회만 수행하고, 동일 후보군을 `TEEN`, `TWENTY` 세대별 네이버 DataLab 점수화에 재사용한다.
+- 스케줄러는 `TEEN`, `TWENTY` 세대를 독립적으로 처리한다. 한 세대 처리 실패가 다른 세대 저장을 막지 않도록 세대별로 예외를 분리한다.
+- 후보 수집 실패나 후보 없음은 모든 세대의 `trend_crawl_runs`를 `FAILED`로 남긴다.
+- 네이버 DataLab 점수화 실패나 점수화 결과 없음은 해당 세대의 `trend_crawl_runs`를 `FAILED`로 남기고, 다른 세대 처리는 계속 진행한다.
+
 ### 크롤링 저장 파이프라인
 
 - 외부 API 응답을 Entity에 직접 저장하지 않는다.
@@ -287,6 +324,7 @@ fun crawlAndUpdateKeywords() {
 - Google Trends는 MVP 크롤링 파이프라인에서 제외한다. 공식 API는 Alpha 단계이고 비공식 크롤링은 운영 안정성이 낮으므로 도입하지 않는다.
 - 후보 키워드 발견은 `TrendCandidateSource` 인터페이스 뒤에 두고, 기본 구현은 `YoutubePopularVideoCandidateSource`를 사용한다.
 - 세대별 후보 검증은 네이버 DataLab Search Trend API로 수행하고, `TEEN`은 `ages=["2"]`, `TWENTY`는 `ages=["3","4"]`로 조회한다.
+- `TrendCrawlRunRecorder`는 크롤링 실행 회차의 `RUNNING`, `COMPLETED`, `FAILED` 상태 전환만 담당한다.
 - `TrendCrawlingService`는 정규화된 수집 DTO를 입력받아 크롤링 회차 생성, 최근 완료 회차/로그 조회, 설명 갱신 대상 판정, Gemini 호출, 저장 서비스 호출을 오케스트레이션한다.
 - `TrendCrawlingPersistenceService`는 DB 저장만 담당하며 `@Transactional` 범위 안에서 `keywords` upsert → `trend_logs` insert → `trend_videos` upsert → 기존 활성 `trend_feed_items` 비활성화 → 새 `trend_feed_items` insert → `trend_video_keywords` upsert → `keyword_relations` upsert 순서로 처리한다.
 - `trend_crawl_runs`는 세대별 크롤링 실행 회차와 상태를 기록하고, `trend_logs.crawl_run_id`는 해당 로그가 생성된 회차를 가리킨다. 외래키 제약은 두지 않고 id 기반으로 관리한다.
@@ -300,7 +338,7 @@ fun crawlAndUpdateKeywords() {
 - Gemini 생성 실패 또는 빈 응답은 해당 키워드 설명만 스킵하고, 기존 설명은 덮어쓰지 않는다.
 - 수집 저장이 끝나면 `keywords`, `feed` 캐시를 무효화한다.
 - local seed 초기화는 확인용 실행 이력을 깔끔하게 보기 위해 `trend_logs`와 `trend_crawl_runs`를 함께 정리한 뒤 다시 저장한다.
-- 스케줄러 조립은 후보 수집, 네이버 DataLab 점수화, Gemini 설명 생성 구조 검증 이후 별도 작업 단위로 진행한다.
+- `TrendCrawlingScheduler`는 후보 수집 → 네이버 DataLab 점수화 → 배치 조립 → `TrendCrawlingService.saveCollectedTrends` 저장 흐름만 연결한다.
 
 ---
 
@@ -343,7 +381,7 @@ Week 3: 크롤링 스케줄러
   [x] 점수화 키워드 기반 YouTube 영상 보강 + 수집 배치 조립
   [x] GeminiApiClient 구현 (설명 생성)
   [ ] KeywordRelationCollector 구현 및 TrendCrawlingBatchAssembler 연결
-  [ ] TrendCrawlingScheduler 구현
+  [x] TrendCrawlingScheduler 구현
   [ ] 초기 시드 키워드 SQL 작성 (10대/20대 각 50개)
 
 Week 4: 키워드 API

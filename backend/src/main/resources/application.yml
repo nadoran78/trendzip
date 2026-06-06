@@ -25,6 +25,13 @@ spring:
 server:
   port: ${PORT:8080}
 
+app:
+  crawling-scheduler:
+    enabled: ${APP_CRAWLING_SCHEDULER_ENABLED:true}
+    cron: "${APP_CRAWLING_SCHEDULER_CRON:0 0 3 * * MON}"
+    zone: "${APP_CRAWLING_SCHEDULER_ZONE:Asia/Seoul}"
+    run-on-startup: ${APP_CRAWLING_SCHEDULER_RUN_ON_STARTUP:false}
+
 external:
   youtube:
     base-url: ${YOUTUBE_BASE_URL:https://www.googleapis.com/youtube/v3}
