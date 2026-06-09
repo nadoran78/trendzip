@@ -41,7 +41,7 @@ data class ExternalApiProperties(
         val apiKey: String = "",
         val model: String = "gemini-3.5-flash",
         val connectTimeoutSeconds: Long = 3,
-        val readTimeoutSeconds: Long = 10,
+        val readTimeoutSeconds: Long = 60,
         val maxExplainKeywordCount: Int = 10,
         val maxPromptVideoCount: Int = 3,
         val rankSurgeThreshold: Int = 3,

@@ -62,7 +62,7 @@ external:
     api-key: ${GEMINI_API_KEY:}
     model: ${GEMINI_MODEL:gemini-3.5-flash}
     connect-timeout-seconds: ${GEMINI_CONNECT_TIMEOUT_SECONDS:3}
-    read-timeout-seconds: ${GEMINI_READ_TIMEOUT_SECONDS:10}
+    read-timeout-seconds: ${GEMINI_READ_TIMEOUT_SECONDS:60}
     max-explain-keyword-count: ${GEMINI_MAX_EXPLAIN_KEYWORD_COUNT:10}
     max-prompt-video-count: ${GEMINI_MAX_PROMPT_VIDEO_COUNT:3}
     rank-surge-threshold: ${GEMINI_RANK_SURGE_THRESHOLD:3}
