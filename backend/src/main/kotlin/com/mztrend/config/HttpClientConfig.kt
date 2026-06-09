@@ -60,6 +60,22 @@ class HttpClientConfig {
         require(gemini.longRunningWeeks > 1) { "Gemini long running weeks must be greater than 1." }
         require(gemini.maxOutputTokens > 0) { "Gemini max output tokens must be positive." }
         require(gemini.temperature in 0.0..2.0) { "Gemini temperature must be between 0.0 and 2.0." }
+        require(gemini.candidateExtractionMaxCandidates > 0) { "Gemini candidate extraction max candidates must be positive." }
+        require(gemini.candidateExtractionMinResultCount in 1..gemini.candidateExtractionMaxCandidates) {
+            "Gemini candidate extraction min result count must be between 1 and max candidates."
+        }
+        require(gemini.candidateExtractionMinConfidence in 0.0..1.0) {
+            "Gemini candidate extraction min confidence must be between 0.0 and 1.0."
+        }
+        require(gemini.candidateExtractionMaxPromptVideos > 0) {
+            "Gemini candidate extraction max prompt videos must be positive."
+        }
+        require(gemini.candidateExtractionMaxDescriptionLength >= 0) {
+            "Gemini candidate extraction max description length must not be negative."
+        }
+        require(gemini.candidateExtractionMaxOutputTokens > 0) {
+            "Gemini candidate extraction max output tokens must be positive."
+        }
 
         return restTemplateBuilder
             .connectTimeout(Duration.ofSeconds(gemini.connectTimeoutSeconds))

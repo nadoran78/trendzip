@@ -48,5 +48,11 @@ data class ExternalApiProperties(
         val longRunningWeeks: Int = 4,
         val temperature: Double = 0.3,
         val maxOutputTokens: Int = 512,
+        val candidateExtractionMaxCandidates: Int = 50,
+        val candidateExtractionMinResultCount: Int = 10,
+        val candidateExtractionMinConfidence: Double = 0.6,
+        val candidateExtractionMaxPromptVideos: Int = 20,
+        val candidateExtractionMaxDescriptionLength: Int = 300,
+        val candidateExtractionMaxOutputTokens: Int = 2048,
     )
 }

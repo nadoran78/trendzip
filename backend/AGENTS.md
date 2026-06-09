@@ -135,6 +135,11 @@ com.mztrend
 │       ├── KeywordExplainRequest
 │       ├── KeywordExplainResult
 │       └── candidate
+│           ├── KeywordCandidateExtractor
+│           ├── KeywordCandidateExtractionRequest
+│           ├── KeywordCandidateExtractionResult
+│           ├── ExtractedKeywordCandidate
+│           ├── GeminiKeywordCandidateExtractor
 │           ├── TrendCandidate
 │           ├── TrendCandidateSource
 │           ├── ScoredTrendKeyword
@@ -323,6 +328,12 @@ fun crawlTrends() {
 - `CollectedTrendBatch` 검증은 크롤링 회차 생성 및 Gemini 호출 전에 먼저 수행한다. 검증에는 feed 중복뿐 아니라 `feedItems`, `videoKeywords`, `keywordRelations`가 batch 내부의 `keywords`, `videos`를 올바르게 참조하는지도 포함한다. 저장 서비스 내부에서도 방어적으로 동일 검증을 유지할 수 있다.
 - Google Trends는 MVP 크롤링 파이프라인에서 제외한다. 공식 API는 Alpha 단계이고 비공식 크롤링은 운영 안정성이 낮으므로 도입하지 않는다.
 - 후보 키워드 발견은 `TrendCandidateSource` 인터페이스 뒤에 두고, 기본 구현은 `YoutubePopularVideoCandidateSource`를 사용한다.
+- `YoutubePopularVideoCandidateSource`는 YouTube 인기 영상 메타데이터를 `GeminiKeywordCandidateExtractor`에 전달해 구조화된 후보 키워드 JSON을 얻는다.
+- 후보 추출용 Gemini 호출은 키워드 발견 용도만 담당한다. 세대별 트렌드 여부와 순위는 네이버 DataLab 검증 이후 확정한다.
+- 후보 추출용 Gemini output token 설정은 설명 생성용 output token 설정과 분리한다.
+- 단순 단어 토큰 추출과 불용어 목록은 기본 후보 품질을 보장하기 어렵기 때문에 주 후보 추출 경로로 사용하지 않는다. `YoutubeVideoCandidateExtractor`는 Gemini 후보 추출 결과가 최소 후보 수보다 적을 때만 fallback으로 사용해 후보군을 보강한다.
+- fallback 후보는 Gemini 후보 뒤에 붙이고, Gemini 후보와 같은 단어는 대소문자 무시 기준으로 제외한다. 병합 후 rank는 1부터 다시 부여한다.
+- Gemini 후보 추출 결과는 `confidence`, 근거 영상 수, 조회수를 바탕으로 `TrendCandidate` 점수를 계산한다. 낮은 confidence와 빈 키워드는 제외한다. `evidenceVideoIds`는 점수 보조 신호이므로 누락되거나 입력 영상과 매칭되지 않아도 후보 자체를 버리지 않는다.
 - 세대별 후보 검증은 네이버 DataLab Search Trend API로 수행하고, `TEEN`은 `ages=["2"]`, `TWENTY`는 `ages=["3","4"]`로 조회한다.
 - `TrendCrawlRunRecorder`는 크롤링 실행 회차의 `RUNNING`, `COMPLETED`, `FAILED` 상태 전환만 담당한다.
 - `TrendCrawlingService`는 정규화된 수집 DTO를 입력받아 크롤링 회차 생성, 최근 완료 회차/로그 조회, 설명 갱신 대상 판정, Gemini 호출, 저장 서비스 호출을 오케스트레이션한다.
@@ -376,6 +387,7 @@ Week 1-2: 백엔드 기반
 Week 3: 크롤링 스케줄러
   [x] 수집 DTO + TrendCrawlingService 저장 파이프라인 구현
   [x] YouTube 인기 영상 기반 후보 키워드 수집 구조 구현
+  [x] Gemini 기반 후보 키워드 추출 구현
   [x] NaverDataLabClient 구현 (공식 API)
   [x] NaverDataLabTrendScorer 구현 (세대별 후보 점수화)
   [x] 점수화 키워드 기반 YouTube 영상 보강 + 수집 배치 조립
