@@ -18,7 +18,7 @@ class GeminiApiClient(
     private val properties: ExternalApiProperties,
     @param:Qualifier("geminiRestTemplate")
     private val restTemplate: RestTemplate,
-) : GeminiContentClient {
+) : GeminiGenerateContentGateway {
     override fun generateText(request: GeminiGenerateContentRequest): String {
         validateRequest(request)
 
@@ -34,9 +34,17 @@ class GeminiApiClient(
                     GeminiGenerateContentResponse::class.java,
                 ) ?: throw GeminiApiException("Gemini API returned an empty response.")
             } catch (exception: RestClientResponseException) {
-                throw GeminiApiException("Gemini API request failed. status=${exception.statusCode.value()}")
+                throw GeminiApiException(
+                    message = "Gemini API request failed. status=${exception.statusCode.value()}",
+                    httpStatus = exception.statusCode.value(),
+                    responseBody = exception.responseBodyAsString.takeIf { it.isNotBlank() },
+                    cause = exception,
+                )
             } catch (exception: RestClientException) {
-                throw GeminiApiException("Gemini API request failed. message=${exception.message}")
+                throw GeminiApiException(
+                    message = "Gemini API request failed. message=${exception.message}",
+                    cause = exception,
+                )
             }
 
         return response.extractText()

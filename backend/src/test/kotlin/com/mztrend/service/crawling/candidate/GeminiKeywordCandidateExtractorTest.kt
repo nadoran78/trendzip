@@ -2,6 +2,7 @@ package com.mztrend.service.crawling.candidate
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.mztrend.client.GeminiContentClient
+import com.mztrend.client.GeminiGenerateContentGateway
 import com.mztrend.client.dto.GeminiGenerateContentRequest
 import com.mztrend.config.ExternalApiProperties
 import java.time.LocalDateTime
@@ -95,9 +96,9 @@ class GeminiKeywordCandidateExtractorTest {
         assertTrue(result.candidates.isEmpty())
     }
 
-    private fun extractor(geminiContentClient: GeminiContentClient): GeminiKeywordCandidateExtractor =
+    private fun extractor(geminiGenerateContentGateway: GeminiGenerateContentGateway): GeminiKeywordCandidateExtractor =
         GeminiKeywordCandidateExtractor(
-            geminiContentClient = geminiContentClient,
+            geminiContentClient = GeminiContentClient(geminiGenerateContentGateway),
             objectMapper = jacksonObjectMapper(),
             properties =
                 ExternalApiProperties(
@@ -129,7 +130,7 @@ class GeminiKeywordCandidateExtractorTest {
 
     private class FakeGeminiContentClient(
         private val response: String,
-    ) : GeminiContentClient {
+    ) : GeminiGenerateContentGateway {
         lateinit var lastRequest: GeminiGenerateContentRequest
 
         override fun generateText(request: GeminiGenerateContentRequest): String {
@@ -138,7 +139,7 @@ class GeminiKeywordCandidateExtractorTest {
         }
     }
 
-    private class FailingGeminiContentClient : GeminiContentClient {
+    private class FailingGeminiContentClient : GeminiGenerateContentGateway {
         override fun generateText(request: GeminiGenerateContentRequest): String = throw IllegalStateException("gemini failed")
     }
 }

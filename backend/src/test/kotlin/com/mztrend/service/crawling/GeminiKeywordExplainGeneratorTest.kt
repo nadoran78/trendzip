@@ -1,6 +1,7 @@
 package com.mztrend.service.crawling
 
 import com.mztrend.client.GeminiContentClient
+import com.mztrend.client.GeminiGenerateContentGateway
 import com.mztrend.client.dto.GeminiGenerateContentRequest
 import com.mztrend.config.ExternalApiProperties
 import com.mztrend.domain.Generation
@@ -14,7 +15,7 @@ class GeminiKeywordExplainGeneratorTest {
         val fakeClient = FakeGeminiContentClient(" 설명 결과 ")
         val generator =
             GeminiKeywordExplainGenerator(
-                geminiContentClient = fakeClient,
+                geminiContentClient = GeminiContentClient(fakeClient),
                 properties =
                     ExternalApiProperties(
                         gemini =
@@ -86,7 +87,7 @@ class GeminiKeywordExplainGeneratorTest {
 
     private class FakeGeminiContentClient(
         private val response: String,
-    ) : GeminiContentClient {
+    ) : GeminiGenerateContentGateway {
         lateinit var lastRequest: GeminiGenerateContentRequest
 
         override fun generateText(request: GeminiGenerateContentRequest): String {

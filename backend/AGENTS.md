@@ -148,6 +148,7 @@ com.mztrend
 │           └── NaverDataLabTrendScorer
 ├── repository
 │   ├── command
+│   │   ├── ExternalApiLogRepository
 │   │   ├── KeywordRepository
 │   │   ├── KeywordRelationRepository
 │   │   ├── TrendFeedItemRepository
@@ -163,6 +164,10 @@ com.mztrend
 │           ├── FeedVideoQueryResult
 │           └── KeywordSummaryQueryResult
 ├── domain
+│   ├── ExternalApiDirection (enum: INBOUND, OUTBOUND)
+│   ├── ExternalApiLog
+│   ├── ExternalApiProvider (enum: YOUTUBE, NAVER_DATALAB, GEMINI, UNKNOWN)
+│   ├── ExternalApiPurpose
 │   ├── Keyword
 │   ├── KeywordRelation
 │   ├── RankTrend
@@ -178,7 +183,14 @@ com.mztrend
 ├── client
 │   ├── YoutubeApiClient
 │   ├── NaverDataLabClient
-│   └── GeminiApiClient
+│   ├── GeminiApiClient
+│   ├── GeminiGenerateContentGateway
+│   └── GeminiContentClient
+├── logging
+│   ├── ExternalApiLogRecorder
+│   ├── ExternalApiLogRecord
+│   ├── RecordExternalApiLog
+│   └── RecordExternalApiLogAspect
 ├── scheduler
 │   ├── TrendCrawlingScheduler
 │   └── TrendCrawlingStartupRunner
@@ -324,6 +336,11 @@ fun crawlTrends() {
 ### 크롤링 저장 파이프라인
 
 - 외부 API 응답을 Entity에 직접 저장하지 않는다.
+- 외부 API 호출/콜백 이력은 `external_api_logs`에 저장한다. `direction`은 우리 서버가 외부로 호출하면 `OUTBOUND`, 외부 서비스가 우리 서버로 호출하면 `INBOUND`로 기록한다.
+- 외부 API 로그는 `@RecordExternalApiLog` 어노테이션과 AOP로 기록한다. 새 외부 API 로그 대상은 수동 저장 코드를 흩뿌리지 말고 어노테이션을 우선 사용한다.
+- 외부 API 로그 저장 실패는 실제 크롤링/외부 API 호출 흐름을 실패시키지 않는다.
+- `request_body`, `response_body`, `error_message`는 저장 전에 API key, token, Authorization, client secret 값을 마스킹하고 내부 안전장치로 길이를 제한한다.
+- 외부 API 로그는 기능 요구사항으로 보고 항상 저장한다. 설정값으로 임의 비활성화하지 않는다.
 - YouTube, 네이버 DataLab, Gemini 결과는 먼저 후보 DTO와 `CollectedTrendBatch` 하위 수집 DTO로 정규화한다.
 - `CollectedTrendBatch` 검증은 크롤링 회차 생성 및 Gemini 호출 전에 먼저 수행한다. 검증에는 feed 중복뿐 아니라 `feedItems`, `videoKeywords`, `keywordRelations`가 batch 내부의 `keywords`, `videos`를 올바르게 참조하는지도 포함한다. 저장 서비스 내부에서도 방어적으로 동일 검증을 유지할 수 있다.
 - Google Trends는 MVP 크롤링 파이프라인에서 제외한다. 공식 API는 Alpha 단계이고 비공식 크롤링은 운영 안정성이 낮으므로 도입하지 않는다.

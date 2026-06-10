@@ -23,21 +23,22 @@ class GeminiKeywordCandidateExtractor(
 
         val response =
             runCatching {
-                geminiContentClient.generateText(
-                    GeminiGenerateContentRequest(
-                        contents =
-                            listOf(
-                                GeminiContent(
-                                    role = "user",
-                                    parts = listOf(GeminiPart(buildPrompt(request))),
+                geminiContentClient.generateCandidateText(
+                    request =
+                        GeminiGenerateContentRequest(
+                            contents =
+                                listOf(
+                                    GeminiContent(
+                                        role = "user",
+                                        parts = listOf(GeminiPart(buildPrompt(request))),
+                                    ),
                                 ),
-                            ),
-                        generationConfig =
-                            GeminiGenerationConfig(
-                                temperature = properties.gemini.temperature,
-                                maxOutputTokens = properties.gemini.candidateExtractionMaxOutputTokens,
-                            ),
-                    ),
+                            generationConfig =
+                                GeminiGenerationConfig(
+                                    temperature = properties.gemini.temperature,
+                                    maxOutputTokens = properties.gemini.candidateExtractionMaxOutputTokens,
+                                ),
+                        ),
                 )
             }.getOrElse { exception ->
                 log.warn("Skip Gemini keyword candidate extraction because request failed. message={}", exception.message)

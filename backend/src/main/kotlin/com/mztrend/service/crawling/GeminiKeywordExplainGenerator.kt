@@ -17,21 +17,22 @@ class GeminiKeywordExplainGenerator(
     override fun generate(request: KeywordExplainRequest): String {
         val prompt = buildPrompt(request)
         val response =
-            geminiContentClient.generateText(
-                GeminiGenerateContentRequest(
-                    contents =
-                        listOf(
-                            GeminiContent(
-                                role = "user",
-                                parts = listOf(GeminiPart(prompt)),
+            geminiContentClient.generateKeywordExplainText(
+                request =
+                    GeminiGenerateContentRequest(
+                        contents =
+                            listOf(
+                                GeminiContent(
+                                    role = "user",
+                                    parts = listOf(GeminiPart(prompt)),
+                                ),
                             ),
-                        ),
-                    generationConfig =
-                        GeminiGenerationConfig(
-                            temperature = properties.gemini.temperature,
-                            maxOutputTokens = properties.gemini.maxOutputTokens,
-                        ),
-                ),
+                        generationConfig =
+                            GeminiGenerationConfig(
+                                temperature = properties.gemini.temperature,
+                                maxOutputTokens = properties.gemini.maxOutputTokens,
+                            ),
+                    ),
             )
 
         return response.trim()
