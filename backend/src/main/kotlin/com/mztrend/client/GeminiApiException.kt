@@ -2,4 +2,7 @@ package com.mztrend.client
 
 class GeminiApiException(
     message: String,
-) : RuntimeException(message)
+    val httpStatus: Int? = null,
+    val responseBody: String? = null,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause)
