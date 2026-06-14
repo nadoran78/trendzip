@@ -20,6 +20,7 @@ class YoutubePopularVideoCandidateSourceTest {
             youtubeApiClient = youtubeApiClient,
             keywordCandidateExtractor = keywordCandidateExtractor,
             fallbackCandidateExtractor = YoutubeVideoCandidateExtractor(),
+            candidatePostProcessor = TrendCandidatePostProcessor(),
             properties =
                 ExternalApiProperties(
                     youtube = ExternalApiProperties.Youtube(popularVideoMaxResults = 10),
@@ -145,8 +146,68 @@ class YoutubePopularVideoCandidateSourceTest {
 
         assertEquals("다비치", candidates.first().word)
         assertTrue(candidates.any { it.word == "fallbackword" })
-        assertEquals(listOf(1, 2, 3, 4, 5), candidates.map { it.rank })
+        assertEquals((1..candidates.size).toList(), candidates.map { it.rank })
         assertEquals(1, candidates.count { it.word == "다비치" })
+    }
+
+    @Test
+    fun `collectCandidates post processes Gemini candidates before returning`() {
+        Mockito
+            .`when`(youtubeApiClient.getPopularVideos(10))
+            .thenReturn(
+                listOf(
+                    youtubeVideo(
+                        videoId = "video-1",
+                        title = "ICONIC BY MISTAKE",
+                        tags = listOf("ICONIC BY MISTAKE"),
+                        viewCount = 2_000_000L,
+                    ),
+                ),
+            )
+        keywordCandidateExtractor.result =
+            KeywordCandidateExtractionResult(
+                candidates =
+                    listOf(
+                        extractedCandidate("ICONIC BY MISTAKE", confidence = 0.9, evidenceVideoIds = listOf("video-1")),
+                        extractedCandidate("by", confidence = 0.8, evidenceVideoIds = listOf("video-1")),
+                        extractedCandidate("mistake", confidence = 0.7, evidenceVideoIds = listOf("video-1")),
+                    ),
+            )
+
+        val candidates = source.collectCandidates()
+
+        assertEquals(listOf("ICONIC BY MISTAKE"), candidates.map { it.word })
+        assertEquals(listOf(1), candidates.map { it.rank })
+    }
+
+    @Test
+    fun `collectCandidates uses fallback when Gemini candidates are too few after post processing`() {
+        Mockito
+            .`when`(youtubeApiClient.getPopularVideos(10))
+            .thenReturn(
+                listOf(
+                    youtubeVideo(
+                        videoId = "video-1",
+                        title = "fallbackword 단독 영상",
+                        tags = listOf("fallbackword"),
+                        viewCount = 2_000_000L,
+                    ),
+                ),
+            )
+        keywordCandidateExtractor.result =
+            KeywordCandidateExtractionResult(
+                candidates =
+                    listOf(
+                        extractedCandidate("by", confidence = 0.9, evidenceVideoIds = listOf("video-1")),
+                        extractedCandidate("game", confidence = 0.8, evidenceVideoIds = listOf("video-1")),
+                        extractedCandidate("football", confidence = 0.7, evidenceVideoIds = listOf("video-1")),
+                    ),
+            )
+
+        val candidates = source.collectCandidates()
+
+        assertTrue(candidates.any { it.word == "fallbackword" })
+        assertTrue(candidates.none { it.word in setOf("by", "game", "football") })
     }
 
     @Test

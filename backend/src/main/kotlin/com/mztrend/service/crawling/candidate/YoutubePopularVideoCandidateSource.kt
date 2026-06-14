@@ -14,6 +14,7 @@ class YoutubePopularVideoCandidateSource(
     private val youtubeApiClient: YoutubeApiClient,
     private val keywordCandidateExtractor: KeywordCandidateExtractor,
     private val fallbackCandidateExtractor: YoutubeVideoCandidateExtractor,
+    private val candidatePostProcessor: TrendCandidatePostProcessor,
     private val properties: ExternalApiProperties,
     private val clock: Clock,
 ) : TrendCandidateSource {
@@ -22,13 +23,18 @@ class YoutubePopularVideoCandidateSource(
         val collectedAt = LocalDateTime.now(clock)
         val extractionResult = keywordCandidateExtractor.extract(popularVideos.toExtractionRequest(collectedAt))
         val extractedCandidates = extractionResult.toTrendCandidates(popularVideos, collectedAt)
+        val processedExtractedCandidates =
+            candidatePostProcessor
+                .process(extractedCandidates)
+                .take(properties.gemini.candidateExtractionMaxCandidates)
 
-        if (extractedCandidates.size >= properties.gemini.candidateExtractionMinResultCount) return extractedCandidates
+        if (processedExtractedCandidates.size >= properties.gemini.candidateExtractionMinResultCount) return processedExtractedCandidates
 
         log.warn(
             "Fallback to token-based YouTube candidate extraction because Gemini returned too few keyword candidates. " +
-                "candidateCount={}, minResultCount={}",
+                "candidateCount={}, processedCandidateCount={}, minResultCount={}",
             extractedCandidates.size,
+            processedExtractedCandidates.size,
             properties.gemini.candidateExtractionMinResultCount,
         )
         val fallbackCandidates =
@@ -38,28 +44,25 @@ class YoutubePopularVideoCandidateSource(
                 limit = properties.gemini.candidateExtractionMaxCandidates,
             )
 
-        return mergeCandidates(
-            primaryCandidates = extractedCandidates,
-            fallbackCandidates = fallbackCandidates,
-            maxCandidates = properties.gemini.candidateExtractionMaxCandidates,
-        )
+        return candidatePostProcessor
+            .process(
+                mergeCandidates(
+                    primaryCandidates = processedExtractedCandidates,
+                    fallbackCandidates = fallbackCandidates,
+                ),
+            ).take(properties.gemini.candidateExtractionMaxCandidates)
     }
 
     private fun mergeCandidates(
         primaryCandidates: List<TrendCandidate>,
         fallbackCandidates: List<TrendCandidate>,
-        maxCandidates: Int,
     ): List<TrendCandidate> {
         val primaryWords = primaryCandidates.map { it.word.lowercase() }.toSet()
         val supplementalCandidates =
             fallbackCandidates
                 .filterNot { it.word.lowercase() in primaryWords }
                 .distinctBy { it.word.lowercase() }
-        val mergedCandidates =
-            (primaryCandidates + supplementalCandidates)
-                .take(maxCandidates)
-
-        return mergedCandidates.mapIndexed { index, candidate ->
+        return (primaryCandidates + supplementalCandidates).mapIndexed { index, candidate ->
             candidate.copy(rank = index + 1)
         }
     }
