@@ -1,5 +1,6 @@
 package com.mztrend.client
 
+import com.mztrend.client.dto.GeminiCandidate
 import com.mztrend.client.dto.GeminiGenerateContentRequest
 import com.mztrend.client.dto.GeminiGenerateContentResponse
 import com.mztrend.config.ExternalApiProperties
@@ -67,19 +68,62 @@ class GeminiApiClient(
         properties.gemini.apiKey.takeIf { it.isNotBlank() }
             ?: throw GeminiApiException("Gemini API key is not configured.")
 
-    private fun GeminiGenerateContentResponse.extractText(): String =
-        candidates
-            .firstNotNullOfOrNull { candidate ->
-                candidate.content
-                    ?.parts
-                    ?.map { it.text.trim() }
-                    ?.filter { it.isNotBlank() }
-                    ?.joinToString(separator = "\n")
-                    ?.takeIf { it.isNotBlank() }
-            }
+    private fun GeminiGenerateContentResponse.extractText(): String {
+        val candidate = candidates.firstOrNull() ?: throw GeminiApiException("Gemini API response did not contain text.")
+        candidate.validateFinishReason()
+
+        return candidate.content
+            ?.parts
+            ?.map { it.text.trim() }
+            ?.filter { it.isNotBlank() }
+            ?.joinToString(separator = "\n")
+            ?.takeIf { it.isNotBlank() }
             ?: throw GeminiApiException("Gemini API response did not contain text.")
+    }
+
+    private fun GeminiCandidate.validateFinishReason() {
+        val reason = finishReason?.trim()?.uppercase() ?: return
+        if (reason != FINISH_REASON_STOP) {
+            throw GeminiApiException(
+                message = "Gemini API response was not completed. finishReason=$reason",
+                httpStatus = SUCCESS_STATUS,
+                responseBody = toFailureResponseBody(reason),
+            )
+        }
+    }
+
+    private fun GeminiCandidate.toFailureResponseBody(reason: String): String {
+        val text =
+            content
+                ?.parts
+                ?.map { it.text.trim() }
+                ?.filter { it.isNotBlank() }
+                ?.joinToString(separator = "\n")
+                ?.take(MAX_FAILURE_TEXT_LENGTH)
+                .orEmpty()
+                .escapeJson()
+
+        return """{"finishReason":"$reason","text":"$text"}"""
+    }
+
+    private fun String.escapeJson(): String =
+        buildString {
+            this@escapeJson.forEach { char ->
+                when (char) {
+                    '\\' -> append("\\\\")
+                    '"' -> append("\\\"")
+                    '\n' -> append("\\n")
+                    '\r' -> append("\\r")
+                    '\t' -> append("\\t")
+                    else -> append(char)
+                }
+            }
+        }
 
     companion object {
         private const val API_KEY_HEADER = "x-goog-api-key"
+        private const val FINISH_REASON_STOP = "STOP"
+        private const val MAX_FAILURE_TEXT_LENGTH = 2_000
+        private const val SUCCESS_STATUS = 200
     }
 }

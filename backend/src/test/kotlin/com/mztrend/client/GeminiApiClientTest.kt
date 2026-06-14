@@ -129,6 +129,41 @@ class GeminiApiClientTest {
         server.verify()
     }
 
+    @Test
+    fun `client throws clear exception when response finish reason is not stop`() {
+        server
+            .expect(requestTo(containsString("/models/gemini-test:generateContent")))
+            .andRespond(
+                withSuccess(
+                    """
+                    {
+                      "candidates": [
+                        {
+                          "content": {
+                            "parts": [
+                              { "text": "잘린 설명입니다" }
+                            ]
+                          },
+                          "finishReason": "MAX_TOKENS"
+                        }
+                      ]
+                    }
+                    """.trimIndent(),
+                    MediaType.APPLICATION_JSON,
+                ),
+            )
+
+        val exception =
+            assertFailsWith<GeminiApiException> {
+                client.generateText(validRequest())
+            }
+
+        assertEquals("Gemini API response was not completed. finishReason=MAX_TOKENS", exception.message)
+        assertEquals(200, exception.httpStatus)
+        assertEquals("""{"finishReason":"MAX_TOKENS","text":"잘린 설명입니다"}""", exception.responseBody)
+        server.verify()
+    }
+
     private fun validRequest(): GeminiGenerateContentRequest =
         GeminiGenerateContentRequest(
             contents = listOf(GeminiContent(role = "user", parts = listOf(GeminiPart("프롬프트")))),

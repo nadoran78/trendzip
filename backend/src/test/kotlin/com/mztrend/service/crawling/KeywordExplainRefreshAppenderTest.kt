@@ -1,5 +1,8 @@
 package com.mztrend.service.crawling
 
+import com.mztrend.client.GeminiApiException
+import com.mztrend.client.GeminiRateLimitGuard
+import com.mztrend.config.ExternalApiProperties
 import com.mztrend.domain.FeedSection
 import com.mztrend.domain.Generation
 import com.mztrend.domain.TrendVideoKeywordRelationType
@@ -15,7 +18,7 @@ import kotlin.test.assertNull
 class KeywordExplainRefreshAppenderTest {
     @Test
     fun `appendExplains generates explains with related video context`() {
-        val generator = RecordingKeywordExplainGenerator(mapOf("아이브" to { " 아이브 설명 " }))
+        val generator = RecordingKeywordExplainGenerator(mapOf("아이브" to { " 아이브 설명입니다. " }))
         val appender = appender(generator)
         val batch = collectedBatch()
 
@@ -35,7 +38,7 @@ class KeywordExplainRefreshAppenderTest {
             )
 
         val updatedKeyword = updatedBatch.keywords.single { it.word == "아이브" }
-        assertEquals("아이브 설명", updatedKeyword.explain)
+        assertEquals("아이브 설명입니다.", updatedKeyword.explain)
         assertEquals(FIXED_NOW, updatedKeyword.explainedAt)
         assertContentEquals(listOf("아이브"), generator.requests.map { it.keyword.word })
         assertEquals(KeywordExplainRefreshReason.FIRST_CONTINUED, generator.requests.single().refreshReason)
@@ -82,9 +85,86 @@ class KeywordExplainRefreshAppenderTest {
         assertContentEquals(listOf("아이브", "뉴진스"), generator.requests.map { it.keyword.word })
     }
 
-    private fun appender(generator: KeywordExplainGenerator): KeywordExplainRefreshAppender =
+    @Test
+    fun `appendExplains skips truncated explain response`() {
+        val generator = RecordingKeywordExplainGenerator(mapOf("아이브" to { "최근 10대 사이에서 관심을" }))
+        val appender = appender(generator, explainMinLength = 10)
+        val batch = collectedBatch()
+
+        val updatedBatch =
+            appender.appendExplains(
+                batch = batch,
+                refreshDecisions =
+                    listOf(
+                        KeywordExplainRefreshDecision(
+                            keyword = batch.keywords.single { it.word == "아이브" },
+                            reason = KeywordExplainRefreshReason.NEW_KEYWORD,
+                        ),
+                    ),
+            )
+
+        assertNull(updatedBatch.keywords.single { it.word == "아이브" }.explain)
+    }
+
+    @Test
+    fun `appendExplains skips remaining requests after Gemini rate limit`() {
+        val generator =
+            RecordingKeywordExplainGenerator(
+                mapOf(
+                    "아이브" to {
+                        throw GeminiApiException(
+                            message = "Gemini API request failed. status=429",
+                            httpStatus = 429,
+                            responseBody = """{"error":{"details":[{"retryDelay":"30s"}]}}""",
+                        )
+                    },
+                    "뉴진스" to { "뉴진스 설명입니다." },
+                ),
+            )
+        val appender = appender(generator)
+        val batch = collectedBatch()
+
+        val updatedBatch =
+            appender.appendExplains(
+                batch = batch,
+                refreshDecisions =
+                    listOf(
+                        KeywordExplainRefreshDecision(
+                            keyword = batch.keywords.single { it.word == "아이브" },
+                            reason = KeywordExplainRefreshReason.NEW_KEYWORD,
+                        ),
+                        KeywordExplainRefreshDecision(
+                            keyword = batch.keywords.single { it.word == "뉴진스" },
+                            reason = KeywordExplainRefreshReason.NEW_KEYWORD,
+                        ),
+                    ),
+            )
+
+        assertNull(updatedBatch.keywords.single { it.word == "아이브" }.explain)
+        assertNull(updatedBatch.keywords.single { it.word == "뉴진스" }.explain)
+        assertContentEquals(listOf("아이브"), generator.requests.map { it.keyword.word })
+    }
+
+    private fun appender(
+        generator: KeywordExplainGenerator,
+        explainMinLength: Int = 5,
+    ): KeywordExplainRefreshAppender =
         KeywordExplainRefreshAppender(
             keywordExplainGenerator = generator,
+            keywordExplainValidator =
+                KeywordExplainValidator(
+                    ExternalApiProperties(
+                        gemini = ExternalApiProperties.Gemini(explainMinLength = explainMinLength),
+                    ),
+                ),
+            geminiRateLimitGuard =
+                GeminiRateLimitGuard(
+                    properties =
+                        ExternalApiProperties(
+                            gemini = ExternalApiProperties.Gemini(rateLimitCooldownSeconds = 60),
+                        ),
+                    clock = FIXED_CLOCK,
+                ),
             clock = FIXED_CLOCK,
         )
 

@@ -264,7 +264,10 @@ class TrendCrawlingServiceTest {
 
         val newKeyword = keywordRepository.findByGenerationAndWord(Generation.TEEN, "신규 키워드")
         assertNotNull(newKeyword)
-        assertEquals("생성 설명: 신규 키워드 / NEW_KEYWORD", newKeyword.explain)
+        assertEquals(
+            "신규 키워드는 관련 영상에서 반복적으로 언급되고 조회 맥락도 분명해 현재 세대의 관심을 받는 흐름으로 볼 수 있습니다.",
+            newKeyword.explain,
+        )
         assertEquals(listOf("기존 키워드", "신규 키워드"), recordingKeywordExplainGenerator.requests.map { it.keyword.word })
     }
 
@@ -669,7 +672,7 @@ class TrendCrawlingServiceTest {
                 throw IllegalStateException("failed keyword=${request.keyword.word}")
             }
 
-            return "생성 설명: ${request.keyword.word} / ${request.refreshReason.name}"
+            return "${request.keyword.word}는 관련 영상에서 반복적으로 언급되고 조회 맥락도 분명해 현재 세대의 관심을 받는 흐름으로 볼 수 있습니다."
         }
 
         fun clear() {

@@ -1,14 +1,20 @@
 package com.mztrend.service.crawling.candidate
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.mztrend.client.GeminiApiException
 import com.mztrend.client.GeminiContentClient
 import com.mztrend.client.GeminiGenerateContentGateway
+import com.mztrend.client.GeminiRateLimitGuard
 import com.mztrend.client.dto.GeminiGenerateContentRequest
 import com.mztrend.config.ExternalApiProperties
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class GeminiKeywordCandidateExtractorTest {
@@ -71,7 +77,7 @@ class GeminiKeywordCandidateExtractorTest {
         assertContains(prompt, "title: 다비치 컴백 무대")
         assertContains(prompt, "description: 설명")
         assertEquals(0.3, fakeClient.lastRequest.generationConfig?.temperature)
-        assertEquals(2048, fakeClient.lastRequest.generationConfig?.maxOutputTokens)
+        assertEquals(4096, fakeClient.lastRequest.generationConfig?.maxOutputTokens)
 
         assertEquals(listOf("다비치", "아이브", "뉴진스"), result.candidates.map { it.keyword })
 
@@ -96,9 +102,38 @@ class GeminiKeywordCandidateExtractorTest {
         assertTrue(result.candidates.isEmpty())
     }
 
-    private fun extractor(geminiGenerateContentGateway: GeminiGenerateContentGateway): GeminiKeywordCandidateExtractor =
+    @Test
+    fun `extract returns empty result when Gemini response JSON is incomplete`() {
+        val extractor = extractor(FakeGeminiContentClient("""{"candidates":[{"keyword":"다비치""""))
+
+        val result = extractor.extract(request())
+
+        assertTrue(result.candidates.isEmpty())
+    }
+
+    @Test
+    fun `extract skips Gemini request while rate limit guard is cooling down`() {
+        val guard = rateLimitGuard()
+        val failingClient = FailingGeminiContentClient()
+        val failingExtractor = extractor(failingClient, guard)
+
+        assertTrue(failingExtractor.extract(request()).candidates.isEmpty())
+        assertFalse(guard.canRequest())
+
+        val successClient = FakeGeminiContentClient("""{"candidates":[{"keyword":"다비치","confidence":0.9}]}""")
+        val skippedExtractor = extractor(successClient, guard)
+
+        assertTrue(skippedExtractor.extract(request()).candidates.isEmpty())
+        assertFalse(successClient.wasCalled)
+    }
+
+    private fun extractor(
+        geminiGenerateContentGateway: GeminiGenerateContentGateway,
+        geminiRateLimitGuard: GeminiRateLimitGuard = rateLimitGuard(),
+    ): GeminiKeywordCandidateExtractor =
         GeminiKeywordCandidateExtractor(
             geminiContentClient = GeminiContentClient(geminiGenerateContentGateway),
+            geminiRateLimitGuard = geminiRateLimitGuard,
             objectMapper = jacksonObjectMapper(),
             properties =
                 ExternalApiProperties(
@@ -106,9 +141,18 @@ class GeminiKeywordCandidateExtractorTest {
                         ExternalApiProperties.Gemini(
                             candidateExtractionMinConfidence = 0.6,
                             candidateExtractionMaxCandidates = 10,
-                            candidateExtractionMaxOutputTokens = 2048,
+                            candidateExtractionMaxOutputTokens = 4096,
                         ),
                 ),
+        )
+
+    private fun rateLimitGuard(): GeminiRateLimitGuard =
+        GeminiRateLimitGuard(
+            properties =
+                ExternalApiProperties(
+                    gemini = ExternalApiProperties.Gemini(rateLimitCooldownSeconds = 60),
+                ),
+            clock = Clock.fixed(Instant.parse("2026-06-14T00:00:00Z"), ZoneId.of("Asia/Seoul")),
         )
 
     private fun request(): KeywordCandidateExtractionRequest =
@@ -132,14 +176,21 @@ class GeminiKeywordCandidateExtractorTest {
         private val response: String,
     ) : GeminiGenerateContentGateway {
         lateinit var lastRequest: GeminiGenerateContentRequest
+        var wasCalled: Boolean = false
 
         override fun generateText(request: GeminiGenerateContentRequest): String {
+            wasCalled = true
             lastRequest = request
             return response
         }
     }
 
     private class FailingGeminiContentClient : GeminiGenerateContentGateway {
-        override fun generateText(request: GeminiGenerateContentRequest): String = throw IllegalStateException("gemini failed")
+        override fun generateText(request: GeminiGenerateContentRequest): String =
+            throw GeminiApiException(
+                message = "Gemini API request failed. status=429",
+                httpStatus = 429,
+                responseBody = """{"error":{"details":[{"retryDelay":"30s"}]}}""",
+            )
     }
 }

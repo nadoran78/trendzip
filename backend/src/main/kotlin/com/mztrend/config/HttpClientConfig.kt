@@ -59,6 +59,8 @@ class HttpClientConfig {
         require(gemini.rankSurgeThreshold > 0) { "Gemini rank surge threshold must be positive." }
         require(gemini.longRunningWeeks > 1) { "Gemini long running weeks must be greater than 1." }
         require(gemini.maxOutputTokens > 0) { "Gemini max output tokens must be positive." }
+        require(gemini.rateLimitCooldownSeconds > 0) { "Gemini rate limit cooldown seconds must be positive." }
+        require(gemini.explainMinLength > 0) { "Gemini explain min length must be positive." }
         require(gemini.temperature in 0.0..2.0) { "Gemini temperature must be between 0.0 and 2.0." }
         require(gemini.candidateExtractionMaxCandidates > 0) { "Gemini candidate extraction max candidates must be positive." }
         require(gemini.candidateExtractionMinResultCount in 1..gemini.candidateExtractionMaxCandidates) {

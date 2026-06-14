@@ -1,5 +1,6 @@
 package com.mztrend.service.crawling
 
+import com.mztrend.client.GeminiRateLimitGuard
 import com.mztrend.common.logger
 import org.springframework.stereotype.Service
 import java.time.Clock
@@ -8,6 +9,8 @@ import java.time.LocalDateTime
 @Service
 class KeywordExplainRefreshAppender(
     private val keywordExplainGenerator: KeywordExplainGenerator,
+    private val keywordExplainValidator: KeywordExplainValidator,
+    private val geminiRateLimitGuard: GeminiRateLimitGuard,
     private val clock: Clock,
 ) {
     fun appendExplains(
@@ -47,8 +50,19 @@ class KeywordExplainRefreshAppender(
         decision: KeywordExplainRefreshDecision,
         videos: List<CollectedVideo>,
         explainedAt: LocalDateTime,
-    ): Pair<String, KeywordExplainResult>? =
-        runCatching {
+    ): Pair<String, KeywordExplainResult>? {
+        if (!geminiRateLimitGuard.canRequest()) {
+            log.warn(
+                "Skip keyword explain generation because Gemini is cooling down. generation={}, keyword={}, reason={}, remainingCooldownSeconds={}",
+                batch.generation,
+                decision.keyword.word,
+                decision.reason,
+                geminiRateLimitGuard.remainingCooldownSeconds(),
+            )
+            return null
+        }
+
+        return runCatching {
             val generatedText =
                 keywordExplainGenerator.generate(
                     KeywordExplainRequest(
@@ -61,12 +75,21 @@ class KeywordExplainRefreshAppender(
                         videos = videos,
                     ),
                 )
-            val explain = generatedText.trim()
+            val explain = keywordExplainValidator.normalize(generatedText)
 
-            explain
-                .takeIf { it.isNotBlank() }
-                ?.let { decision.keyword.word to KeywordExplainResult(decision.keyword.word, it, explainedAt) }
+            if (explain == null) {
+                log.warn(
+                    "Skip keyword explain generation because Gemini response failed validation. generation={}, keyword={}, reason={}",
+                    batch.generation,
+                    decision.keyword.word,
+                    decision.reason,
+                )
+                null
+            } else {
+                decision.keyword.word to KeywordExplainResult(decision.keyword.word, explain, explainedAt)
+            }
         }.onFailure { exception ->
+            geminiRateLimitGuard.recordRateLimitIfNeeded(exception)
             log.warn(
                 "Skip keyword explain generation because Gemini request failed. generation={}, keyword={}, reason={}, message={}",
                 batch.generation,
@@ -75,6 +98,7 @@ class KeywordExplainRefreshAppender(
                 exception.message,
             )
         }.getOrNull()
+    }
 
     private fun CollectedTrendBatch.videoIdsByKeyword(): Map<String, List<String>> {
         val videoIdsByKeyword = linkedMapOf<String, MutableList<String>>()
