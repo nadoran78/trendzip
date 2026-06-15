@@ -48,6 +48,7 @@ data class ExternalApiProperties(
         val longRunningWeeks: Int = 4,
         val temperature: Double = 0.3,
         val maxOutputTokens: Int = 1024,
+        val thinkingLevel: String = "minimal",
         val rateLimitCooldownSeconds: Long = 60,
         val explainMinLength: Int = 50,
         val candidateExtractionMaxCandidates: Int = 20,

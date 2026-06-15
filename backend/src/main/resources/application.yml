@@ -69,6 +69,7 @@ external:
     long-running-weeks: ${GEMINI_LONG_RUNNING_WEEKS:4}
     temperature: ${GEMINI_TEMPERATURE:0.3}
     max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:1024}
+    thinking-level: ${GEMINI_THINKING_LEVEL:minimal}
     rate-limit-cooldown-seconds: ${GEMINI_RATE_LIMIT_COOLDOWN_SECONDS:60}
     explain-min-length: ${GEMINI_EXPLAIN_MIN_LENGTH:50}
     candidate-extraction-max-candidates: ${GEMINI_CANDIDATE_EXTRACTION_MAX_CANDIDATES:20}

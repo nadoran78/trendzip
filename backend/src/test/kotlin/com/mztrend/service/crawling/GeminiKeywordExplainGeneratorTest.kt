@@ -64,6 +64,12 @@ class GeminiKeywordExplainGeneratorTest {
         assertContains(prompt, "확인되지 않은 사실을 단정하지 않는다")
         assertEquals(0.2, fakeClient.lastRequest.generationConfig?.temperature)
         assertEquals(256, fakeClient.lastRequest.generationConfig?.maxOutputTokens)
+        assertEquals(
+            "MINIMAL",
+            fakeClient.lastRequest.generationConfig
+                ?.thinkingConfig
+                ?.thinkingLevel,
+        )
         assertEquals("설명 결과", explain)
     }
 

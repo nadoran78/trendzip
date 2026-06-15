@@ -130,6 +130,56 @@ class GeminiApiClientTest {
     }
 
     @Test
+    fun `client keeps response metadata when candidate text is blank`() {
+        server
+            .expect(requestTo(containsString("/models/gemini-test:generateContent")))
+            .andRespond(
+                withSuccess(
+                    """
+                    {
+                      "candidates": [
+                        {
+                          "content": {
+                            "parts": [
+                              { "text": "   " }
+                            ]
+                          },
+                          "finishReason": "STOP"
+                        }
+                      ],
+                      "usageMetadata": {
+                        "promptTokenCount": 300,
+                        "candidatesTokenCount": 0,
+                        "thoughtsTokenCount": 700,
+                        "totalTokenCount": 1000
+                      }
+                    }
+                    """.trimIndent(),
+                    MediaType.APPLICATION_JSON,
+                ),
+            )
+
+        val exception =
+            assertFailsWith<GeminiApiException> {
+                client.generateText(validRequest())
+            }
+
+        assertEquals("Gemini API response did not contain text.", exception.message)
+        assertEquals("STOP", exception.responseMetadata?.get("finishReason"))
+        assertEquals(1, exception.responseMetadata?.get("candidateCount"))
+        assertEquals(
+            mapOf(
+                "promptTokenCount" to 300,
+                "candidatesTokenCount" to 0,
+                "thoughtsTokenCount" to 700,
+                "totalTokenCount" to 1000,
+            ),
+            exception.responseMetadata?.get("usageMetadata"),
+        )
+        server.verify()
+    }
+
+    @Test
     fun `client throws clear exception when response finish reason is not stop`() {
         server
             .expect(requestTo(containsString("/models/gemini-test:generateContent")))
@@ -143,10 +193,16 @@ class GeminiApiClientTest {
                             "parts": [
                               { "text": "잘린 설명입니다" }
                             ]
-                          },
+                        },
                           "finishReason": "MAX_TOKENS"
                         }
-                      ]
+                      ],
+                      "usageMetadata": {
+                        "promptTokenCount": 300,
+                        "candidatesTokenCount": 1024,
+                        "thoughtsTokenCount": 700,
+                        "totalTokenCount": 2024
+                      }
                     }
                     """.trimIndent(),
                     MediaType.APPLICATION_JSON,
@@ -161,6 +217,16 @@ class GeminiApiClientTest {
         assertEquals("Gemini API response was not completed. finishReason=MAX_TOKENS", exception.message)
         assertEquals(200, exception.httpStatus)
         assertEquals("""{"finishReason":"MAX_TOKENS","text":"잘린 설명입니다"}""", exception.responseBody)
+        assertEquals("MAX_TOKENS", exception.responseMetadata?.get("finishReason"))
+        assertEquals(
+            mapOf(
+                "promptTokenCount" to 300,
+                "candidatesTokenCount" to 1024,
+                "thoughtsTokenCount" to 700,
+                "totalTokenCount" to 2024,
+            ),
+            exception.responseMetadata?.get("usageMetadata"),
+        )
         server.verify()
     }
 

@@ -3,6 +3,9 @@ package com.mztrend.client
 import com.mztrend.client.dto.NaverSearchTrendRequest
 import com.mztrend.client.dto.NaverSearchTrendResponse
 import com.mztrend.config.ExternalApiProperties
+import com.mztrend.domain.ExternalApiProvider
+import com.mztrend.domain.ExternalApiPurpose
+import com.mztrend.logging.RecordExternalApiLog
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -19,6 +22,14 @@ class NaverDataLabClient(
     @param:Qualifier("naverRestTemplate")
     private val restTemplate: RestTemplate,
 ) : NaverDataLabTrendClient {
+    @RecordExternalApiLog(
+        provider = ExternalApiProvider.NAVER_DATALAB,
+        purpose = ExternalApiPurpose.NAVER_TREND_SCORE,
+        method = "POST",
+        endpoint = "/search",
+        requestMetadata = "@externalApiLogMetadataFactory.naverTrendRequest(#p0)",
+        responseMetadata = "@externalApiLogMetadataFactory.naverTrendResponse(#result)",
+    )
     override fun searchTrend(request: NaverSearchTrendRequest): NaverSearchTrendResponse {
         validateRequest(request)
 
@@ -33,7 +44,13 @@ class NaverDataLabClient(
                 NaverSearchTrendResponse::class.java,
             ) ?: throw NaverDataLabException("Naver DataLab API returned an empty response.")
         } catch (exception: RestClientResponseException) {
-            throw NaverDataLabException("Naver DataLab API request failed. status=${exception.statusCode.value()}")
+            val metadata = exception.toResponseMetadata()
+            throw NaverDataLabException(
+                message = "Naver DataLab API request failed. status=${exception.statusCode.value()}",
+                httpStatus = exception.statusCode.value(),
+                responseBody = exception.responseBodyAsString.takeIf { it.isNotBlank() },
+                responseMetadata = metadata,
+            )
         } catch (exception: RestClientException) {
             throw NaverDataLabException("Naver DataLab API request failed. message=${exception.message}")
         }
@@ -72,6 +89,12 @@ class NaverDataLabClient(
     private fun requireClientSecret(): String =
         properties.naver.clientSecret.takeIf { it.isNotBlank() }
             ?: throw NaverDataLabException("Naver DataLab client secret is not configured.")
+
+    private fun RestClientResponseException.toResponseMetadata(): Map<String, Any?> =
+        mapOf(
+            "httpStatus" to statusCode.value(),
+            "responseBodyLength" to responseBodyAsString.length,
+        )
 
     companion object {
         private const val MAX_KEYWORDS_PER_GROUP = 20

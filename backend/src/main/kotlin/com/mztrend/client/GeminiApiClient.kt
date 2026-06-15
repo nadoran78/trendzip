@@ -20,7 +20,9 @@ class GeminiApiClient(
     @param:Qualifier("geminiRestTemplate")
     private val restTemplate: RestTemplate,
 ) : GeminiGenerateContentGateway {
-    override fun generateText(request: GeminiGenerateContentRequest): String {
+    override fun generateText(request: GeminiGenerateContentRequest): String = generateContent(request).text
+
+    override fun generateContent(request: GeminiGenerateContentRequest): GeminiGenerateContentResult {
         validateRequest(request)
 
         val response =
@@ -35,10 +37,12 @@ class GeminiApiClient(
                     GeminiGenerateContentResponse::class.java,
                 ) ?: throw GeminiApiException("Gemini API returned an empty response.")
             } catch (exception: RestClientResponseException) {
+                val metadata = exception.toResponseMetadata()
                 throw GeminiApiException(
                     message = "Gemini API request failed. status=${exception.statusCode.value()}",
                     httpStatus = exception.statusCode.value(),
                     responseBody = exception.responseBodyAsString.takeIf { it.isNotBlank() },
+                    responseMetadata = metadata,
                     cause = exception,
                 )
             } catch (exception: RestClientException) {
@@ -48,7 +52,7 @@ class GeminiApiClient(
                 )
             }
 
-        return response.extractText()
+        return response.extractResult()
     }
 
     private fun validateRequest(request: GeminiGenerateContentRequest) {
@@ -68,29 +72,67 @@ class GeminiApiClient(
         properties.gemini.apiKey.takeIf { it.isNotBlank() }
             ?: throw GeminiApiException("Gemini API key is not configured.")
 
-    private fun GeminiGenerateContentResponse.extractText(): String {
-        val candidate = candidates.firstOrNull() ?: throw GeminiApiException("Gemini API response did not contain text.")
-        candidate.validateFinishReason()
+    private fun GeminiGenerateContentResponse.extractResult(): GeminiGenerateContentResult {
+        val candidate = candidates.firstOrNull()
+        val metadata = toMetadata(candidate)
+        candidate ?: throw GeminiApiException(
+            message = "Gemini API response did not contain text.",
+            responseMetadata = metadata,
+        )
+        candidate.validateFinishReason(metadata)
 
-        return candidate.content
-            ?.parts
-            ?.map { it.text.trim() }
-            ?.filter { it.isNotBlank() }
-            ?.joinToString(separator = "\n")
-            ?.takeIf { it.isNotBlank() }
-            ?: throw GeminiApiException("Gemini API response did not contain text.")
+        val text =
+            candidate.content
+                ?.parts
+                ?.map { it.text.trim() }
+                ?.filter { it.isNotBlank() }
+                ?.joinToString(separator = "\n")
+                ?.takeIf { it.isNotBlank() }
+                ?: throw GeminiApiException(
+                    message = "Gemini API response did not contain text.",
+                    responseMetadata = metadata,
+                )
+
+        return GeminiGenerateContentResult(
+            text = text,
+            finishReason = candidate.finishReason,
+            usageMetadata = usageMetadata,
+        )
     }
 
-    private fun GeminiCandidate.validateFinishReason() {
+    private fun GeminiCandidate.validateFinishReason(responseMetadata: Map<String, Any?>) {
         val reason = finishReason?.trim()?.uppercase() ?: return
         if (reason != FINISH_REASON_STOP) {
             throw GeminiApiException(
                 message = "Gemini API response was not completed. finishReason=$reason",
                 httpStatus = SUCCESS_STATUS,
                 responseBody = toFailureResponseBody(reason),
+                responseMetadata = responseMetadata,
             )
         }
     }
+
+    private fun GeminiGenerateContentResponse.toMetadata(candidate: GeminiCandidate?): Map<String, Any?> =
+        linkedMapOf(
+            "finishReason" to candidate?.finishReason,
+            "candidateCount" to candidates.size,
+            "usageMetadata" to
+                usageMetadata?.let {
+                    linkedMapOf(
+                        "promptTokenCount" to it.promptTokenCount,
+                        "cachedContentTokenCount" to it.cachedContentTokenCount,
+                        "candidatesTokenCount" to it.candidatesTokenCount,
+                        "thoughtsTokenCount" to it.thoughtsTokenCount,
+                        "totalTokenCount" to it.totalTokenCount,
+                    ).filterValues { value -> value != null }
+                },
+        ).filterValues { it != null }
+
+    private fun RestClientResponseException.toResponseMetadata(): Map<String, Any?> =
+        linkedMapOf(
+            "httpStatus" to statusCode.value(),
+            "responseBodyLength" to responseBodyAsString.length,
+        )
 
     private fun GeminiCandidate.toFailureResponseBody(reason: String): String {
         val text =

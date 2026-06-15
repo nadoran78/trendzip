@@ -78,6 +78,12 @@ class GeminiKeywordCandidateExtractorTest {
         assertContains(prompt, "description: 설명")
         assertEquals(0.3, fakeClient.lastRequest.generationConfig?.temperature)
         assertEquals(4096, fakeClient.lastRequest.generationConfig?.maxOutputTokens)
+        assertEquals(
+            "MINIMAL",
+            fakeClient.lastRequest.generationConfig
+                ?.thinkingConfig
+                ?.thinkingLevel,
+        )
 
         assertEquals(listOf("다비치", "아이브", "뉴진스"), result.candidates.map { it.keyword })
 

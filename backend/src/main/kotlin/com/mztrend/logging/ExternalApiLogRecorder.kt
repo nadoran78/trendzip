@@ -1,5 +1,6 @@
 package com.mztrend.logging
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.mztrend.domain.ExternalApiLog
 import com.mztrend.repository.command.ExternalApiLogRepository
@@ -27,6 +28,8 @@ class ExternalApiLogRecorder(
                 durationMs = record.durationMs,
                 requestBody = record.requestBodySource.toSafeBody(),
                 responseBody = record.responseBodySource.toSafeBody(),
+                requestMetadata = record.requestMetadata.toSafeMetadata(),
+                responseMetadata = record.responseMetadata.toSafeMetadata(),
                 errorMessage = record.errorMessage.toSafeBody(),
                 startedAt = record.startedAt,
                 endedAt = record.endedAt,
@@ -46,6 +49,16 @@ class ExternalApiLogRecorder(
         return rawBody
             .maskSensitiveValues()
             .limitLength()
+    }
+
+    private fun Map<String, Any?>?.toSafeMetadata(): Map<String, Any?>? {
+        if (isNullOrEmpty()) return null
+
+        val maskedJson = objectMapper.writeValueAsString(this).maskSensitiveValues()
+        return objectMapper.readValue(
+            maskedJson,
+            object : TypeReference<Map<String, Any?>>() {},
+        )
     }
 
     private fun String.maskSensitiveValues(): String =

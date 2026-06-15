@@ -12,4 +12,6 @@ annotation class RecordExternalApiLog(
     val method: String,
     val endpoint: String,
     val direction: ExternalApiDirection = ExternalApiDirection.OUTBOUND,
+    val requestMetadata: String = "",
+    val responseMetadata: String = "",
 )

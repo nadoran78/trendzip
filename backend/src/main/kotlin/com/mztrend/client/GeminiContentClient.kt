@@ -15,14 +15,20 @@ class GeminiContentClient(
         purpose = ExternalApiPurpose.GEMINI_CANDIDATE_EXTRACTION,
         method = "POST",
         endpoint = "/models/{model}:generateContent",
+        requestMetadata = "@externalApiLogMetadataFactory.geminiRequest(#p0)",
+        responseMetadata = "@externalApiLogMetadataFactory.geminiResponse(#result)",
     )
-    fun generateCandidateText(request: GeminiGenerateContentRequest): String = geminiGenerateContentGateway.generateText(request)
+    fun generateCandidateContent(request: GeminiGenerateContentRequest): GeminiGenerateContentResult =
+        geminiGenerateContentGateway.generateContent(request)
 
     @RecordExternalApiLog(
         provider = ExternalApiProvider.GEMINI,
         purpose = ExternalApiPurpose.GEMINI_KEYWORD_EXPLAIN,
         method = "POST",
         endpoint = "/models/{model}:generateContent",
+        requestMetadata = "@externalApiLogMetadataFactory.geminiRequest(#p0)",
+        responseMetadata = "@externalApiLogMetadataFactory.geminiResponse(#result)",
     )
-    fun generateKeywordExplainText(request: GeminiGenerateContentRequest): String = geminiGenerateContentGateway.generateText(request)
+    fun generateKeywordExplainContent(request: GeminiGenerateContentRequest): GeminiGenerateContentResult =
+        geminiGenerateContentGateway.generateContent(request)
 }

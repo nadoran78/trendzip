@@ -16,6 +16,8 @@ data class ExternalApiLogRecord(
     val durationMs: Long,
     val requestBodySource: Any?,
     val responseBodySource: Any?,
+    val requestMetadata: Map<String, Any?>? = null,
+    val responseMetadata: Map<String, Any?>? = null,
     val errorMessage: String?,
     val startedAt: LocalDateTime,
     val endedAt: LocalDateTime,

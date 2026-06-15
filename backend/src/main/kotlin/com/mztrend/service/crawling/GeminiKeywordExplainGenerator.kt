@@ -5,6 +5,7 @@ import com.mztrend.client.dto.GeminiContent
 import com.mztrend.client.dto.GeminiGenerateContentRequest
 import com.mztrend.client.dto.GeminiGenerationConfig
 import com.mztrend.client.dto.GeminiPart
+import com.mztrend.client.dto.GeminiThinkingConfig
 import com.mztrend.config.ExternalApiProperties
 import com.mztrend.domain.Generation
 import org.springframework.stereotype.Service
@@ -17,7 +18,7 @@ class GeminiKeywordExplainGenerator(
     override fun generate(request: KeywordExplainRequest): String {
         val prompt = buildPrompt(request)
         val response =
-            geminiContentClient.generateKeywordExplainText(
+            geminiContentClient.generateKeywordExplainContent(
                 request =
                     GeminiGenerateContentRequest(
                         contents =
@@ -31,11 +32,12 @@ class GeminiKeywordExplainGenerator(
                             GeminiGenerationConfig(
                                 temperature = properties.gemini.temperature,
                                 maxOutputTokens = properties.gemini.maxOutputTokens,
+                                thinkingConfig = GeminiThinkingConfig(properties.gemini.thinkingLevel.uppercase()),
                             ),
                     ),
             )
 
-        return response.trim()
+        return response.text.trim()
     }
 
     private fun buildPrompt(request: KeywordExplainRequest): String {

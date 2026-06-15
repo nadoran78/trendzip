@@ -9,6 +9,7 @@ import com.mztrend.client.dto.GeminiContent
 import com.mztrend.client.dto.GeminiGenerateContentRequest
 import com.mztrend.client.dto.GeminiGenerationConfig
 import com.mztrend.client.dto.GeminiPart
+import com.mztrend.client.dto.GeminiThinkingConfig
 import com.mztrend.common.logger
 import com.mztrend.config.ExternalApiProperties
 import org.springframework.stereotype.Service
@@ -32,23 +33,25 @@ class GeminiKeywordCandidateExtractor(
 
         val response =
             runCatching {
-                geminiContentClient.generateCandidateText(
-                    request =
-                        GeminiGenerateContentRequest(
-                            contents =
-                                listOf(
-                                    GeminiContent(
-                                        role = "user",
-                                        parts = listOf(GeminiPart(buildPrompt(request))),
+                geminiContentClient
+                    .generateCandidateContent(
+                        request =
+                            GeminiGenerateContentRequest(
+                                contents =
+                                    listOf(
+                                        GeminiContent(
+                                            role = "user",
+                                            parts = listOf(GeminiPart(buildPrompt(request))),
+                                        ),
                                     ),
-                                ),
-                            generationConfig =
-                                GeminiGenerationConfig(
-                                    temperature = properties.gemini.temperature,
-                                    maxOutputTokens = properties.gemini.candidateExtractionMaxOutputTokens,
-                                ),
-                        ),
-                )
+                                generationConfig =
+                                    GeminiGenerationConfig(
+                                        temperature = properties.gemini.temperature,
+                                        maxOutputTokens = properties.gemini.candidateExtractionMaxOutputTokens,
+                                        thinkingConfig = GeminiThinkingConfig(properties.gemini.thinkingLevel.uppercase()),
+                                    ),
+                            ),
+                    ).text
             }.getOrElse { exception ->
                 geminiRateLimitGuard.recordRateLimitIfNeeded(exception)
                 log.warn("Skip Gemini keyword candidate extraction because request failed. message={}", exception.message)

@@ -9,6 +9,8 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.PrePersist
 import jakarta.persistence.Table
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.time.LocalDateTime
 
 @Entity
@@ -37,6 +39,12 @@ class ExternalApiLog(
     var requestBody: String? = null,
     @Column(name = "response_body", columnDefinition = "TEXT")
     var responseBody: String? = null,
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "request_metadata", columnDefinition = "jsonb")
+    var requestMetadata: Map<String, Any?>? = null,
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "response_metadata", columnDefinition = "jsonb")
+    var responseMetadata: Map<String, Any?>? = null,
     @Column(name = "error_message", columnDefinition = "TEXT")
     var errorMessage: String? = null,
     @Column(name = "started_at", nullable = false)

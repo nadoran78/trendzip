@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS external_api_logs (
     duration_ms   BIGINT NOT NULL,
     request_body  TEXT,
     response_body TEXT,
+    request_metadata  JSONB,
+    response_metadata JSONB,
     error_message TEXT,
     started_at    TIMESTAMP NOT NULL,
     ended_at      TIMESTAMP NOT NULL,
@@ -52,6 +54,8 @@ COMMENT ON COLUMN external_api_logs.success IS '외부 API 처리 성공 여부'
 COMMENT ON COLUMN external_api_logs.duration_ms IS '처리 소요 시간(ms)';
 COMMENT ON COLUMN external_api_logs.request_body IS '마스킹 및 길이 제한이 적용된 요청 본문';
 COMMENT ON COLUMN external_api_logs.response_body IS '마스킹 및 길이 제한이 적용된 응답 본문';
+COMMENT ON COLUMN external_api_logs.request_metadata IS '검색 및 집계가 가능한 구조화된 요청 메타데이터(JSON)';
+COMMENT ON COLUMN external_api_logs.response_metadata IS '검색 및 집계가 가능한 구조화된 응답 메타데이터(JSON)';
 COMMENT ON COLUMN external_api_logs.error_message IS '실패 시 예외 또는 오류 메시지';
 COMMENT ON COLUMN external_api_logs.started_at IS '외부 API 처리 시작 시각';
 COMMENT ON COLUMN external_api_logs.ended_at IS '외부 API 처리 종료 시각';

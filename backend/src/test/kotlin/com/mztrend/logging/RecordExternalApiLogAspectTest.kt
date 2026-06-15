@@ -10,6 +10,7 @@ import com.mztrend.repository.command.ExternalApiLogRepository
 import org.aspectj.lang.ProceedingJoinPoint
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
+import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -37,6 +38,9 @@ class RecordExternalApiLogAspectTest {
         assertEquals(true, record.success)
         assertEquals("""["request"]""", record.requestBody)
         assertEquals("response", record.responseBody)
+        assertEquals(1024, record.requestMetadata?.get("maxOutputTokens"))
+        assertEquals("STOP", record.responseMetadata?.get("finishReason"))
+        assertEquals(mapOf("thoughtsTokenCount" to 100), record.responseMetadata?.get("usageMetadata"))
     }
 
     @Test
@@ -49,8 +53,9 @@ class RecordExternalApiLogAspectTest {
                 message = "Gemini API request failed. status=503",
                 httpStatus = 503,
                 responseBody = """{"error":"overloaded"}""",
+                responseMetadata = mapOf("httpStatus" to 503),
             )
-        Mockito.`when`(joinPoint.args).thenReturn(emptyArray())
+        Mockito.`when`(joinPoint.args).thenReturn(arrayOf("request"))
         Mockito.`when`(joinPoint.proceed()).thenThrow(exception)
 
         val thrown =
@@ -63,6 +68,7 @@ class RecordExternalApiLogAspectTest {
         assertEquals(false, record.success)
         assertEquals(503, record.httpStatus)
         assertEquals("""{"error":"overloaded"}""", record.responseBody)
+        assertEquals(503, record.responseMetadata?.get("httpStatus"))
         assertEquals("Gemini API request failed. status=503", record.errorMessage)
     }
 
@@ -74,6 +80,10 @@ class RecordExternalApiLogAspectTest {
                     objectMapper = jacksonObjectMapper(),
                 ),
             clock = Clock.fixed(Instant.parse("2026-06-09T18:00:00Z"), ZoneId.of("Asia/Seoul")),
+            beanFactory =
+                DefaultListableBeanFactory().apply {
+                    registerSingleton("testExternalApiMetadataFactory", TestExternalApiMetadataFactory())
+                },
         )
 
     private fun capturedLog(repository: ExternalApiLogRepository): ExternalApiLog {
@@ -94,7 +104,19 @@ class RecordExternalApiLogAspectTest {
             purpose = ExternalApiPurpose.GEMINI_CANDIDATE_EXTRACTION,
             method = "POST",
             endpoint = "/models/{model}:generateContent",
+            requestMetadata = "@testExternalApiMetadataFactory.request(#p0)",
+            responseMetadata = "@testExternalApiMetadataFactory.response(#result)",
         )
         fun call() = Unit
+    }
+
+    private class TestExternalApiMetadataFactory {
+        fun request(value: String): Map<String, Any?> = mapOf("maxOutputTokens" to if (value == "request") 1024 else 0)
+
+        fun response(value: String): Map<String, Any?> =
+            mapOf(
+                "finishReason" to if (value == "response") "STOP" else "UNKNOWN",
+                "usageMetadata" to mapOf("thoughtsTokenCount" to 100),
+            )
     }
 }

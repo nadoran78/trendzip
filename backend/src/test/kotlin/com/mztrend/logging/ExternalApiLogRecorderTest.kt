@@ -44,6 +44,15 @@ class ExternalApiLogRecorderTest {
                         "prompt" to "긴 프롬프트".repeat(20),
                     ),
                 responseBodySource = "Authorization: Bearer secret-token",
+                requestMetadata =
+                    mapOf(
+                        "apiKey" to "secret-key",
+                        "maxOutputTokens" to 1024,
+                    ),
+                responseMetadata =
+                    mapOf(
+                        "usageMetadata" to mapOf("thoughtsTokenCount" to 700),
+                    ),
                 errorMessage = "x-goog-api-key: secret-key",
                 startedAt = startedAt,
                 endedAt = endedAt,
@@ -59,6 +68,9 @@ class ExternalApiLogRecorderTest {
         assertContains(requireNotNull(log.requestBody), """"apiKey":"***"""")
         assertContains(requireNotNull(log.requestBody), "[truncated]")
         assertEquals("Authorization: ***", log.responseBody)
+        assertEquals("***", log.requestMetadata?.get("apiKey"))
+        assertEquals(1024, log.requestMetadata?.get("maxOutputTokens"))
+        assertEquals(mapOf("thoughtsTokenCount" to 700), log.responseMetadata?.get("usageMetadata"))
         assertEquals("x-goog-api-key: ***", log.errorMessage)
     }
 

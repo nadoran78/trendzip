@@ -10,7 +10,10 @@ import com.mztrend.client.dto.YoutubeVideoDetail
 import com.mztrend.client.dto.YoutubeVideoItem
 import com.mztrend.client.dto.YoutubeVideoListResponse
 import com.mztrend.config.ExternalApiProperties
+import com.mztrend.domain.ExternalApiProvider
+import com.mztrend.domain.ExternalApiPurpose
 import com.mztrend.domain.Generation
+import com.mztrend.logging.RecordExternalApiLog
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClientException
@@ -30,6 +33,14 @@ class YoutubeApiClient(
     @param:Qualifier("youtubeRestTemplate")
     private val restTemplate: RestTemplate,
 ) {
+    @RecordExternalApiLog(
+        provider = ExternalApiProvider.YOUTUBE,
+        purpose = ExternalApiPurpose.YOUTUBE_VIDEO_SEARCH,
+        method = "GET",
+        endpoint = "/search",
+        requestMetadata = "@externalApiLogMetadataFactory.youtubeSearchRequest(#p0, #p1, #p2)",
+        responseMetadata = "@externalApiLogMetadataFactory.youtubeSearchResponse(#result)",
+    )
     fun searchVideos(
         keyword: String,
         generation: Generation,
@@ -59,6 +70,14 @@ class YoutubeApiClient(
         return response.items.mapNotNull { it.toSearchVideo() }
     }
 
+    @RecordExternalApiLog(
+        provider = ExternalApiProvider.YOUTUBE,
+        purpose = ExternalApiPurpose.YOUTUBE_POPULAR_VIDEOS,
+        method = "GET",
+        endpoint = "/videos",
+        requestMetadata = "@externalApiLogMetadataFactory.youtubePopularRequest(#p0)",
+        responseMetadata = "@externalApiLogMetadataFactory.youtubeVideoDetailsResponse(#result)",
+    )
     fun getPopularVideos(maxResults: Int = properties.youtube.popularVideoMaxResults): List<YoutubeVideoDetail> {
         require(maxResults in 1..MAX_SEARCH_SIZE) { "YouTube popular video maxResults must be between 1 and 50." }
 
@@ -84,10 +103,20 @@ class YoutubeApiClient(
         return response.items.mapNotNull { it.toVideoDetail() }
     }
 
-    fun getVideoDetails(videoIds: Collection<String>): List<YoutubeVideoDetail> =
-        videoIds
-            .filter { it.isNotBlank() }
-            .distinct()
+    @RecordExternalApiLog(
+        provider = ExternalApiProvider.YOUTUBE,
+        purpose = ExternalApiPurpose.YOUTUBE_VIDEO_DETAILS,
+        method = "GET",
+        endpoint = "/videos",
+        requestMetadata = "@externalApiLogMetadataFactory.youtubeVideoDetailsRequest(#p0)",
+        responseMetadata = "@externalApiLogMetadataFactory.youtubeVideoDetailsResponse(#result)",
+    )
+    fun getVideoDetails(videoIds: Collection<String>): List<YoutubeVideoDetail> {
+        val distinctVideoIds =
+            videoIds
+                .filter { it.isNotBlank() }
+                .distinct()
+        return distinctVideoIds
             .chunked(MAX_ID_BATCH_SIZE)
             .flatMap { ids ->
                 val response =
@@ -103,11 +132,22 @@ class YoutubeApiClient(
 
                 response.items.mapNotNull { it.toVideoDetail() }
             }
+    }
 
-    fun getChannelDetails(channelIds: Collection<String>): List<YoutubeChannelDetail> =
-        channelIds
-            .filter { it.isNotBlank() }
-            .distinct()
+    @RecordExternalApiLog(
+        provider = ExternalApiProvider.YOUTUBE,
+        purpose = ExternalApiPurpose.YOUTUBE_CHANNEL_DETAILS,
+        method = "GET",
+        endpoint = "/channels",
+        requestMetadata = "@externalApiLogMetadataFactory.youtubeChannelDetailsRequest(#p0)",
+        responseMetadata = "@externalApiLogMetadataFactory.youtubeChannelDetailsResponse(#result)",
+    )
+    fun getChannelDetails(channelIds: Collection<String>): List<YoutubeChannelDetail> {
+        val distinctChannelIds =
+            channelIds
+                .filter { it.isNotBlank() }
+                .distinct()
+        return distinctChannelIds
             .chunked(MAX_ID_BATCH_SIZE)
             .flatMap { ids ->
                 val response =
@@ -123,6 +163,7 @@ class YoutubeApiClient(
 
                 response.items.mapNotNull { it.toChannelDetail() }
             }
+    }
 
     private fun <T : Any> get(
         path: String,
@@ -141,11 +182,23 @@ class YoutubeApiClient(
             restTemplate.getForObject(uriBuilder.build().toUri(), responseType)
                 ?: throw YoutubeApiException("YouTube API returned an empty response.")
         } catch (exception: RestClientResponseException) {
-            throw YoutubeApiException("YouTube API request failed. status=${exception.statusCode.value()}")
+            val metadata = exception.toResponseMetadata()
+            throw YoutubeApiException(
+                message = "YouTube API request failed. status=${exception.statusCode.value()}",
+                httpStatus = exception.statusCode.value(),
+                responseBody = exception.responseBodyAsString.takeIf { it.isNotBlank() },
+                responseMetadata = metadata,
+            )
         } catch (exception: RestClientException) {
             throw YoutubeApiException("YouTube API request failed. message=${exception.message}")
         }
     }
+
+    private fun RestClientResponseException.toResponseMetadata(): Map<String, Any?> =
+        mapOf(
+            "httpStatus" to statusCode.value(),
+            "responseBodyLength" to responseBodyAsString.length,
+        )
 
     private fun requireApiKey(): String =
         properties.youtube.apiKey.takeIf { it.isNotBlank() }
