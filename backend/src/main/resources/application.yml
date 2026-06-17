@@ -71,6 +71,10 @@ external:
     max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:1024}
     thinking-level: ${GEMINI_THINKING_LEVEL:minimal}
     rate-limit-cooldown-seconds: ${GEMINI_RATE_LIMIT_COOLDOWN_SECONDS:60}
+    rate-limit-max-requests-per-minute: ${GEMINI_RATE_LIMIT_MAX_REQUESTS_PER_MINUTE:5}
+    rate-limit-window-seconds: ${GEMINI_RATE_LIMIT_WINDOW_SECONDS:60}
+    rate-limit-safety-delay-millis: ${GEMINI_RATE_LIMIT_SAFETY_DELAY_MILLIS:500}
+    rate-limit-redis-key-prefix: ${GEMINI_RATE_LIMIT_REDIS_KEY_PREFIX:rate-limit:gemini}
     explain-min-length: ${GEMINI_EXPLAIN_MIN_LENGTH:50}
     candidate-extraction-max-candidates: ${GEMINI_CANDIDATE_EXTRACTION_MAX_CANDIDATES:20}
     candidate-extraction-min-result-count: ${GEMINI_CANDIDATE_EXTRACTION_MIN_RESULT_COUNT:10}

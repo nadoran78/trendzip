@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.mztrend.client.GeminiContentClient
-import com.mztrend.client.GeminiRateLimitGuard
+import com.mztrend.client.GeminiRateLimiter
 import com.mztrend.client.dto.GeminiContent
 import com.mztrend.client.dto.GeminiGenerateContentRequest
 import com.mztrend.client.dto.GeminiGenerationConfig
@@ -17,22 +17,16 @@ import org.springframework.stereotype.Service
 @Service
 class GeminiKeywordCandidateExtractor(
     private val geminiContentClient: GeminiContentClient,
-    private val geminiRateLimitGuard: GeminiRateLimitGuard,
+    private val geminiRateLimiter: GeminiRateLimiter,
     private val objectMapper: ObjectMapper,
     private val properties: ExternalApiProperties,
 ) : KeywordCandidateExtractor {
     override fun extract(request: KeywordCandidateExtractionRequest): KeywordCandidateExtractionResult {
         if (request.videos.isEmpty()) return KeywordCandidateExtractionResult()
-        if (!geminiRateLimitGuard.canRequest()) {
-            log.warn(
-                "Skip Gemini keyword candidate extraction because Gemini is cooling down. remainingCooldownSeconds={}",
-                geminiRateLimitGuard.remainingCooldownSeconds(),
-            )
-            return KeywordCandidateExtractionResult()
-        }
 
         val response =
             runCatching {
+                geminiRateLimiter.acquirePermit()
                 geminiContentClient
                     .generateCandidateContent(
                         request =
@@ -53,7 +47,7 @@ class GeminiKeywordCandidateExtractor(
                             ),
                     ).text
             }.getOrElse { exception ->
-                geminiRateLimitGuard.recordRateLimitIfNeeded(exception)
+                geminiRateLimiter.recordRateLimitIfNeeded(exception)
                 log.warn("Skip Gemini keyword candidate extraction because request failed. message={}", exception.message)
                 return KeywordCandidateExtractionResult()
             }

@@ -1,6 +1,6 @@
 package com.mztrend.service.crawling
 
-import com.mztrend.client.GeminiRateLimitGuard
+import com.mztrend.client.GeminiRateLimiter
 import com.mztrend.common.logger
 import org.springframework.stereotype.Service
 import java.time.Clock
@@ -10,7 +10,7 @@ import java.time.LocalDateTime
 class KeywordExplainRefreshAppender(
     private val keywordExplainGenerator: KeywordExplainGenerator,
     private val keywordExplainValidator: KeywordExplainValidator,
-    private val geminiRateLimitGuard: GeminiRateLimitGuard,
+    private val geminiRateLimiter: GeminiRateLimiter,
     private val clock: Clock,
 ) {
     fun appendExplains(
@@ -50,19 +50,9 @@ class KeywordExplainRefreshAppender(
         decision: KeywordExplainRefreshDecision,
         videos: List<CollectedVideo>,
         explainedAt: LocalDateTime,
-    ): Pair<String, KeywordExplainResult>? {
-        if (!geminiRateLimitGuard.canRequest()) {
-            log.warn(
-                "Skip keyword explain generation because Gemini is cooling down. generation={}, keyword={}, reason={}, remainingCooldownSeconds={}",
-                batch.generation,
-                decision.keyword.word,
-                decision.reason,
-                geminiRateLimitGuard.remainingCooldownSeconds(),
-            )
-            return null
-        }
-
-        return runCatching {
+    ): Pair<String, KeywordExplainResult>? =
+        runCatching {
+            geminiRateLimiter.acquirePermit()
             val generatedText =
                 keywordExplainGenerator.generate(
                     KeywordExplainRequest(
@@ -89,7 +79,7 @@ class KeywordExplainRefreshAppender(
                 decision.keyword.word to KeywordExplainResult(decision.keyword.word, explain, explainedAt)
             }
         }.onFailure { exception ->
-            geminiRateLimitGuard.recordRateLimitIfNeeded(exception)
+            geminiRateLimiter.recordRateLimitIfNeeded(exception)
             log.warn(
                 "Skip keyword explain generation because Gemini request failed. generation={}, keyword={}, reason={}, message={}",
                 batch.generation,
@@ -98,7 +88,6 @@ class KeywordExplainRefreshAppender(
                 exception.message,
             )
         }.getOrNull()
-    }
 
     private fun CollectedTrendBatch.videoIdsByKeyword(): Map<String, List<String>> {
         val videoIdsByKeyword = linkedMapOf<String, MutableList<String>>()

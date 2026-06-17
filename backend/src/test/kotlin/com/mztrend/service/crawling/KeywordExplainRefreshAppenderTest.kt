@@ -1,7 +1,7 @@
 package com.mztrend.service.crawling
 
 import com.mztrend.client.GeminiApiException
-import com.mztrend.client.GeminiRateLimitGuard
+import com.mztrend.client.GeminiRateLimiter
 import com.mztrend.config.ExternalApiProperties
 import com.mztrend.domain.FeedSection
 import com.mztrend.domain.Generation
@@ -107,7 +107,8 @@ class KeywordExplainRefreshAppenderTest {
     }
 
     @Test
-    fun `appendExplains skips remaining requests after Gemini rate limit`() {
+    fun `appendExplains records rate limit and continues remaining requests`() {
+        val rateLimiter = RecordingGeminiRateLimiter()
         val generator =
             RecordingKeywordExplainGenerator(
                 mapOf(
@@ -121,7 +122,7 @@ class KeywordExplainRefreshAppenderTest {
                     "뉴진스" to { "뉴진스 설명입니다." },
                 ),
             )
-        val appender = appender(generator)
+        val appender = appender(generator, geminiRateLimiter = rateLimiter)
         val batch = collectedBatch()
 
         val updatedBatch =
@@ -141,13 +142,16 @@ class KeywordExplainRefreshAppenderTest {
             )
 
         assertNull(updatedBatch.keywords.single { it.word == "아이브" }.explain)
-        assertNull(updatedBatch.keywords.single { it.word == "뉴진스" }.explain)
-        assertContentEquals(listOf("아이브"), generator.requests.map { it.keyword.word })
+        assertEquals("뉴진스 설명입니다.", updatedBatch.keywords.single { it.word == "뉴진스" }.explain)
+        assertContentEquals(listOf("아이브", "뉴진스"), generator.requests.map { it.keyword.word })
+        assertEquals(2, rateLimiter.acquireCount)
+        assertEquals(1, rateLimiter.rateLimitRecordCount)
     }
 
     private fun appender(
         generator: KeywordExplainGenerator,
         explainMinLength: Int = 5,
+        geminiRateLimiter: GeminiRateLimiter = RecordingGeminiRateLimiter(),
     ): KeywordExplainRefreshAppender =
         KeywordExplainRefreshAppender(
             keywordExplainGenerator = generator,
@@ -157,14 +161,7 @@ class KeywordExplainRefreshAppenderTest {
                         gemini = ExternalApiProperties.Gemini(explainMinLength = explainMinLength),
                     ),
                 ),
-            geminiRateLimitGuard =
-                GeminiRateLimitGuard(
-                    properties =
-                        ExternalApiProperties(
-                            gemini = ExternalApiProperties.Gemini(rateLimitCooldownSeconds = 60),
-                        ),
-                    clock = FIXED_CLOCK,
-                ),
+            geminiRateLimiter = geminiRateLimiter,
             clock = FIXED_CLOCK,
         )
 
@@ -226,6 +223,21 @@ class KeywordExplainRefreshAppenderTest {
         override fun generate(request: KeywordExplainRequest): String {
             requests += request
             return responsesByWord[request.keyword.word]?.invoke().orEmpty()
+        }
+    }
+
+    private class RecordingGeminiRateLimiter : GeminiRateLimiter {
+        var acquireCount: Int = 0
+        var rateLimitRecordCount: Int = 0
+
+        override fun acquirePermit() {
+            acquireCount += 1
+        }
+
+        override fun recordRateLimitIfNeeded(exception: Throwable): Boolean {
+            val recorded = exception is GeminiApiException && exception.httpStatus == 429
+            if (recorded) rateLimitRecordCount += 1
+            return recorded
         }
     }
 

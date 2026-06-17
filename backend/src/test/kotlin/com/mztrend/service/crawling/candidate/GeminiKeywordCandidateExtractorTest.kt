@@ -4,17 +4,13 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.mztrend.client.GeminiApiException
 import com.mztrend.client.GeminiContentClient
 import com.mztrend.client.GeminiGenerateContentGateway
-import com.mztrend.client.GeminiRateLimitGuard
+import com.mztrend.client.GeminiRateLimiter
 import com.mztrend.client.dto.GeminiGenerateContentRequest
 import com.mztrend.config.ExternalApiProperties
-import java.time.Clock
-import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class GeminiKeywordCandidateExtractorTest {
@@ -118,28 +114,29 @@ class GeminiKeywordCandidateExtractorTest {
     }
 
     @Test
-    fun `extract skips Gemini request while rate limit guard is cooling down`() {
-        val guard = rateLimitGuard()
+    fun `extract records rate limit and continues next Gemini request`() {
+        val rateLimiter = RecordingGeminiRateLimiter()
         val failingClient = FailingGeminiContentClient()
-        val failingExtractor = extractor(failingClient, guard)
+        val failingExtractor = extractor(failingClient, rateLimiter)
 
         assertTrue(failingExtractor.extract(request()).candidates.isEmpty())
-        assertFalse(guard.canRequest())
 
         val successClient = FakeGeminiContentClient("""{"candidates":[{"keyword":"다비치","confidence":0.9}]}""")
-        val skippedExtractor = extractor(successClient, guard)
+        val waitingExtractor = extractor(successClient, rateLimiter)
 
-        assertTrue(skippedExtractor.extract(request()).candidates.isEmpty())
-        assertFalse(successClient.wasCalled)
+        assertEquals(listOf("다비치"), waitingExtractor.extract(request()).candidates.map { it.keyword })
+        assertTrue(successClient.wasCalled)
+        assertEquals(2, rateLimiter.acquireCount)
+        assertEquals(1, rateLimiter.rateLimitRecordCount)
     }
 
     private fun extractor(
         geminiGenerateContentGateway: GeminiGenerateContentGateway,
-        geminiRateLimitGuard: GeminiRateLimitGuard = rateLimitGuard(),
+        geminiRateLimiter: GeminiRateLimiter = rateLimiter(),
     ): GeminiKeywordCandidateExtractor =
         GeminiKeywordCandidateExtractor(
             geminiContentClient = GeminiContentClient(geminiGenerateContentGateway),
-            geminiRateLimitGuard = geminiRateLimitGuard,
+            geminiRateLimiter = geminiRateLimiter,
             objectMapper = jacksonObjectMapper(),
             properties =
                 ExternalApiProperties(
@@ -152,14 +149,7 @@ class GeminiKeywordCandidateExtractorTest {
                 ),
         )
 
-    private fun rateLimitGuard(): GeminiRateLimitGuard =
-        GeminiRateLimitGuard(
-            properties =
-                ExternalApiProperties(
-                    gemini = ExternalApiProperties.Gemini(rateLimitCooldownSeconds = 60),
-                ),
-            clock = Clock.fixed(Instant.parse("2026-06-14T00:00:00Z"), ZoneId.of("Asia/Seoul")),
-        )
+    private fun rateLimiter(): GeminiRateLimiter = RecordingGeminiRateLimiter()
 
     private fun request(): KeywordCandidateExtractionRequest =
         KeywordCandidateExtractionRequest(
@@ -198,5 +188,20 @@ class GeminiKeywordCandidateExtractorTest {
                 httpStatus = 429,
                 responseBody = """{"error":{"details":[{"retryDelay":"30s"}]}}""",
             )
+    }
+
+    private class RecordingGeminiRateLimiter : GeminiRateLimiter {
+        var acquireCount: Int = 0
+        var rateLimitRecordCount: Int = 0
+
+        override fun acquirePermit() {
+            acquireCount += 1
+        }
+
+        override fun recordRateLimitIfNeeded(exception: Throwable): Boolean {
+            val recorded = exception is GeminiApiException && exception.httpStatus == 429
+            if (recorded) rateLimitRecordCount += 1
+            return recorded
+        }
     }
 }

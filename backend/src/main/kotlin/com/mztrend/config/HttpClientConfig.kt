@@ -63,6 +63,16 @@ class HttpClientConfig {
             "Gemini thinking level must be one of ${SUPPORTED_GEMINI_THINKING_LEVELS.joinToString()}."
         }
         require(gemini.rateLimitCooldownSeconds > 0) { "Gemini rate limit cooldown seconds must be positive." }
+        require(gemini.rateLimitMaxRequestsPerMinute > 0) {
+            "Gemini rate limit max requests per minute must be positive."
+        }
+        require(gemini.rateLimitWindowSeconds > 0) { "Gemini rate limit window seconds must be positive." }
+        require(gemini.rateLimitSafetyDelayMillis >= 0) {
+            "Gemini rate limit safety delay millis must not be negative."
+        }
+        require(gemini.rateLimitRedisKeyPrefix.isNotBlank()) {
+            "Gemini rate limit Redis key prefix must not be blank."
+        }
         require(gemini.explainMinLength > 0) { "Gemini explain min length must be positive." }
         require(gemini.temperature in 0.0..2.0) { "Gemini temperature must be between 0.0 and 2.0." }
         require(gemini.candidateExtractionMaxCandidates > 0) { "Gemini candidate extraction max candidates must be positive." }
