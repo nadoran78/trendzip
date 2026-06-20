@@ -14,13 +14,13 @@ import kotlin.test.assertTrue
 class RedisGeminiRateLimiterTest {
     @Test
     fun `acquirePermit sleeps when Redis script returns delay`() {
-        val executor = RecordingRedisScriptExecutor(60_500L)
+        val executor = RecordingRedisScriptExecutor(60_200L)
         val sleeper = RecordingSleeper()
         val limiter = limiter(executor = executor, sleeper = sleeper)
 
         limiter.acquirePermit()
 
-        assertEquals(listOf(Duration.ofMillis(60_500)), sleeper.delays)
+        assertEquals(listOf(Duration.ofMillis(60_200)), sleeper.delays)
         assertEquals(
             listOf(
                 "rate-limit:gemini:{gemini-test}:requests",
@@ -29,7 +29,7 @@ class RedisGeminiRateLimiterTest {
             ),
             executor.calls.single().keys,
         )
-        assertEquals(listOf("60000", "5", "500", "120000"), executor.calls.single().args)
+        assertEquals(listOf("60000", "20", "200", "120000"), executor.calls.single().args)
     }
 
     @Test
@@ -48,7 +48,7 @@ class RedisGeminiRateLimiterTest {
         val call = executor.calls.single()
         assertEquals(listOf("rate-limit:gemini:{gemini-test}:blocked-until"), call.keys)
         assertEquals(FIXED_INSTANT.plusSeconds(60).toEpochMilli().toString(), call.args[0])
-        assertEquals(listOf("120000", "60000", "500"), call.args.drop(1))
+        assertEquals(listOf("120000", "60000", "200"), call.args.drop(1))
     }
 
     @Test
@@ -80,11 +80,11 @@ class RedisGeminiRateLimiterTest {
     fun `reservePermit falls back to in-memory limit when Redis fails`() {
         val limiter = limiter(executor = FailingRedisScriptExecutor())
 
-        repeat(5) {
+        repeat(20) {
             assertEquals(Duration.ZERO, limiter.reservePermit())
         }
 
-        assertEquals(Duration.ofMillis(60_500), limiter.reservePermit())
+        assertEquals(Duration.ofMillis(60_200), limiter.reservePermit())
     }
 
     @Test
@@ -113,9 +113,9 @@ class RedisGeminiRateLimiterTest {
                         ExternalApiProperties.Gemini(
                             model = "gemini-test",
                             rateLimitCooldownSeconds = 60,
-                            rateLimitMaxRequestsPerMinute = 5,
+                            rateLimitMaxRequestsPerMinute = 20,
                             rateLimitWindowSeconds = 60,
-                            rateLimitSafetyDelayMillis = 500,
+                            rateLimitSafetyDelayMillis = 200,
                         ),
                 ),
             clock = Clock.fixed(FIXED_INSTANT, ZoneId.of("Asia/Seoul")),

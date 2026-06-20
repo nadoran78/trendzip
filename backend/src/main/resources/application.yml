@@ -60,7 +60,7 @@ external:
   gemini:
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
     api-key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-3.5-flash}
+    model: ${GEMINI_MODEL:gemini-3.1-flash-lite}
     connect-timeout-seconds: ${GEMINI_CONNECT_TIMEOUT_SECONDS:3}
     read-timeout-seconds: ${GEMINI_READ_TIMEOUT_SECONDS:60}
     max-explain-keyword-count: ${GEMINI_MAX_EXPLAIN_KEYWORD_COUNT:10}
@@ -71,9 +71,9 @@ external:
     max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:1024}
     thinking-level: ${GEMINI_THINKING_LEVEL:minimal}
     rate-limit-cooldown-seconds: ${GEMINI_RATE_LIMIT_COOLDOWN_SECONDS:60}
-    rate-limit-max-requests-per-minute: ${GEMINI_RATE_LIMIT_MAX_REQUESTS_PER_MINUTE:5}
+    rate-limit-max-requests-per-minute: ${GEMINI_RATE_LIMIT_MAX_REQUESTS_PER_MINUTE:20}
     rate-limit-window-seconds: ${GEMINI_RATE_LIMIT_WINDOW_SECONDS:60}
-    rate-limit-safety-delay-millis: ${GEMINI_RATE_LIMIT_SAFETY_DELAY_MILLIS:500}
+    rate-limit-safety-delay-millis: ${GEMINI_RATE_LIMIT_SAFETY_DELAY_MILLIS:200}
     rate-limit-redis-key-prefix: ${GEMINI_RATE_LIMIT_REDIS_KEY_PREFIX:rate-limit:gemini}
     explain-min-length: ${GEMINI_EXPLAIN_MIN_LENGTH:50}
     candidate-extraction-max-candidates: ${GEMINI_CANDIDATE_EXTRACTION_MAX_CANDIDATES:20}
