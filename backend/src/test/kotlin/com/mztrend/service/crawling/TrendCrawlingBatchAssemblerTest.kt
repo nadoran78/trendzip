@@ -4,6 +4,7 @@ import com.mztrend.domain.FeedSection
 import com.mztrend.domain.Generation
 import com.mztrend.domain.TrendVideoKeywordRelationType
 import com.mztrend.service.crawling.candidate.ScoredTrendKeyword
+import com.mztrend.service.crawling.candidate.TrendCandidateEvidenceVideo
 import com.mztrend.service.crawling.candidate.TrendCandidateSourceType
 import java.time.LocalDateTime
 import kotlin.test.Test
@@ -52,7 +53,21 @@ class TrendCrawlingBatchAssemblerTest {
                 scoredKeywords =
                     listOf(
                         scoredKeyword("마라탕후루", rank = 2, trendScore = 70_000L),
-                        scoredKeyword("아이브", rank = 1, trendScore = 90_000L),
+                        scoredKeyword(
+                            "아이브",
+                            rank = 1,
+                            trendScore = 90_000L,
+                            evidenceVideos =
+                                listOf(
+                                    TrendCandidateEvidenceVideo(
+                                        videoId = "evidence-1",
+                                        title = "아이브 신곡 공개",
+                                        channelName = "공식 채널",
+                                        description = "후보 추출 근거",
+                                        viewCount = 2_000_000L,
+                                    ),
+                                ),
+                        ),
                     ),
             )
 
@@ -62,6 +77,9 @@ class TrendCrawlingBatchAssemblerTest {
         assertEquals(listOf(90_000L, 70_000L), batch.keywords.map { it.trendScore })
         assertNull(batch.keywords[0].rankTrend)
         assertEquals(listOf(null, null), batch.keywords.map { it.explain })
+        val evidenceVideo = batch.keywords[0].evidenceVideos.single()
+        assertEquals("evidence-1", evidenceVideo.youtubeVideoId)
+        assertEquals("후보 추출 근거", evidenceVideo.description)
         assertEquals(1, batch.videos.size)
         assertEquals(1, batch.feedItems.size)
         assertEquals(1, batch.videoKeywords.size)
@@ -93,6 +111,7 @@ class TrendCrawlingBatchAssemblerTest {
         generation: Generation = Generation.TEEN,
         rank: Int = 1,
         trendScore: Long = 100_000L,
+        evidenceVideos: List<TrendCandidateEvidenceVideo> = emptyList(),
     ): ScoredTrendKeyword =
         ScoredTrendKeyword(
             generation = generation,
@@ -104,6 +123,7 @@ class TrendCrawlingBatchAssemblerTest {
             source = TrendCandidateSourceType.YOUTUBE_POPULAR,
             candidateScore = 1_000L,
             collectedAt = LocalDateTime.of(2026, 6, 1, 3, 0),
+            evidenceVideos = evidenceVideos,
         )
 
     private class FakeKeywordVideoCollector(

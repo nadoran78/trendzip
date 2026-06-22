@@ -12,17 +12,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class KeywordExplainRefreshPolicyTest {
-    private val policy =
-        KeywordExplainRefreshPolicy(
-            ExternalApiProperties(
-                gemini =
-                    ExternalApiProperties.Gemini(
-                        maxExplainKeywordCount = 10,
-                        rankSurgeThreshold = 3,
-                        longRunningWeeks = 4,
-                    ),
-            ),
-        )
+    private val policy = refreshPolicy()
 
     @Test
     fun `resolveRefreshTargets selects new and missing explain keywords`() {
@@ -168,6 +158,33 @@ class KeywordExplainRefreshPolicyTest {
         assertEquals(listOf(KeywordExplainRefreshReason.RE_ENTRY), decisions.map { it.reason })
         assertEquals(listOf(1), decisions.map { it.consecutiveWeeks })
     }
+
+    @Test
+    fun `resolveRefreshTargets allows up to twenty explain targets by default`() {
+        val decisions =
+            policy.resolveRefreshTargets(
+                collectedKeywords = (1..21).map { index -> collectedKeyword("키워드$index", rank = index) },
+                existingKeywordsByWord = emptyMap(),
+                recentCompletedRuns = emptyList(),
+                trendLogsByRunId = emptyMap(),
+                pastAppearedKeywordIds = emptySet(),
+            )
+
+        assertEquals(20, decisions.size)
+        assertEquals("키워드20", decisions.last().keyword.word)
+    }
+
+    private fun refreshPolicy(maxExplainKeywordCount: Int = 20): KeywordExplainRefreshPolicy =
+        KeywordExplainRefreshPolicy(
+            ExternalApiProperties(
+                gemini =
+                    ExternalApiProperties.Gemini(
+                        maxExplainKeywordCount = maxExplainKeywordCount,
+                        rankSurgeThreshold = 3,
+                        longRunningWeeks = 4,
+                    ),
+            ),
+        )
 
     private fun collectedKeyword(
         word: String,

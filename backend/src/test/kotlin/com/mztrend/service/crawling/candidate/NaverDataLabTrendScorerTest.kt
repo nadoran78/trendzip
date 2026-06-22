@@ -38,7 +38,19 @@ class NaverDataLabTrendScorerTest {
             scorer.score(
                 candidates =
                     listOf(
-                        candidate("아이브", rank = 1, score = 1000),
+                        candidate(
+                            "아이브",
+                            rank = 1,
+                            score = 1000,
+                            evidenceVideos =
+                                listOf(
+                                    TrendCandidateEvidenceVideo(
+                                        videoId = "evidence-1",
+                                        title = "아이브 신곡 공개",
+                                        channelName = "공식 채널",
+                                    ),
+                                ),
+                        ),
                         candidate("마라탕후루", rank = 2, score = 900),
                     ),
                 generation = Generation.TEEN,
@@ -58,6 +70,7 @@ class NaverDataLabTrendScorerTest {
         assertEquals(1, scoredKeywords[0].rank)
         assertEquals(Generation.TEEN, scoredKeywords[0].generation)
         assertEquals(LocalDateTime.of(2026, 6, 1, 3, 0), scoredKeywords[0].collectedAt)
+        assertEquals("evidence-1", scoredKeywords[0].evidenceVideos.single().videoId)
         assertEquals("마라탕후루", scoredKeywords[1].word)
     }
 
@@ -178,6 +191,7 @@ class NaverDataLabTrendScorerTest {
         word: String,
         rank: Int,
         score: Long,
+        evidenceVideos: List<TrendCandidateEvidenceVideo> = emptyList(),
     ): TrendCandidate =
         TrendCandidate(
             word = word,
@@ -187,6 +201,7 @@ class NaverDataLabTrendScorerTest {
             evidenceCount = 1,
             totalViewCount = score,
             collectedAt = LocalDateTime.of(2026, 6, 1, 3, 0),
+            evidenceVideos = evidenceVideos,
         )
 
     private fun result(

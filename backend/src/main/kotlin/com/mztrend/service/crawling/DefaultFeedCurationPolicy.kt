@@ -50,7 +50,28 @@ class DefaultFeedCurationPolicy : FeedCurationPolicy {
                 .thenByDescending { it.videoDetail.viewCount ?: 0L }
                 .thenBy { it.video.videoId }
 
-        return sortedWith(candidateComparator).distinctBy { it.video.videoId }
+        val sortedCandidates = sortedWith(candidateComparator)
+        val selectedVideoIds = mutableSetOf<String>()
+        val selectedKeywordWords = mutableSetOf<String>()
+        val representativeCandidates =
+            sortedCandidates.filter { candidate ->
+                val isNewKeyword = candidate.keyword.word !in selectedKeywordWords
+                val isNewVideo = candidate.video.videoId !in selectedVideoIds
+                if (!isNewKeyword || !isNewVideo) return@filter false
+
+                selectedKeywordWords.add(candidate.keyword.word)
+                selectedVideoIds.add(candidate.video.videoId)
+                true
+            }
+        val remainingCandidates =
+            sortedCandidates
+                .filterNot { candidate ->
+                    candidate.video.videoId in selectedVideoIds
+                }.distinctBy { candidate ->
+                    candidate.video.videoId
+                }
+
+        return representativeCandidates + remainingCandidates
     }
 
     private fun FeedCurationCandidate.toFeedItem(

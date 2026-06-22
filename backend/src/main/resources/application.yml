@@ -63,7 +63,7 @@ external:
     model: ${GEMINI_MODEL:gemini-3.1-flash-lite}
     connect-timeout-seconds: ${GEMINI_CONNECT_TIMEOUT_SECONDS:3}
     read-timeout-seconds: ${GEMINI_READ_TIMEOUT_SECONDS:60}
-    max-explain-keyword-count: ${GEMINI_MAX_EXPLAIN_KEYWORD_COUNT:10}
+    max-explain-keyword-count: ${GEMINI_MAX_EXPLAIN_KEYWORD_COUNT:20}
     max-prompt-video-count: ${GEMINI_MAX_PROMPT_VIDEO_COUNT:3}
     rank-surge-threshold: ${GEMINI_RANK_SURGE_THRESHOLD:3}
     long-running-weeks: ${GEMINI_LONG_RUNNING_WEEKS:4}

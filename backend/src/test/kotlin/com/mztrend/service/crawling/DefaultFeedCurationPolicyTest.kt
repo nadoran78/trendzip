@@ -57,6 +57,59 @@ class DefaultFeedCurationPolicyTest {
         assertEquals(FeedSection.TODAY_PICK, feedItems.single().feedSection)
     }
 
+    @Test
+    fun `curate selects representative videos across keywords before extra videos`() {
+        val feedItems =
+            policy.curate(
+                candidates =
+                    listOf(
+                        candidate("아이브", rank = 1, videoId = "video-1", searchOrder = 1),
+                        candidate("아이브", rank = 1, videoId = "video-2", searchOrder = 2),
+                        candidate("동궁", rank = 2, videoId = "video-3", searchOrder = 1),
+                        candidate("남주혁", rank = 3, videoId = "video-4", searchOrder = 1),
+                    ),
+                collectedAt = LocalDateTime.of(2026, 6, 1, 3, 0),
+            )
+
+        assertContentEquals(listOf("아이브", "동궁", "남주혁", "아이브"), feedItems.map { it.keywordWord })
+        assertContentEquals(listOf("video-1", "video-3", "video-4", "video-2"), feedItems.map { it.youtubeVideoId })
+    }
+
+    @Test
+    fun `curate uses alternate video when keyword top search result is already selected`() {
+        val feedItems =
+            policy.curate(
+                candidates =
+                    listOf(
+                        candidate("동궁", rank = 1, videoId = "video-1", searchOrder = 1),
+                        candidate("남주혁", rank = 2, videoId = "video-1", searchOrder = 1),
+                        candidate("남주혁", rank = 2, videoId = "video-2", searchOrder = 2),
+                    ),
+                collectedAt = LocalDateTime.of(2026, 6, 1, 3, 0),
+            )
+
+        assertContentEquals(listOf("동궁", "남주혁"), feedItems.map { it.keywordWord })
+        assertContentEquals(listOf("video-1", "video-2"), feedItems.map { it.youtubeVideoId })
+    }
+
+    @Test
+    fun `curate keeps remaining videos unique after representative selection`() {
+        val feedItems =
+            policy.curate(
+                candidates =
+                    listOf(
+                        candidate("아이브", rank = 1, videoId = "video-1", searchOrder = 1),
+                        candidate("동궁", rank = 2, videoId = "video-2", searchOrder = 1),
+                        candidate("아이브", rank = 1, videoId = "video-3", searchOrder = 2),
+                        candidate("동궁", rank = 2, videoId = "video-3", searchOrder = 2),
+                    ),
+                collectedAt = LocalDateTime.of(2026, 6, 1, 3, 0),
+            )
+
+        assertContentEquals(listOf("video-1", "video-2", "video-3"), feedItems.map { it.youtubeVideoId })
+        assertEquals(feedItems.map { it.youtubeVideoId }.distinct().size, feedItems.size)
+    }
+
     private fun candidate(
         word: String,
         rank: Int,

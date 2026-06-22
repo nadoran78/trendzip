@@ -121,9 +121,31 @@ class YoutubePopularVideoCandidateSource(
                     evidenceCount = context.evidenceCount,
                     totalViewCount = context.totalViewCount,
                     collectedAt = collectedAt,
+                    evidenceVideos = evidenceVideos(context.candidate.evidenceVideoIds, popularVideos),
                 )
             }
     }
+
+    private fun evidenceVideos(
+        evidenceVideoIds: List<String>,
+        popularVideos: List<YoutubeVideoDetail>,
+    ): List<TrendCandidateEvidenceVideo> {
+        val videosById = popularVideos.associateBy { it.videoId }
+
+        return evidenceVideoIds
+            .mapNotNull(videosById::get)
+            .distinctBy { it.videoId }
+            .map { video -> video.toEvidenceVideo() }
+    }
+
+    private fun YoutubeVideoDetail.toEvidenceVideo(): TrendCandidateEvidenceVideo =
+        TrendCandidateEvidenceVideo(
+            videoId = videoId,
+            title = title,
+            channelName = channelName,
+            description = description?.take(properties.gemini.candidateExtractionMaxDescriptionLength),
+            viewCount = viewCount,
+        )
 
     private fun ExtractedKeywordCandidate.toScore(
         evidenceCount: Int,

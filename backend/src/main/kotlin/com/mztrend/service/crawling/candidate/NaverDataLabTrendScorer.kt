@@ -54,6 +54,7 @@ class NaverDataLabTrendScorer(
                     source = context.candidate.source,
                     candidateScore = context.candidate.score,
                     collectedAt = collectedAt,
+                    evidenceVideos = context.candidate.evidenceVideos,
                 )
             }
     }

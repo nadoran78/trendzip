@@ -13,6 +13,7 @@ data class ScoredTrendKeyword(
     val source: TrendCandidateSourceType,
     val candidateScore: Long,
     val collectedAt: LocalDateTime,
+    val evidenceVideos: List<TrendCandidateEvidenceVideo> = emptyList(),
 ) {
     init {
         require(word.isNotBlank()) { "Scored trend keyword word must not be blank." }

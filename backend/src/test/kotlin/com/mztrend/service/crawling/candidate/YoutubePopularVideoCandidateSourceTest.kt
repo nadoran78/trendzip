@@ -78,6 +78,12 @@ class YoutubePopularVideoCandidateSourceTest {
         assertTrue(candidates.all { it.source == TrendCandidateSourceType.YOUTUBE_POPULAR })
         assertEquals(LocalDateTime.of(2026, 6, 1, 3, 0), candidates.first().collectedAt)
         assertEquals(500_000L, candidates.first().totalViewCount)
+        val iveEvidenceVideo = candidates.first().evidenceVideos.single()
+        assertEquals("video-2", iveEvidenceVideo.videoId)
+        assertEquals("아이브 무대", iveEvidenceVideo.title)
+        val davichi = candidates.first { it.word == "다비치" }
+        assertEquals("긴 설명", davichi.evidenceVideos.single().description)
+        assertEquals(2_000_000L, davichi.evidenceVideos.single().viewCount)
         assertTrue(candidates.none { it.word == "fallbackword" })
 
         val request = keywordCandidateExtractor.lastRequest
@@ -112,6 +118,7 @@ class YoutubePopularVideoCandidateSourceTest {
         assertEquals("아이브", candidates.first().word)
         assertEquals(1, candidates.first().evidenceCount)
         assertEquals(0L, candidates.first().totalViewCount)
+        assertTrue(candidates.first().evidenceVideos.isEmpty())
     }
 
     @Test

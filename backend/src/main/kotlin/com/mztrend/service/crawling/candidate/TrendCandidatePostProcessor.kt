@@ -87,6 +87,7 @@ class TrendCandidatePostProcessor {
             evidenceCount = sumOf { it.evidenceCount },
             totalViewCount = sumOf { it.totalViewCount },
             collectedAt = maxOf { it.collectedAt },
+            evidenceVideos = flatMap { it.evidenceVideos }.distinctBy { it.videoId },
         )
     }
 

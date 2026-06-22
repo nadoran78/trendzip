@@ -48,6 +48,7 @@ class YoutubeVideoCandidateExtractor {
                     evidenceCount = stats.evidenceCount,
                     totalViewCount = stats.totalViewCount,
                     collectedAt = collectedAt,
+                    evidenceVideos = stats.evidenceVideos.values.toList(),
                 )
             }
     }
@@ -225,6 +226,7 @@ class YoutubeVideoCandidateExtractor {
         var totalViewCount: Long = 0,
         var rawScore: Long = 0,
         val youtubeVideoIds: MutableSet<String> = mutableSetOf(),
+        val evidenceVideos: MutableMap<String, TrendCandidateEvidenceVideo> = linkedMapOf(),
         val sources: MutableSet<EvidenceSource> = mutableSetOf(),
     ) {
         fun add(
@@ -236,6 +238,14 @@ class YoutubeVideoCandidateExtractor {
             sources.add(evidence.source)
             if (youtubeVideoIds.add(video.videoId)) {
                 totalViewCount += video.viewCount ?: 0
+                evidenceVideos[video.videoId] =
+                    TrendCandidateEvidenceVideo(
+                        videoId = video.videoId,
+                        title = video.title,
+                        channelName = video.channelName,
+                        description = video.description?.take(DESCRIPTION_SCAN_LENGTH),
+                        viewCount = video.viewCount,
+                    )
             }
             rawScore += evidenceScore
         }

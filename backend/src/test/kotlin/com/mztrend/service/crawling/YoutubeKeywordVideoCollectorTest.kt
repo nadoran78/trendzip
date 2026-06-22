@@ -63,8 +63,8 @@ class YoutubeKeywordVideoCollectorTest {
         assertContentEquals(listOf("video-1", "video-2", "video-3"), batch.videos.map { it.youtubeVideoId })
         assertContentEquals(listOf("상세 채널 1", "상세 채널 2", "상세 채널 3"), batch.videos.map { it.channelName })
 
-        assertContentEquals(listOf("video-1", "video-2", "video-3"), batch.feedItems.map { it.youtubeVideoId })
-        assertContentEquals(listOf("아이브", "아이브", "마라탕후루"), batch.feedItems.map { it.keywordWord })
+        assertContentEquals(listOf("video-1", "video-3", "video-2"), batch.feedItems.map { it.youtubeVideoId })
+        assertContentEquals(listOf("아이브", "마라탕후루", "아이브"), batch.feedItems.map { it.keywordWord })
         assertContentEquals(listOf(FeedSection.TODAY_PICK, FeedSection.RISING, FeedSection.RISING), batch.feedItems.map { it.feedSection })
         assertContentEquals(listOf(1, 1, 2), batch.feedItems.map { it.displayOrder })
         assertContentEquals(listOf("HOT", "NEW", "NEW"), batch.feedItems.map { it.badge })

@@ -79,8 +79,26 @@ class TrendCandidatePostProcessorTest {
             postProcessor.process(
                 listOf(
                     candidate("maplestory", score = 100, evidenceCount = 2, totalViewCount = 1000),
-                    candidate("메이플스토리", score = 300, evidenceCount = 3, totalViewCount = 2000),
-                    candidate("메이플", score = 50, evidenceCount = 1, totalViewCount = 500),
+                    candidate(
+                        "메이플스토리",
+                        score = 300,
+                        evidenceCount = 3,
+                        totalViewCount = 2000,
+                        evidenceVideos =
+                            listOf(
+                                evidenceVideo("video-1", "메이플 쇼케이스"),
+                            ),
+                    ),
+                    candidate(
+                        "메이플",
+                        score = 50,
+                        evidenceCount = 1,
+                        totalViewCount = 500,
+                        evidenceVideos =
+                            listOf(
+                                evidenceVideo("video-2", "메이플 신직업"),
+                            ),
+                    ),
                     candidate("maple", score = 25, evidenceCount = 1, totalViewCount = 250),
                     candidate("illit", score = 200),
                     candidate("katseye", score = 150),
@@ -93,6 +111,7 @@ class TrendCandidatePostProcessorTest {
         assertEquals(475, mapleStory.score)
         assertEquals(7, mapleStory.evidenceCount)
         assertEquals(3750, mapleStory.totalViewCount)
+        assertEquals(listOf("video-1", "video-2"), mapleStory.evidenceVideos.map { it.videoId })
         assertEquals(listOf(1, 2, 3, 4), processed.map { it.rank })
     }
 
@@ -101,6 +120,7 @@ class TrendCandidatePostProcessorTest {
         score: Long,
         evidenceCount: Int = 1,
         totalViewCount: Long = 0,
+        evidenceVideos: List<TrendCandidateEvidenceVideo> = emptyList(),
     ): TrendCandidate =
         TrendCandidate(
             word = word,
@@ -110,6 +130,17 @@ class TrendCandidatePostProcessorTest {
             evidenceCount = evidenceCount,
             totalViewCount = totalViewCount,
             collectedAt = COLLECTED_AT,
+            evidenceVideos = evidenceVideos,
+        )
+
+    private fun evidenceVideo(
+        videoId: String,
+        title: String,
+    ): TrendCandidateEvidenceVideo =
+        TrendCandidateEvidenceVideo(
+            videoId = videoId,
+            title = title,
+            channelName = "채널",
         )
 
     companion object {

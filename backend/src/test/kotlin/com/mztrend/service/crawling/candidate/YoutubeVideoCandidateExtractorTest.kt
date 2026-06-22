@@ -54,6 +54,9 @@ class YoutubeVideoCandidateExtractorTest {
         assertTrue(ive.evidenceCount > 1)
         assertTrue(ive.rank > 0)
         assertTrue(ive.score > 0)
+        assertEquals("video-1", ive.evidenceVideos.single().videoId)
+        assertEquals("아이브 Official MV #아이브", ive.evidenceVideos.single().title)
+        assertEquals("아이브 컴백 무대 https://example.com", ive.evidenceVideos.single().description)
     }
 
     @Test

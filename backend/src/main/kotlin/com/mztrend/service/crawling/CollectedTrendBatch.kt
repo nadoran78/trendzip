@@ -24,9 +24,24 @@ data class CollectedKeyword(
     val rankDelta: Int? = null,
     val explain: String? = null,
     val explainedAt: LocalDateTime? = null,
+    val evidenceVideos: List<CollectedKeywordEvidenceVideo> = emptyList(),
 ) {
     init {
         require(word.isNotBlank()) { "Collected keyword word must not be blank." }
+    }
+}
+
+data class CollectedKeywordEvidenceVideo(
+    val youtubeVideoId: String,
+    val title: String,
+    val channelName: String,
+    val description: String? = null,
+    val viewCount: Long? = null,
+) {
+    init {
+        require(youtubeVideoId.isNotBlank()) { "Collected keyword evidence video id must not be blank." }
+        require(title.isNotBlank()) { "Collected keyword evidence video title must not be blank." }
+        require(channelName.isNotBlank()) { "Collected keyword evidence video channel name must not be blank." }
     }
 }
 
