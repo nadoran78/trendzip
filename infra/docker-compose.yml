@@ -1,0 +1,22 @@
+name: macmini-infra
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - macmini-proxy
+
+networks:
+  macmini-proxy:
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -988,8 +988,6 @@ Internet
 
 문서화 이후 실제 코드/설정 작업은 다음 순서로 진행한다.
 
-- `infra/docker-compose.yml` 예시 추가
-- `infra/Caddyfile` 예시 추가
 - `docker-compose.prod.yml`에서 `caddy` 제거
 - `docker-compose.prod.yml`의 `backend`를 `macmini-proxy` external network에 연결
 - `Caddyfile` 위치와 책임 재정리

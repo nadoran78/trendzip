@@ -1,0 +1,3 @@
+http://api-trendzip.nadoran.com {
+	reverse_proxy trendzip-backend:8080
+}
