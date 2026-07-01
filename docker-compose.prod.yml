@@ -17,6 +17,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      default:
+      macmini-proxy:
+        aliases:
+          - trendzip-backend
 
   postgres:
     image: postgres:16-alpine
@@ -51,21 +56,10 @@ services:
       retries: 10
       start_period: 5s
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - backend
+networks:
+  macmini-proxy:
+    external: true
 
 volumes:
   postgres_data:
   redis_data:
-  caddy_data:
-  caddy_config:
