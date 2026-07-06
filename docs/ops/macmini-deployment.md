@@ -989,8 +989,6 @@ Internet
 문서화 이후 실제 코드/설정 작업은 다음 순서로 진행한다.
 
 - `backend/.env.prod.example`의 운영 URL/프로필 값 재검토
-- `backend/Dockerfile` 추가
-- `.dockerignore` 추가
 - `scripts/ops/build-push-backend.sh` 추가
 - `scripts/ops/deploy-macmini.sh` 추가
 - `.github/workflows/deploy-backend.yml` 추가

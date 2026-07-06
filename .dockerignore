@@ -1,0 +1,34 @@
+# VCS / editor
+.git
+.idea
+.vscode
+*.iml
+
+# Secrets / local environment
+.env
+.env.*
+backend/.env
+backend/.env.*
+!backend/.env.example
+!backend/.env.prod.example
+
+# Logs
+logs
+*.log
+
+# Gradle / Kotlin build cache
+.gradle
+backend/.gradle
+backend/.kotlin
+backend/build/*
+!backend/build/libs/
+!backend/build/libs/*.jar
+
+# Frontend dependencies and build output
+frontend/node_modules
+frontend/.next
+frontend/dist
+frontend/coverage
+
+# Design / local tooling noise
+.DS_Store
