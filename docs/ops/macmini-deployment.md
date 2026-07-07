@@ -23,17 +23,13 @@
 ```text
 Build/Release path
 ------------------
-GitHub
+Local development machine
   |
-  | manual workflow_dispatch
-  v
-GitHub Actions
-  |
-  | scripts/ops/build-push-backend.sh -> push image
+  | scripts/ops/build-push-backend.sh
   v
 GitHub Container Registry
   |
-  | scripts/ops/deploy-macmini.sh -> SSH -> docker-compose pull
+  | scripts/ops/deploy-macmini.sh
   v
 Mac mini
 
@@ -502,7 +498,7 @@ GEMINI_MAX_EXPLAIN_KEYWORD_COUNT=20
 
 backend를 이미지로 만들 수 있어야 한다.
 
-추가 예정 파일:
+구성 파일:
 
 ```text
 backend/Dockerfile
@@ -525,11 +521,11 @@ ghcr.io/nadoran78/trendzip-backend:prod
 
 `<git-sha>`는 정확한 배포 버전을 추적하기 위한 태그이고, `prod`는 맥미니 compose가 기본으로 pull하는 운영 태그다.
 
-### 9.2 공용 배포 스크립트 구성
+### 9.2 수동 배포 스크립트 구성
 
-GitHub Actions와 로컬 수동 배포가 같은 스크립트를 사용하도록 구성한다.
+현재는 로컬 개발 머신에서 수동으로 이미지 빌드/푸시와 맥미니 배포를 실행한다.
 
-추가 예정 파일:
+구성 파일:
 
 ```text
 scripts/ops/build-push-backend.sh
@@ -540,60 +536,19 @@ scripts/ops/deploy-macmini.sh
 
 ```text
 build-push-backend.sh
-  -> GitHub Actions runner 또는 로컬 개발 머신에서 실행
-  -> Gradle 테스트
+  -> 로컬 개발 머신에서 실행
+  -> Gradle task 실행
   -> Docker backend image build
   -> GHCR push
 
 deploy-macmini.sh
-  -> GitHub Actions runner 또는 로컬 개발 머신에서 실행
+  -> 로컬 개발 머신에서 실행
   -> SSH로 맥미니 접속
   -> ~/apps/trendzip에서 docker-compose pull/up 실행
   -> 배포 후 로그 또는 health check 확인
 ```
 
 `deploy-macmini.sh`는 Trendzip compose만 재기동해야 한다. 공용 `infra` compose는 Caddyfile 변경이나 tunnel 변경이 있을 때만 별도로 재기동한다.
-
-### 9.3 GitHub Actions 수동 배포 구성
-
-`main` branch에 push될 때 자동 배포하지 않는다. GitHub Actions 화면에서 사람이 직접 실행하는 `workflow_dispatch` 방식으로 시작한다.
-
-수동 workflow 실행 순서:
-
-```text
-checkout
-setup JDK / Docker
-login to GHCR
-scripts/ops/build-push-backend.sh
-scripts/ops/deploy-macmini.sh
-```
-
-추가 예정 파일:
-
-```text
-.github/workflows/deploy-backend.yml
-```
-
-GitHub workflow 권한:
-
-```yaml
-permissions:
-  contents: read
-  packages: write
-```
-
-GitHub Actions secrets:
-
-```text
-MACMINI_HOST
-MACMINI_PORT
-MACMINI_USER
-MACMINI_SSH_KEY
-GHCR_USERNAME
-GHCR_TOKEN
-```
-
-`MACMINI_SSH_KEY`는 맥미니에 접속 가능한 private key다. 해당 public key는 맥미니의 `~/.ssh/authorized_keys`에 등록되어 있어야 한다.
 
 ## 10. 최초 배포 순서
 
@@ -688,31 +643,53 @@ DB 마이그레이션은 앱 시작 시 Flyway가 자동 실행되는 구조를 
 
 재배포는 Trendzip 앱 compose만 대상으로 한다.
 
-### 11.1 GitHub Actions 수동 배포
+### 11.1 이미지 빌드 및 푸시
 
-GitHub Actions 화면에서 `deploy-backend` workflow를 수동 실행한다.
-
-실행 흐름:
-
-```text
-workflow_dispatch
-  -> checkout
-  -> setup JDK / Docker
-  -> GHCR login
-  -> scripts/ops/build-push-backend.sh
-  -> scripts/ops/deploy-macmini.sh
-```
-
-맥미니 내부에서 실행되는 명령:
+개발 머신에서 backend jar와 Docker image를 만들고 GHCR에 push한다.
 
 ```bash
-cd ~/apps/trendzip
-docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml pull backend
-docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml up -d backend
-docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml logs --tail=200 backend
+scripts/ops/build-push-backend.sh
 ```
 
-### 11.2 Infra 변경 배포
+### 11.2 맥미니 배포
+
+개발 머신에서 배포 스크립트를 실행한다.
+
+```bash
+scripts/ops/deploy-macmini.sh
+```
+
+`MACMINI_HOST`, `MACMINI_USER`가 환경변수로 없으면 스크립트가 실행 초기에 입력을 요청한다.
+
+```text
+Mac mini host: 192.168.0.20
+Mac mini user: leejungchang
+```
+
+매번 입력하기 싫으면 환경변수로 넘겨도 된다.
+
+```bash
+MACMINI_HOST=192.168.0.20 \
+MACMINI_USER=leejungchang \
+scripts/ops/deploy-macmini.sh
+```
+
+비대화형 실행 환경에서는 입력을 기다리지 않고 실패한다. 이 경우 `MACMINI_HOST`, `MACMINI_USER`를 환경변수로 반드시 주입해야 한다.
+
+SSH로 원격 명령을 실행할 때는 맥미니의 일반 터미널과 `PATH`가 다를 수 있다. `deploy-macmini.sh`는 기본적으로 다음 경로를 원격 `PATH`에 추가한다.
+
+```text
+/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+```
+
+맥미니의 `docker-compose`가 다른 위치에 있다면 `REMOTE_PATH`를 지정해서 실행한다.
+
+```bash
+REMOTE_PATH=/custom/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin \
+scripts/ops/deploy-macmini.sh
+```
+
+### 11.3 Infra 변경 배포
 
 Caddy 라우팅을 바꾼 경우:
 
@@ -989,9 +966,6 @@ Internet
 문서화 이후 실제 코드/설정 작업은 다음 순서로 진행한다.
 
 - `backend/.env.prod.example`의 운영 URL/프로필 값 재검토
-- `scripts/ops/build-push-backend.sh` 추가
-- `scripts/ops/deploy-macmini.sh` 추가
-- `.github/workflows/deploy-backend.yml` 추가
 - 백엔드 prod profile 필요 여부 확인
 - 백업 스크립트 추가
 - 반복 운영 명령을 `Makefile` 또는 추가 `scripts/ops` 스크립트로 정리
