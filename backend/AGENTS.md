@@ -388,6 +388,7 @@ fun crawlTrends() {
 - 트랜잭션은 서비스 레이어에서 관리
 - 예외는 커스텀 Exception 클래스로 처리
 - API 응답은 공통 ResponseWrapper 사용
+- API 문서는 springdoc-openapi 기반 Swagger UI(`/swagger-ui/index.html`)와 OpenAPI JSON(`/v3/api-docs`)으로 제공
 - 테스트: 서비스 레이어 단위 테스트 필수, 컨트롤러 통합 테스트
 
 ---

@@ -50,6 +50,23 @@
 
 ## API 명세 (백/프론트 공통 참조)
 
+### Swagger/OpenAPI
+
+```
+Swagger UI: /swagger-ui/index.html
+OpenAPI JSON: /v3/api-docs
+```
+
+모든 API 응답은 공통 wrapper를 사용한다.
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
+
 ### 피드 조회
 
 ```
@@ -58,17 +75,25 @@ GET /api/feed?generation=TWENTY
 
 Response:
 {
-  "generation": "TEEN",
-  "videos": [
-    {
-      "videoId": "xxx",
-      "title": "영상 제목",
-      "channelName": "채널명",
-      "thumbnailUrl": "https://...",
-      "viewCount": 1200000,
-      "keyword": "관련 키워드"
-    }
-  ]
+  "success": true,
+  "data": {
+    "generation": "TEEN",
+    "videos": [
+      {
+        "videoId": "xxx",
+        "title": "영상 제목",
+        "channelName": "채널명",
+        "thumbnailUrl": "https://...",
+        "viewCount": 1200000,
+        "keyword": "관련 키워드",
+        "feedSection": "TODAY_PICK",
+        "badge": "NEW",
+        "publishedAt": "2026-06-15T15:05:34",
+        "durationSeconds": 4838
+      }
+    ]
+  },
+  "error": null
 }
 ```
 
@@ -79,32 +104,28 @@ GET /api/keywords?generation=TEEN
 
 Response:
 {
-  "generation": "TEEN",
-  "keywords": [
-    {
-      "id": 1,
-      "word": "키워드명",
-      "rank": 1,
-      "category": "음악"
-    }
-  ]
+  "success": true,
+  "data": {
+    "generation": "TEEN",
+    "keywords": [
+      {
+        "id": 1,
+        "word": "키워드명",
+        "rank": 1,
+        "category": "음악",
+        "trendScore": 88982,
+        "rankTrend": "NEW",
+        "rankDelta": null
+      }
+    ]
+  },
+  "error": null
 }
 ```
 
-### 키워드 상세 (왜 뜨는지 설명)
+### 키워드 상세 (왜 뜨는지 설명, 예정)
 
-```
-GET /api/keywords/{id}/explain
-
-Response:
-{
-  "keyword": "키워드명",
-  "explain": "이 키워드가 뜨는 이유 설명...",
-  "relatedVideos": [...],
-  "trendGraph": [...],
-  "relatedKeywords": [...]
-}
-```
+`/api/keywords/{id}/explain`은 프론트 상세 화면 구현 전에 백엔드에서 추가할 예정 API다. 현재 공개 API에는 포함하지 않는다.
 
 ---
 
