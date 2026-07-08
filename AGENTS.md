@@ -32,7 +32,7 @@
 
 | 영역 | 기술 |
 |------|------|
-| 프론트엔드 | Next.js 14 (App Router), Tailwind CSS, Vercel |
+| 프론트엔드 | Next.js 16 (App Router), Tailwind CSS, Vercel |
 | 백엔드 | Kotlin, Spring Boot 3.x, Oracle Cloud Free Tier |
 | DB | PostgreSQL (Supabase Free Tier) |
 | 캐시 | Redis (Upstash Free Tier) |
