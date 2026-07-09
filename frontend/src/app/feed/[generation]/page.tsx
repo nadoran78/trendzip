@@ -1,22 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getGenerationBySlug } from "@/lib/generation";
+
 type FeedPageProps = {
   params: Promise<{
     generation: string;
   }>;
 };
 
-const generationLabels: Record<string, string> = {
-  teen: "10대",
-  twenty: "20대",
-};
-
 export default async function FeedPage({ params }: FeedPageProps) {
   const { generation } = await params;
-  const label = generationLabels[generation];
+  const generationOption = getGenerationBySlug(generation);
 
-  if (!label) {
+  if (!generationOption) {
     notFound();
   }
 
@@ -27,7 +24,9 @@ export default async function FeedPage({ params }: FeedPageProps) {
           <Link href="/" className="text-sm font-medium text-zinc-400">
             MZ 따라잡기
           </Link>
-          <h1 className="text-4xl font-semibold">{label} 피드</h1>
+          <h1 className="text-4xl font-semibold">
+            {generationOption.label} 피드
+          </h1>
         </div>
 
         <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-5 text-zinc-300">
