@@ -132,6 +132,7 @@ class TrendCrawlingServiceTest {
         assertEquals(2, trendFeedItemRepository.count())
         assertEquals(1, trendVideoKeywordRepository.count())
         assertEquals(1, keywordRelationRepository.count())
+        assertEquals(1, activeKeywordRelationCount())
         assertEquals(2, trendLogRepository.count())
         val firstCrawlRun = trendCrawlRunRepository.findAll().single()
         assertEquals(TrendCrawlRunStatus.COMPLETED, firstCrawlRun.status)
@@ -146,7 +147,8 @@ class TrendCrawlingServiceTest {
         assertEquals(2, trendVideoRepository.count())
         assertEquals(4, trendFeedItemRepository.count())
         assertEquals(1, trendVideoKeywordRepository.count())
-        assertEquals(1, keywordRelationRepository.count())
+        assertEquals(2, keywordRelationRepository.count())
+        assertEquals(1, activeKeywordRelationCount())
         assertEquals(4, trendLogRepository.count())
         assertEquals(2, trendCrawlRunRepository.count())
         assertEquals(2, trendFeedItemRepository.findAllByGenerationAndIsActiveTrue(Generation.TEEN).size)
@@ -177,6 +179,23 @@ class TrendCrawlingServiceTest {
             )
         assertNotNull(videoKeyword)
         assertEquals(TrendVideoKeywordRelationType.TAG, videoKeyword.relationType)
+    }
+
+    @Test
+    fun `saveCollectedTrends replaces keyword relations for collected keywords`() {
+        val batch = collectedBatch()
+
+        trendCrawlingService.saveCollectedTrends(batch)
+
+        assertEquals(1, keywordRelationRepository.count())
+        assertEquals(1, activeKeywordRelationCount())
+
+        trendCrawlingService.saveCollectedTrends(batch.copy(keywordRelations = emptyList()))
+
+        val savedRelations = keywordRelationRepository.findAll()
+        assertEquals(1, savedRelations.size)
+        assertEquals(0, activeKeywordRelationCount())
+        assertNotNull(savedRelations.single().deactivatedAt)
     }
 
     @Test
@@ -654,6 +673,8 @@ class TrendCrawlingServiceTest {
             .findAllByGenerationAndIsActiveTrue(Generation.TEEN)
             .map { it.trendVideoId }
             .sorted()
+
+    private fun activeKeywordRelationCount(): Int = keywordRelationRepository.findAll().count { it.isActive }
 
     @TestConfiguration
     class KeywordExplainTestConfig {

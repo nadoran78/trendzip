@@ -115,6 +115,7 @@ class YoutubePopularVideoCandidateSource(
             .mapIndexed { index, context ->
                 TrendCandidate(
                     word = context.candidate.keyword,
+                    category = context.candidate.category,
                     source = TrendCandidateSourceType.YOUTUBE_POPULAR,
                     rank = index + 1,
                     score = context.score,

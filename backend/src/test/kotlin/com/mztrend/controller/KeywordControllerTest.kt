@@ -127,7 +127,7 @@ class KeywordControllerTest {
             .andExpect(jsonPath("$.data.trendGraph[0].period").value("2026-06-01"))
             .andExpect(jsonPath("$.data.trendGraph[0].ratio").value(1200))
             .andExpect(jsonPath("$.data.trendGraph[1].period").value("2026-06-08"))
-            .andExpect(jsonPath("$.data.trendGraph[1].ratio").value(2400))
+            .andExpect(jsonPath("$.data.trendGraph[1].ratio").value(2600))
             .andExpect(jsonPath("$.data.relatedKeywords.length()").value(1))
             .andExpect(jsonPath("$.data.relatedKeywords[0].word").value("남주혁"))
             .andExpect(jsonPath("$.data.relatedKeywords[0].rankTrend").value(RankTrend.UP.name))
@@ -199,6 +199,16 @@ class KeywordControllerTest {
                 9_000L,
                 RankTrend.NEW.name,
                 null,
+                null,
+            ).values(
+                13L,
+                "비활성",
+                Generation.TEEN.name,
+                "방송/영화",
+                3,
+                7_000L,
+                RankTrend.SAME.name,
+                0,
                 null,
             ).execute()
 
@@ -310,6 +320,13 @@ class KeywordControllerTest {
                 4,
                 1_200L,
                 java.time.LocalDateTime.of(2026, 6, 1, 9, 0),
+            ).values(
+                1002L,
+                1001L,
+                10L,
+                1,
+                2_600L,
+                java.time.LocalDateTime.of(2026, 6, 8, 12, 0),
             ).execute()
 
         dsl
@@ -321,6 +338,8 @@ class KeywordControllerTest {
                 KEYWORD_RELATIONS.DISPLAY_ORDER,
                 KEYWORD_RELATIONS.SCORE,
                 KEYWORD_RELATIONS.SOURCE,
+                KEYWORD_RELATIONS.IS_ACTIVE,
+                KEYWORD_RELATIONS.DEACTIVATED_AT,
             ).values(
                 1000L,
                 10L,
@@ -328,6 +347,8 @@ class KeywordControllerTest {
                 1,
                 95,
                 "test",
+                true,
+                null,
             ).values(
                 1001L,
                 10L,
@@ -335,6 +356,17 @@ class KeywordControllerTest {
                 0,
                 100,
                 "test",
+                true,
+                null,
+            ).values(
+                1002L,
+                10L,
+                13L,
+                0,
+                100,
+                "test",
+                false,
+                java.time.LocalDateTime.of(2026, 6, 9, 9, 0),
             ).execute()
     }
 

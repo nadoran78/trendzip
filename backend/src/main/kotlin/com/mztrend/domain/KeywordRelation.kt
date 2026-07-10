@@ -21,6 +21,8 @@ class KeywordRelation(
     var score: Int? = null,
     @Column(length = 30)
     var source: String? = null,
+    @Column(name = "is_active", nullable = false)
+    var isActive: Boolean = true,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,4 +30,10 @@ class KeywordRelation(
 
     @Column(name = "created_at", nullable = false)
     var createdAt: LocalDateTime = LocalDateTime.now()
+
+    @Column(name = "updated_at", nullable = false)
+    var updatedAt: LocalDateTime = LocalDateTime.now()
+
+    @Column(name = "deactivated_at")
+    var deactivatedAt: LocalDateTime? = null
 }

@@ -117,13 +117,14 @@ class KeywordQueryRepository(
             ).from(TREND_LOGS)
             .where(TREND_LOGS.KEYWORD_ID.eq(keywordId))
             .orderBy(TREND_LOGS.RECORDED_AT.desc(), TREND_LOGS.ID.desc())
-            .limit(TREND_GRAPH_LIMIT)
             .fetch { record ->
                 TrendGraphPointQueryResult(
                     period = record.get(TREND_LOGS.RECORDED_AT).toLocalDate(),
                     ratio = record.get(TREND_LOGS.SCORE),
                 )
-            }.sortedBy { it.period }
+            }.distinctBy { it.period }
+            .take(TREND_GRAPH_LIMIT)
+            .sortedBy { it.period }
 
     fun findRelatedKeywords(
         keywordId: Long,
@@ -144,6 +145,7 @@ class KeywordQueryRepository(
             .join(relatedKeywords)
             .on(relatedKeywords.ID.eq(KEYWORD_RELATIONS.RELATED_KEYWORD_ID))
             .where(KEYWORD_RELATIONS.KEYWORD_ID.eq(keywordId))
+            .and(KEYWORD_RELATIONS.IS_ACTIVE.isTrue)
             .and(relatedKeywords.GENERATION.eq(generation.name))
             .orderBy(
                 KEYWORD_RELATIONS.DISPLAY_ORDER.asc(),

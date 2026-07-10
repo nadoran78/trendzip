@@ -11,6 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class TrendCrawlingBatchAssemblerTest {
     @Test
@@ -83,7 +84,104 @@ class TrendCrawlingBatchAssemblerTest {
         assertEquals(1, batch.videos.size)
         assertEquals(1, batch.feedItems.size)
         assertEquals(1, batch.videoKeywords.size)
-        assertEquals(0, batch.keywordRelations.size)
+        assertEquals(emptyList(), batch.keywordRelations)
+    }
+
+    @Test
+    fun `assemble creates related keyword relations from shared evidence and text mentions before category fallback`() {
+        val assembler = assembler()
+
+        val batch =
+            assembler.assemble(
+                generation = Generation.TEEN,
+                scoredKeywords =
+                    listOf(
+                        scoredKeyword(
+                            "김부장",
+                            category = "방송/영화",
+                            rank = 1,
+                            evidenceVideos =
+                                listOf(
+                                    evidenceVideo(
+                                        videoId = "kim-manager-trailer",
+                                        title = "김부장 공식 예고편",
+                                        description = "소지섭 주연 액션 드라마",
+                                    ),
+                                ),
+                        ),
+                        scoredKeyword(
+                            "리센느",
+                            category = "음악",
+                            rank = 2,
+                            evidenceVideos = listOf(evidenceVideo(videoId = "rescene-stage", title = "리센느 Pretty Girl 무대")),
+                        ),
+                        scoredKeyword(
+                            "소지섭",
+                            category = "인물",
+                            rank = 3,
+                            evidenceVideos = listOf(evidenceVideo(videoId = "kim-manager-trailer", title = "소지섭 김부장 인터뷰")),
+                        ),
+                        scoredKeyword(
+                            "호프",
+                            category = "방송/영화",
+                            rank = 4,
+                            evidenceVideos =
+                                listOf(
+                                    evidenceVideo(
+                                        videoId = "hope-trailer",
+                                        title = "호프 공식 예고편",
+                                        description = "황정민 조인성 출연",
+                                    ),
+                                ),
+                        ),
+                        scoredKeyword(
+                            "황정민",
+                            category = "인물",
+                            rank = 5,
+                            evidenceVideos = listOf(evidenceVideo(videoId = "hope-trailer", title = "황정민 호프 제작보고회")),
+                        ),
+                    ),
+            )
+
+        val relationsByKeyword = batch.keywordRelations.groupBy { it.keywordWord }
+
+        assertEquals(listOf("소지섭"), relationsByKeyword.getValue("김부장").map { it.relatedKeywordWord })
+        assertEquals(listOf("김부장"), relationsByKeyword.getValue("소지섭").map { it.relatedKeywordWord })
+        assertEquals(listOf("황정민"), relationsByKeyword.getValue("호프").map { it.relatedKeywordWord })
+        assertEquals(emptyList(), relationsByKeyword["리센느"].orEmpty())
+        assertTrue(relationsByKeyword.getValue("김부장").single().score!! >= 5_000)
+    }
+
+    @Test
+    fun `assemble matches reordered multi token keywords and short english tokens from evidence text`() {
+        val assembler = assembler()
+
+        val batch =
+            assembler.assemble(
+                generation = Generation.TEEN,
+                scoredKeywords =
+                    listOf(
+                        scoredKeyword(
+                            "MSI 2026",
+                            rank = 1,
+                            evidenceVideos =
+                                listOf(
+                                    evidenceVideo(
+                                        videoId = "msi-guide",
+                                        title = "2026 MSI 진행 방식",
+                                        description = "T1 일정과 리그오브레전드 국제 대회 안내",
+                                    ),
+                                ),
+                        ),
+                        scoredKeyword("t1", rank = 2),
+                        scoredKeyword("리그오브레전드", rank = 3),
+                    ),
+            )
+
+        val relationsByKeyword = batch.keywordRelations.groupBy { it.keywordWord }
+
+        assertEquals(listOf("t1", "리그오브레전드"), relationsByKeyword.getValue("MSI 2026").map { it.relatedKeywordWord })
+        assertEquals(listOf("MSI 2026"), relationsByKeyword.getValue("t1").map { it.relatedKeywordWord })
     }
 
     @Test
@@ -108,6 +206,7 @@ class TrendCrawlingBatchAssemblerTest {
 
     private fun scoredKeyword(
         word: String,
+        category: String? = null,
         generation: Generation = Generation.TEEN,
         rank: Int = 1,
         trendScore: Long = 100_000L,
@@ -116,6 +215,7 @@ class TrendCrawlingBatchAssemblerTest {
         ScoredTrendKeyword(
             generation = generation,
             word = word,
+            category = category,
             rank = rank,
             trendScore = trendScore,
             averageRatio = 50.0,
@@ -124,6 +224,18 @@ class TrendCrawlingBatchAssemblerTest {
             candidateScore = 1_000L,
             collectedAt = LocalDateTime.of(2026, 6, 1, 3, 0),
             evidenceVideos = evidenceVideos,
+        )
+
+    private fun evidenceVideo(
+        videoId: String,
+        title: String,
+        description: String? = null,
+    ): TrendCandidateEvidenceVideo =
+        TrendCandidateEvidenceVideo(
+            videoId = videoId,
+            title = title,
+            channelName = "테스트 채널",
+            description = description,
         )
 
     private class FakeKeywordVideoCollector(

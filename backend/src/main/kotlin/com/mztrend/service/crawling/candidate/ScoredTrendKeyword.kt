@@ -6,6 +6,7 @@ import java.time.LocalDateTime
 data class ScoredTrendKeyword(
     val generation: Generation,
     val word: String,
+    val category: String? = null,
     val rank: Int,
     val trendScore: Long,
     val averageRatio: Double,

@@ -10,6 +10,7 @@ import com.mztrend.domain.TrendFeedItem
 import com.mztrend.domain.TrendLog
 import com.mztrend.domain.TrendVideo
 import com.mztrend.domain.TrendVideoKeyword
+import com.mztrend.repository.command.KeywordRelationBulkRepository
 import com.mztrend.repository.command.KeywordRelationRepository
 import com.mztrend.repository.command.KeywordRepository
 import com.mztrend.repository.command.TrendFeedItemRepository
@@ -28,6 +29,7 @@ import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.Caching
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 import kotlin.math.abs
 
 @Service
@@ -37,6 +39,7 @@ class TrendCrawlingPersistenceService(
     private val trendVideoRepository: TrendVideoRepository,
     private val trendFeedItemRepository: TrendFeedItemRepository,
     private val trendVideoKeywordRepository: TrendVideoKeywordRepository,
+    private val keywordRelationBulkRepository: KeywordRelationBulkRepository,
     private val keywordRelationRepository: KeywordRelationRepository,
     private val collectedTrendBatchValidator: CollectedTrendBatchValidator,
 ) {
@@ -305,6 +308,9 @@ class TrendCrawlingPersistenceService(
         collectedRelations: List<CollectedKeywordRelation>,
         keywordsByWord: Map<String, Keyword>,
     ): Int {
+        val keywordIds = keywordsByWord.values.mapNotNull { it.id }
+        keywordRelationBulkRepository.deactivateActiveByKeywordIdIn(keywordIds, LocalDateTime.now())
+
         val relations =
             collectedRelations
                 .distinctBy { it.keywordWord to it.relatedKeywordWord }
@@ -312,35 +318,27 @@ class TrendCrawlingPersistenceService(
                     val keyword = resolveKeyword(generation, relation.keywordWord, keywordsByWord)
                     val relatedKeyword = resolveKeyword(generation, relation.relatedKeywordWord, keywordsByWord)
 
-                    upsertKeywordRelation(relation, keyword, relatedKeyword)
+                    relation.toKeywordRelation(keyword, relatedKeyword)
                 }
 
         keywordRelationRepository.saveAll(relations)
         return relations.size
     }
 
-    private fun upsertKeywordRelation(
-        relation: CollectedKeywordRelation,
+    private fun CollectedKeywordRelation.toKeywordRelation(
         keyword: Keyword,
         relatedKeyword: Keyword,
     ): KeywordRelation {
         val keywordId = requireNotNull(keyword.id)
         val relatedKeywordId = requireNotNull(relatedKeyword.id)
 
-        return keywordRelationRepository
-            .findByKeywordIdAndRelatedKeywordId(keywordId, relatedKeywordId)
-            ?.apply {
-                displayOrder = relation.displayOrder
-                score = relation.score
-                source = relation.source
-            }
-            ?: KeywordRelation(
-                keywordId = keywordId,
-                relatedKeywordId = relatedKeywordId,
-                displayOrder = relation.displayOrder,
-                score = relation.score,
-                source = relation.source,
-            )
+        return KeywordRelation(
+            keywordId = keywordId,
+            relatedKeywordId = relatedKeywordId,
+            displayOrder = displayOrder,
+            score = score,
+            source = source,
+        )
     }
 
     private fun resolveKeyword(

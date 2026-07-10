@@ -4,6 +4,7 @@ import java.time.LocalDateTime
 
 data class TrendCandidate(
     val word: String,
+    val category: String? = null,
     val source: TrendCandidateSourceType,
     val rank: Int,
     val score: Long,

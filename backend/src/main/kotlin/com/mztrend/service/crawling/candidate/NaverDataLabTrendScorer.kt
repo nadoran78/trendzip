@@ -47,6 +47,7 @@ class NaverDataLabTrendScorer(
                 ScoredTrendKeyword(
                     generation = generation,
                     word = context.candidate.word,
+                    category = context.candidate.category,
                     rank = index + 1,
                     trendScore = context.trendScore,
                     averageRatio = context.rawMetrics.averageRatio,

@@ -5,6 +5,7 @@ import com.mztrend.service.crawling.candidate.ScoredTrendKeyword
 fun ScoredTrendKeyword.toCollectedKeyword(): CollectedKeyword =
     CollectedKeyword(
         word = word,
+        category = category,
         currentRank = rank,
         trendScore = trendScore,
         evidenceVideos =
