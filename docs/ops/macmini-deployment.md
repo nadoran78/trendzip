@@ -617,6 +617,14 @@ compose 설정을 먼저 검증한다.
 docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml config
 ```
 
+Trendzip compose는 컨테이너와 DB 세션 시간대를 `Asia/Seoul`로 고정한다.
+
+- `backend`: `TZ=Asia/Seoul`, `JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Seoul`
+- `postgres`: `TZ=Asia/Seoul`, `postgres -c timezone=Asia/Seoul`
+- `redis`: `TZ=Asia/Seoul`
+
+이 설정은 Spring Boot 로그, JVM의 `LocalDateTime.now()`, PostgreSQL의 `CURRENT_TIMESTAMP`가 서로 다른 시간대로 저장되는 문제를 줄이기 위한 것이다.
+
 초기 설정 확인을 위해 맥미니에서 직접 pull/up을 실행할 수 있다.
 
 ```bash
@@ -635,6 +643,15 @@ docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml ps
 
 ```bash
 docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml logs -f backend
+```
+
+시간대 확인:
+
+```bash
+docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml exec backend date
+docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml exec postgres date
+docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml exec postgres \
+  psql -U mztrend -d mztrend -c "show timezone; select now();"
 ```
 
 DB 마이그레이션은 앱 시작 시 Flyway가 자동 실행되는 구조를 기본으로 한다.
@@ -760,6 +777,30 @@ curl https://api-trendzip.nadoran.com/api/health
 curl "https://api-trendzip.nadoran.com/api/feed?generation=TEEN"
 curl "https://api-trendzip.nadoran.com/api/keywords?generation=TEEN"
 ```
+
+### 12.4 시간대 검증
+
+운영 컨테이너의 기준 시간은 한국 시간(`Asia/Seoul`)으로 통일한다. 배포 후 아래 값을 확인한다.
+
+```bash
+cd ~/apps/trendzip
+docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml exec backend date
+docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml exec postgres date
+docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml exec postgres \
+  psql -U mztrend -d mztrend -c "show timezone; select now();"
+docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml logs --tail=50 backend
+```
+
+신규 크롤링 이후 `keywords.created_at`, `keywords.updated_at`, `keywords.explained_at`이 같은 시간대 기준으로 들어오는지 확인한다.
+
+```sql
+select id, word, generation, created_at, updated_at, explained_at
+from keywords
+order by updated_at desc
+limit 20;
+```
+
+기존 데이터는 바로 일괄 보정하지 않는다. 설정 적용 이후 새로 생성되거나 갱신되는 데이터가 KST로 들어오는지 먼저 확인하고, 과거 데이터 보정은 필요성이 확실해졌을 때 별도 작업으로 진행한다.
 
 ## 13. DB 접속 방식
 
@@ -930,6 +971,7 @@ find ~/backups/trendzip/postgres -name "mztrend-*.sql" -mtime +14 -delete
 - Caddy 로그: `cd ~/apps/infra && docker-compose logs --tail=200 caddy`
 - Trendzip 상태: `cd ~/apps/trendzip && docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml ps`
 - 백엔드 로그: `cd ~/apps/trendzip && docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml logs --tail=200 backend`
+- 시간대 상태: `cd ~/apps/trendzip && docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml exec postgres psql -U mztrend -d mztrend -c "show timezone; select now();"`
 - 최근 크롤링 성공 여부
 - 최근 외부 API 실패 여부
 - 피드/키워드 개수

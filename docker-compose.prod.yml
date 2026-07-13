@@ -7,6 +7,8 @@ services:
     env_file:
       - ${BACKEND_ENV_FILE:-./backend/.env.prod}
     environment:
+      TZ: Asia/Seoul
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Seoul
       PORT: 8080
       POSTGRES_URL: jdbc:postgresql://postgres:5432/mztrend
       REDIS_URL: redis://redis:6379
@@ -26,7 +28,9 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    command: ["postgres", "-c", "timezone=Asia/Seoul"]
     environment:
+      TZ: Asia/Seoul
       POSTGRES_DB: ${POSTGRES_DB:-mztrend}
       POSTGRES_USER: ${POSTGRES_USER:-mztrend}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in backend/.env.prod}
@@ -45,6 +49,8 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
+    environment:
+      TZ: Asia/Seoul
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
