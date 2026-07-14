@@ -53,7 +53,7 @@ class CacheConfig {
 }
 
 object CacheNames {
-    const val KEYWORDS = "keywords"
-    const val FEED = "feed"
+    const val KEYWORDS = "keywords:v2"
+    const val FEED = "feed:v2"
     const val VIDEOS = "videos"
 }
