@@ -1,0 +1,36 @@
+package com.mztrend.service
+
+import com.mztrend.domain.Generation
+import com.mztrend.domain.TrendCrawlRun
+import com.mztrend.domain.TrendCrawlRunStatus
+import com.mztrend.repository.command.TrendCrawlRunRepository
+import org.springframework.stereotype.Service
+import java.time.Clock
+import java.time.LocalDateTime
+
+@Service
+class TrendCrawlRunRecorder(
+    private val trendCrawlRunRepository: TrendCrawlRunRepository,
+    private val clock: Clock,
+) {
+    fun start(generation: Generation): TrendCrawlRun =
+        trendCrawlRunRepository.save(
+            TrendCrawlRun(
+                generation = generation,
+                status = TrendCrawlRunStatus.RUNNING,
+                startedAt = LocalDateTime.now(clock),
+            ),
+        )
+
+    fun complete(crawlRun: TrendCrawlRun) {
+        crawlRun.status = TrendCrawlRunStatus.COMPLETED
+        crawlRun.completedAt = LocalDateTime.now(clock)
+        trendCrawlRunRepository.save(crawlRun)
+    }
+
+    fun fail(crawlRun: TrendCrawlRun) {
+        crawlRun.status = TrendCrawlRunStatus.FAILED
+        crawlRun.completedAt = LocalDateTime.now(clock)
+        trendCrawlRunRepository.save(crawlRun)
+    }
+}

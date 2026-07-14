@@ -6,7 +6,7 @@
 
 | 항목 | 기술 |
 |------|------|
-| 프레임워크 | Next.js 14 (App Router) |
+| 프레임워크 | Next.js 16 (App Router) |
 | 스타일링 | Tailwind CSS |
 | PWA | next-pwa |
 | 배포 | Vercel |
@@ -125,7 +125,7 @@ NEXT_PUBLIC_API_BASE_URL=https://api.mztrend.kr  # 프로덕션
 
 ```
 Week 4: 기반 세팅 + 핵심 페이지
-  [ ] Next.js 14 프로젝트 세팅 (App Router, TypeScript, Tailwind)
+  [ ] Next.js 16 프로젝트 세팅 (App Router, TypeScript, Tailwind)
   [ ] next-pwa 설정
   [ ] 공통 레이아웃 (Header, BottomNav, GenerationTab)
   [ ] 랜딩 페이지 + 세대 선택 UI

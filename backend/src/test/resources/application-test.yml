@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: ${TEST_POSTGRES_URL:jdbc:postgresql://localhost:5432/mztrend_test}
+    username: ${TEST_POSTGRES_USERNAME:mztrend}
+    password: ${TEST_POSTGRES_PASSWORD:mztrend}
+    driver-class-name: org.postgresql.Driver
+  cache:
+    type: simple
+
+app:
+  crawling-scheduler:
+    enabled: false
+    run-on-startup: false

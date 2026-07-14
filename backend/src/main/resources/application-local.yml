@@ -1,0 +1,20 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/mztrend}
+    username: ${POSTGRES_USERNAME:mztrend}
+    password: ${POSTGRES_PASSWORD:mztrend}
+  cache:
+    type: redis
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+
+app:
+  local-data:
+    enabled: ${APP_LOCAL_DATA_ENABLED:false}
+  crawling-scheduler:
+    enabled: ${APP_CRAWLING_SCHEDULER_ENABLED:false}
+    run-on-startup: ${APP_CRAWLING_SCHEDULER_RUN_ON_STARTUP:false}

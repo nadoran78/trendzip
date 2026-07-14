@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT="$(git rev-parse --show-toplevel)"
+STAGED_FILES="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+if printf '%s\n' "$STAGED_FILES" | grep -E '^backend/.*\.kts?$' >/dev/null; then
+  echo "Running backend ktlintCheck..."
+  cd "$ROOT/backend"
+  ./gradlew ktlintCheck --no-daemon
+fi
+

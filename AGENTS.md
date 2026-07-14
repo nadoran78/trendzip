@@ -32,7 +32,7 @@
 
 | 영역 | 기술 |
 |------|------|
-| 프론트엔드 | Next.js 14 (App Router), Tailwind CSS, Vercel |
+| 프론트엔드 | Next.js 16 (App Router), Tailwind CSS, Vercel |
 | 백엔드 | Kotlin, Spring Boot 3.x, Oracle Cloud Free Tier |
 | DB | PostgreSQL (Supabase Free Tier) |
 | 캐시 | Redis (Upstash Free Tier) |
@@ -42,14 +42,30 @@
 
 | API | 용도 |
 |-----|------|
-| YouTube Data API v3 | 세대별 영상/채널 검색 |
-| Google Trends (비공식) | 급상승 키워드 수집 |
-| 네이버 DataLab API | 연령대별 검색 트렌드 (공식 API) |
+| YouTube Data API v3 | 현재 인기 영상 조회, 후보 키워드 추출, 키워드별 영상 검색 |
+| 네이버 DataLab API | YouTube 후보 키워드의 연령대별 검색 트렌드 검증 |
 | Gemini API (무료 티어) | 키워드 "왜 뜨는지" 설명 자동 생성 |
 
 ---
 
 ## API 명세 (백/프론트 공통 참조)
+
+### Swagger/OpenAPI
+
+```
+Swagger UI: /swagger-ui/index.html
+OpenAPI JSON: /v3/api-docs
+```
+
+모든 API 응답은 공통 wrapper를 사용한다.
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
 
 ### 피드 조회
 
@@ -59,17 +75,26 @@ GET /api/feed?generation=TWENTY
 
 Response:
 {
-  "generation": "TEEN",
-  "videos": [
-    {
-      "videoId": "xxx",
-      "title": "영상 제목",
-      "channelName": "채널명",
-      "thumbnailUrl": "https://...",
-      "viewCount": 1200000,
-      "keyword": "관련 키워드"
-    }
-  ]
+  "success": true,
+  "data": {
+    "generation": "TEEN",
+    "videos": [
+      {
+        "videoId": "xxx",
+        "keywordId": 1,
+        "title": "영상 제목",
+        "channelName": "채널명",
+        "thumbnailUrl": "https://...",
+        "viewCount": 1200000,
+        "keyword": "관련 키워드",
+        "feedSection": "TODAY_PICK",
+        "badge": "NEW",
+        "publishedAt": "2026-06-15T15:05:34",
+        "durationSeconds": 4838
+      }
+    ]
+  },
+  "error": null
 }
 ```
 
@@ -80,15 +105,22 @@ GET /api/keywords?generation=TEEN
 
 Response:
 {
-  "generation": "TEEN",
-  "keywords": [
-    {
-      "id": 1,
-      "word": "키워드명",
-      "rank": 1,
-      "category": "음악"
-    }
-  ]
+  "success": true,
+  "data": {
+    "generation": "TEEN",
+    "keywords": [
+      {
+        "id": 1,
+        "word": "키워드명",
+        "rank": 1,
+        "category": "음악",
+        "trendScore": 88982,
+        "rankTrend": "NEW",
+        "rankDelta": null
+      }
+    ]
+  },
+  "error": null
 }
 ```
 
@@ -99,11 +131,44 @@ GET /api/keywords/{id}/explain
 
 Response:
 {
-  "keyword": "키워드명",
-  "explain": "이 키워드가 뜨는 이유 설명...",
-  "relatedVideos": [...],
-  "trendGraph": [...],
-  "relatedKeywords": [...]
+  "success": true,
+  "data": {
+    "keyword": "키워드명",
+    "explain": "이 키워드가 뜨는 이유 설명...",
+    "relatedVideos": [
+      {
+        "videoId": "xxx",
+        "keywordId": 1,
+        "title": "영상 제목",
+        "channelName": "채널명",
+        "thumbnailUrl": "https://...",
+        "viewCount": 1200000,
+        "keyword": "키워드명",
+        "feedSection": "RISING",
+        "badge": "HOT",
+        "publishedAt": "2026-06-15T15:05:34",
+        "durationSeconds": 4838
+      }
+    ],
+    "trendGraph": [
+      {
+        "period": "2026-06-15",
+        "ratio": 88982
+      }
+    ],
+    "relatedKeywords": [
+      {
+        "id": 2,
+        "word": "관련 키워드",
+        "rank": 2,
+        "category": "음악",
+        "trendScore": 44120,
+        "rankTrend": "UP",
+        "rankDelta": 1
+      }
+    ]
+  },
+  "error": null
 }
 ```
 
@@ -149,6 +214,9 @@ REDIS_TOKEN=
 - 사용자가 작업계획을 요청하면 실제 구현하기 좋은 단위로 나누어 제안한다.
 - 각 작업 단위는 가능하면 독립적으로 빌드/테스트/검증 가능한 범위로 잡는다.
 - 큰 일정표보다 바로 착수 가능한 PR/커밋 단위의 계획을 우선한다.
+- 커밋 메시지는 Conventional Commits 형식으로 작성한다.
+- 커밋 제목은 `feat: 키워드 저장소 추가`, `test: PostgreSQL 테스트 DB 분리`처럼 타입 prefix는 영어, 설명은 간결한 한국어로 작성한다.
+- 주로 사용하는 타입은 `feat`, `fix`, `refactor`, `test`, `docs`, `chore`를 우선한다.
 
 ---
 
@@ -156,7 +224,7 @@ REDIS_TOKEN=
 
 ```
 Week 1-2  백엔드 기반 (Spring Boot + YouTube API + Redis)
-Week 3    크롤링 스케줄러 (Google Trends + 네이버 DataLab + Gemini)
+Week 3    크롤링 스케줄러 (YouTube 후보 수집 + 네이버 DataLab + Gemini)
 Week 4    키워드 API + 프론트 기반 세팅
 Week 5-6  프론트 전체 페이지 구현 + 배포
 ```
