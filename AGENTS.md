@@ -81,6 +81,7 @@ Response:
     "videos": [
       {
         "videoId": "xxx",
+        "keywordId": 1,
         "title": "영상 제목",
         "channelName": "채널명",
         "thumbnailUrl": "https://...",
@@ -123,9 +124,53 @@ Response:
 }
 ```
 
-### 키워드 상세 (왜 뜨는지 설명, 예정)
+### 키워드 상세 (왜 뜨는지 설명)
 
-`/api/keywords/{id}/explain`은 프론트 상세 화면 구현 전에 백엔드에서 추가할 예정 API다. 현재 공개 API에는 포함하지 않는다.
+```
+GET /api/keywords/{id}/explain
+
+Response:
+{
+  "success": true,
+  "data": {
+    "keyword": "키워드명",
+    "explain": "이 키워드가 뜨는 이유 설명...",
+    "relatedVideos": [
+      {
+        "videoId": "xxx",
+        "keywordId": 1,
+        "title": "영상 제목",
+        "channelName": "채널명",
+        "thumbnailUrl": "https://...",
+        "viewCount": 1200000,
+        "keyword": "키워드명",
+        "feedSection": "RISING",
+        "badge": "HOT",
+        "publishedAt": "2026-06-15T15:05:34",
+        "durationSeconds": 4838
+      }
+    ],
+    "trendGraph": [
+      {
+        "period": "2026-06-15",
+        "ratio": 88982
+      }
+    ],
+    "relatedKeywords": [
+      {
+        "id": 2,
+        "word": "관련 키워드",
+        "rank": 2,
+        "category": "음악",
+        "trendScore": 44120,
+        "rankTrend": "UP",
+        "rankDelta": 1
+      }
+    ]
+  },
+  "error": null
+}
+```
 
 ---
 
