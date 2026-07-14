@@ -26,6 +26,7 @@ export type FeedResponse = {
 
 export type FeedVideo = {
   videoId: string;
+  keywordId: number;
   title: string;
   channelName: string;
   thumbnailUrl: string | null;

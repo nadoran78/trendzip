@@ -97,6 +97,7 @@ class KeywordQueryRepository(
             .fetch { record ->
                 FeedVideoQueryResult(
                     videoId = record.get(TREND_VIDEOS.YOUTUBE_VIDEO_ID),
+                    keywordId = keywordId,
                     title = record.get(TREND_VIDEOS.TITLE),
                     channelName = record.get(TREND_VIDEOS.CHANNEL_NAME),
                     thumbnailUrl = record.get(TREND_VIDEOS.THUMBNAIL_URL),

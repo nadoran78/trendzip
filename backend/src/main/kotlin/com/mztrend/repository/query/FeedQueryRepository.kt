@@ -25,6 +25,7 @@ class FeedQueryRepository(
                 TREND_VIDEOS.CHANNEL_NAME,
                 TREND_VIDEOS.THUMBNAIL_URL,
                 TREND_VIDEOS.VIEW_COUNT,
+                KEYWORDS.ID,
                 KEYWORDS.WORD,
                 TREND_FEED_ITEMS.FEED_SECTION,
                 TREND_FEED_ITEMS.BADGE,
@@ -47,6 +48,7 @@ class FeedQueryRepository(
             ).fetch { record ->
                 FeedVideoQueryResult(
                     videoId = record.get(TREND_VIDEOS.YOUTUBE_VIDEO_ID),
+                    keywordId = record.get(KEYWORDS.ID),
                     title = record.get(TREND_VIDEOS.TITLE),
                     channelName = record.get(TREND_VIDEOS.CHANNEL_NAME),
                     thumbnailUrl = record.get(TREND_VIDEOS.THUMBNAIL_URL),

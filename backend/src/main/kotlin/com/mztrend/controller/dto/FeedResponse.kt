@@ -11,6 +11,7 @@ data class FeedResponse(
 
 data class FeedVideoResponse(
     val videoId: String,
+    val keywordId: Long,
     val title: String,
     val channelName: String,
     val thumbnailUrl: String?,

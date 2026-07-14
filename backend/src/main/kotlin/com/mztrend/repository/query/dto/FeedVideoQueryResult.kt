@@ -5,6 +5,7 @@ import java.time.LocalDateTime
 
 data class FeedVideoQueryResult(
     val videoId: String,
+    val keywordId: Long,
     val title: String,
     val channelName: String,
     val thumbnailUrl: String?,

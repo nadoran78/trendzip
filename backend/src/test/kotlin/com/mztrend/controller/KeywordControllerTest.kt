@@ -119,6 +119,7 @@ class KeywordControllerTest {
             .andExpect(jsonPath("$.data.explain").value("넷플릭스 신작 공개로 관련 배우와 작품명이 함께 주목받고 있습니다."))
             .andExpect(jsonPath("$.data.relatedVideos.length()").value(2))
             .andExpect(jsonPath("$.data.relatedVideos[0].videoId").value("donggung-trailer"))
+            .andExpect(jsonPath("$.data.relatedVideos[0].keywordId").value(10))
             .andExpect(jsonPath("$.data.relatedVideos[0].keyword").value("동궁"))
             .andExpect(jsonPath("$.data.relatedVideos[0].feedSection").value(FeedSection.RISING.name))
             .andExpect(jsonPath("$.data.relatedVideos[0].badge").value("HOT"))

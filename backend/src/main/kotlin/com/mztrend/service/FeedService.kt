@@ -22,6 +22,7 @@ class FeedService(
                     .map {
                         FeedVideoResponse(
                             videoId = it.videoId,
+                            keywordId = it.keywordId,
                             title = it.title,
                             channelName = it.channelName,
                             thumbnailUrl = it.thumbnailUrl,

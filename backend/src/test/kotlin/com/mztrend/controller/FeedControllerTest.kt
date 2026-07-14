@@ -56,12 +56,14 @@ class FeedControllerTest {
             .andExpect(jsonPath("$.data.generation").value(Generation.TEEN.name))
             .andExpect(jsonPath("$.data.videos.length()").value(4))
             .andExpect(jsonPath("$.data.videos[0].videoId").value("teen-today-1"))
+            .andExpect(jsonPath("$.data.videos[0].keywordId").value(1))
             .andExpect(jsonPath("$.data.videos[0].keyword").value("teen-first"))
             .andExpect(jsonPath("$.data.videos[0].feedSection").value(FeedSection.TODAY_PICK.name))
             .andExpect(jsonPath("$.data.videos[0].viewCount").value(900_000))
             .andExpect(jsonPath("$.data.videos[0].badge").value("HOT"))
             .andExpect(jsonPath("$.data.videos[0].durationSeconds").value(180))
             .andExpect(jsonPath("$.data.videos[1].videoId").value("teen-today-2"))
+            .andExpect(jsonPath("$.data.videos[1].keywordId").value(2))
             .andExpect(jsonPath("$.data.videos[1].keyword").value("teen-second"))
             .andExpect(jsonPath("$.data.videos[2].videoId").value("teen-rising-1"))
             .andExpect(jsonPath("$.data.videos[2].feedSection").value(FeedSection.RISING.name))
@@ -77,6 +79,7 @@ class FeedControllerTest {
             .andExpect(jsonPath("$.data.generation").value(Generation.TWENTY.name))
             .andExpect(jsonPath("$.data.videos.length()").value(1))
             .andExpect(jsonPath("$.data.videos[0].videoId").value("twenty-today-1"))
+            .andExpect(jsonPath("$.data.videos[0].keywordId").value(4))
             .andExpect(jsonPath("$.data.videos[0].keyword").value("twenty-first"))
     }
 
