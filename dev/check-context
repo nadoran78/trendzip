@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+QUIET=false
+ERROR_COUNT=0
+
+usage() {
+    cat <<'EOF'
+Usage: ./dev/check-context [--quiet] [--help]
+
+Validates the project context documents used by ./dev/context.
+EOF
+}
+
+pass() {
+    if [[ "$QUIET" == false ]]; then
+        printf '  PASS %s\n' "$1"
+    fi
+}
+
+fail() {
+    printf '  FAIL %s\n' "$1" >&2
+    ERROR_COUNT=$((ERROR_COUNT + 1))
+}
+
+require_fixed_line() {
+    local file="$1"
+    local line="$2"
+
+    if grep -Fqx -- "$line" "$file"; then
+        return 0
+    fi
+
+    fail "$file: missing heading '$line'"
+    return 1
+}
+
+section_task_count() {
+    local section="$1"
+    local file="$2"
+
+    awk -v section="$section" '
+        $0 == "## " section { inside = 1; next }
+        inside && /^## / { exit }
+        inside && /^### [A-Z]+-[0-9][0-9][0-9] / { count++ }
+        END { print count + 0 }
+    ' "$file"
+}
+
+now_block() {
+    awk '
+        $0 == "## NOW" { inside = 1; next }
+        inside && /^## / { exit }
+        inside { print }
+    ' "$WORK_ITEMS"
+}
+
+check_required_files() {
+    local missing=false
+    local file
+
+    for file in "$PROJECT_STATUS" "$BUSINESS_FLOW" "$WORK_ITEMS"; do
+        if [[ -f "$file" ]]; then
+            pass "${file#"$PROJECT_ROOT"/}"
+        else
+            fail "${file#"$PROJECT_ROOT"/}: file not found"
+            missing=true
+        fi
+    done
+
+    [[ "$missing" == false ]]
+}
+
+check_project_status() {
+    local valid=true
+    local heading
+
+    if ! grep -Eq '^- 마지막 갱신: [0-9]{4}-[0-9]{2}-[0-9]{2}$' "$PROJECT_STATUS"; then
+        fail "docs/project-status.md: invalid or missing last-updated date"
+        valid=false
+    fi
+    if ! grep -Eq '^- 현재 단계: .+' "$PROJECT_STATUS"; then
+        fail "docs/project-status.md: missing current phase"
+        valid=false
+    fi
+    if ! grep -Eq '^- 현재 집중 영역: .+' "$PROJECT_STATUS"; then
+        fail "docs/project-status.md: missing current focus"
+        valid=false
+    fi
+
+    for heading in \
+        '## 한 줄 상태' \
+        '## 구현 현황' \
+        '## 현재 가능한 사용자 흐름' \
+        '## 주요 미완성 영역' \
+        '## 알려진 문제와 제약' \
+        '## 로컬 실행'; do
+        require_fixed_line "$PROJECT_STATUS" "$heading" || valid=false
+    done
+
+    if [[ "$valid" == true ]]; then
+        pass 'project status structure'
+    fi
+}
+
+check_business_flow() {
+    local valid=true
+    local heading
+
+    for heading in \
+        '## 서비스 목적' \
+        '## 핵심 용어' \
+        '## 사용자 흐름' \
+        '## 트렌드 수집 흐름' \
+        '## 피드 생성 흐름' \
+        '## 키워드 설명 흐름' \
+        '## 데이터와 API 연결' \
+        '## 주요 비즈니스 규칙' \
+        '## 코드 탐색 지도'; do
+        require_fixed_line "$BUSINESS_FLOW" "$heading" || valid=false
+    done
+
+    if [[ "$valid" == true ]]; then
+        pass 'business flow structure'
+    fi
+}
+
+check_work_items() {
+    local valid=true
+    local heading
+    local now_count
+    local next_count
+    local block
+
+    for heading in '## NOW' '## NEXT' '## LATER' '## 최근 완료'; do
+        require_fixed_line "$WORK_ITEMS" "$heading" || valid=false
+    done
+
+    now_count="$(section_task_count NOW "$WORK_ITEMS")"
+    if [[ "$now_count" -ne 1 ]]; then
+        fail "docs/work-items.md: NOW must contain exactly one work item, found $now_count"
+        valid=false
+    else
+        pass 'NOW contains exactly one work item'
+    fi
+
+    next_count="$(section_task_count NEXT "$WORK_ITEMS")"
+    if [[ "$next_count" -gt 5 ]]; then
+        fail "docs/work-items.md: NEXT must contain at most five work items, found $next_count"
+        valid=false
+    else
+        pass "NEXT contains $next_count work item(s)"
+    fi
+
+    block="$(now_block)"
+    for heading in \
+        '#### 목적' \
+        '#### 범위' \
+        '#### 제외 범위' \
+        '#### 완료 조건' \
+        '#### 관련 코드' \
+        '#### 검증'; do
+        if ! grep -Fqx -- "$heading" <<<"$block"; then
+            fail "docs/work-items.md: NOW is missing '$heading'"
+            valid=false
+        fi
+    done
+
+    if [[ "$now_count" -eq 1 ]] && ! grep -Eq '^### [A-Z]+-[0-9]{3} .+' <<<"$block"; then
+        fail 'docs/work-items.md: NOW work item ID is invalid'
+        valid=false
+    fi
+
+    if [[ "$valid" == true ]]; then
+        pass 'work item structure'
+    fi
+}
+
+check_now_code_paths() {
+    local paths
+    local path
+    local valid=true
+
+    paths="$(now_block | awk '
+        $0 == "#### 관련 코드" { inside = 1; next }
+        inside && /^#### / { exit }
+        inside && /^- `/ {
+            line = $0
+            sub(/^- `/, "", line)
+            sub(/`$/, "", line)
+            print line
+        }
+    ')"
+
+    if [[ -z "$paths" ]]; then
+        fail 'docs/work-items.md: NOW must reference at least one code path'
+        return
+    fi
+
+    while IFS= read -r path; do
+        if [[ ! -e "$PROJECT_ROOT/$path" ]]; then
+            fail "docs/work-items.md: referenced path does not exist: $path"
+            valid=false
+        fi
+    done <<<"$paths"
+
+    if [[ "$valid" == true ]]; then
+        pass 'NOW code paths exist'
+    fi
+}
+
+case "${1:-}" in
+    '') ;;
+    --quiet) QUIET=true ;;
+    --help|-h)
+        usage
+        exit 0
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
+
+PROJECT_STATUS="$PROJECT_ROOT/docs/project-status.md"
+BUSINESS_FLOW="$PROJECT_ROOT/docs/business-flow.md"
+WORK_ITEMS="$PROJECT_ROOT/docs/work-items.md"
+
+if [[ "$QUIET" == false ]]; then
+    printf 'Context harness check\n'
+fi
+
+if ! check_required_files; then
+    exit 1
+fi
+
+check_project_status
+check_business_flow
+check_work_items
+check_now_code_paths
+
+if [[ "$ERROR_COUNT" -gt 0 ]]; then
+    printf '\nContext harness has %d error(s).\n' "$ERROR_COUNT" >&2
+    exit 1
+fi
+
+if [[ "$QUIET" == false ]]; then
+    printf '\nContext harness is valid.\n'
+fi
