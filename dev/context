@@ -1,0 +1,194 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_STATUS="$PROJECT_ROOT/docs/project-status.md"
+WORK_ITEMS="$PROJECT_ROOT/docs/work-items.md"
+BASE_BRANCH="${CONTEXT_BASE_BRANCH:-develop}"
+FULL=false
+
+usage() {
+    cat <<'EOF'
+Usage: ./dev/context [--full] [--help]
+
+Shows project context, the checked-out branch, its mapped work item, other
+active work, upcoming work, and Git progress. This command never modifies the
+repository.
+
+Environment:
+  CONTEXT_BASE_BRANCH  Integration branch used for ahead/behind (default: develop)
+EOF
+}
+
+metadata_value() {
+    local label="$1"
+    sed -n "s/^- ${label}: //p" "$PROJECT_STATUS" | head -n 1
+}
+
+task_records() {
+    local section="$1"
+
+    awk -v section="$section" '
+        function emit() {
+            if (id != "") {
+                printf "%s|%s|%s|%s|%s|%s\n", id, title, status, branch, updated, next_action
+                id = ""
+            }
+        }
+        $0 == "## " section { inside = 1; next }
+        inside && /^## / { emit(); exit }
+        inside && /^### [A-Z]+-[0-9][0-9][0-9] / {
+            emit()
+            line = $0
+            sub(/^### /, "", line)
+            split(line, parts, " ")
+            id = parts[1]
+            title = line
+            sub(/^[^ ]+ /, "", title)
+            status = branch = updated = next_action = ""
+            details = 0
+            next
+        }
+        inside && id != "" && /^#### / { details = 1 }
+        inside && id != "" && !details && /^- 상태: / { status = $0; sub(/^- 상태: /, "", status); next }
+        inside && id != "" && !details && /^- 브랜치: / { branch = $0; sub(/^- 브랜치: /, "", branch); next }
+        inside && id != "" && !details && /^- 마지막 갱신: / { updated = $0; sub(/^- 마지막 갱신: /, "", updated); next }
+        inside && id != "" && !details && /^- 다음 행동: / { next_action = $0; sub(/^- 다음 행동: /, "", next_action); next }
+        END { if (inside) emit() }
+    ' "$WORK_ITEMS"
+}
+
+print_current_work_item() {
+    local current_branch="$1"
+    local record
+
+    record="$(task_records ACTIVE | awk -F '|' -v branch="$current_branch" '$4 == branch { print; exit }')"
+    if [[ -z "$record" ]]; then
+        printf '현재 작업\n'
+        printf '  연결된 ACTIVE 작업 없음\n'
+        case "$current_branch" in
+            codex/*)
+                printf '  WARNING: 이 codex 브랜치를 docs/work-items.md의 ACTIVE 작업에 등록하세요.\n'
+                ;;
+            "$BASE_BRANCH"|main)
+                printf '  안내: 구현 작업은 READY 항목의 작업 브랜치에서 시작합니다.\n'
+                ;;
+        esac
+        return
+    fi
+
+    local id title status branch updated next_action
+    IFS='|' read -r id title status branch updated next_action <<<"$record"
+    printf '현재 작업\n'
+    printf '  %s %s\n' "$id" "$title"
+    printf '  상태: %s\n' "$status"
+    printf '  브랜치: %s (일치)\n' "$branch"
+    printf '  마지막 갱신: %s\n' "$updated"
+    printf '  다음 행동: %s\n' "$next_action"
+}
+
+print_other_active_work() {
+    local current_branch="$1"
+    local found=false
+    local id title status branch updated next_action
+
+    printf '\n다른 활성 작업\n'
+    while IFS='|' read -r id title status branch updated next_action; do
+        [[ -n "$id" ]] || continue
+        [[ "$branch" != "$current_branch" ]] || continue
+        found=true
+        printf '  %s %s [%s]\n' "$id" "$title" "$status"
+        printf '    브랜치: %s\n' "$branch"
+        printf '    다음 행동: %s\n' "$next_action"
+        if git -C "$PROJECT_ROOT" show-ref --verify --quiet "refs/heads/$branch"; then
+            printf '    최근 커밋: %s\n' "$(git -C "$PROJECT_ROOT" log -1 --format='%h %s' "$branch")"
+        else
+            printf '    최근 커밋: 로컬 브랜치 없음\n'
+        fi
+    done < <(task_records ACTIVE)
+
+    if [[ "$found" == false ]]; then
+        printf '  없음\n'
+    fi
+}
+
+print_ready_work() {
+    local id title status branch updated next_action
+
+    printf '\n준비된 작업\n'
+    while IFS='|' read -r id title status branch updated next_action; do
+        [[ -n "$id" ]] || continue
+        printf '  %s %s\n' "$id" "$title"
+        printf '    다음 행동: %s\n' "$next_action"
+    done < <(task_records READY)
+}
+
+case "${1:-}" in
+    '') ;;
+    --full) FULL=true ;;
+    --help|-h)
+        usage
+        exit 0
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
+
+if ! "$SCRIPT_DIR/check-context" --quiet --no-branch-check; then
+    printf '\nFix the context documents, then run ./dev/context again.\n' >&2
+    exit 1
+fi
+
+CURRENT_BRANCH="$(git -C "$PROJECT_ROOT" branch --show-current)"
+if [[ -z "$CURRENT_BRANCH" ]]; then
+    CURRENT_BRANCH='(detached HEAD)'
+fi
+
+printf 'MZ 따라잡기 — 프로젝트 컨텍스트\n'
+printf '%s\n\n' '================================'
+printf '프로젝트 상태\n'
+printf '  단계: %s\n' "$(metadata_value '현재 단계')"
+printf '  집중: %s\n' "$(metadata_value '현재 집중 영역')"
+printf '  갱신: %s\n\n' "$(metadata_value '마지막 갱신')"
+
+printf 'Git 상태\n'
+printf '  현재 브랜치: %s\n' "$CURRENT_BRANCH"
+printf '  기준 브랜치: %s\n' "$BASE_BRANCH"
+if git -C "$PROJECT_ROOT" show-ref --verify --quiet "refs/heads/$BASE_BRANCH"; then
+    read -r BEHIND AHEAD < <(git -C "$PROJECT_ROOT" rev-list --left-right --count "$BASE_BRANCH...HEAD")
+    printf '  기준 대비: %s ahead, %s behind\n' "$AHEAD" "$BEHIND"
+else
+    printf '  기준 대비: 계산 불가 (로컬 기준 브랜치 없음)\n'
+fi
+if [[ -z "$(git -C "$PROJECT_ROOT" status --short)" ]]; then
+    printf '  작업 트리: clean\n'
+else
+    printf '  작업 트리: dirty\n'
+fi
+printf '  최근 커밋: %s\n\n' "$(git -C "$PROJECT_ROOT" log -1 --format='%h %s')"
+
+print_current_work_item "$CURRENT_BRANCH"
+print_other_active_work "$CURRENT_BRANCH"
+print_ready_work
+
+if [[ "$FULL" == true ]]; then
+    printf '\n작업 트리 상세\n'
+    if [[ -z "$(git -C "$PROJECT_ROOT" status --short)" ]]; then
+        printf '  clean\n'
+    else
+        git -C "$PROJECT_ROOT" status --short | sed 's/^/  /'
+    fi
+
+    printf '\n최근 커밋\n'
+    git -C "$PROJECT_ROOT" log --oneline -5 | sed 's/^/  /'
+fi
+
+printf '\n빠른 시작\n'
+printf '  현재 작업: docs/work-items.md\n'
+printf '  현재 상태: docs/project-status.md\n'
+printf '  비즈니스 흐름: docs/business-flow.md\n'
+printf '  문서 검사: ./dev/check-context\n'

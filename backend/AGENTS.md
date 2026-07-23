@@ -108,7 +108,6 @@ com.mztrend
 │   │   └── KeywordListResponse
 │   ├── FeedController
 │   ├── KeywordController
-│   └── TrendController
 ├── service
 │   ├── FeedService
 │   ├── KeywordService
