@@ -69,6 +69,9 @@ class TrendCrawlingServiceTest {
     private lateinit var trendCrawlRunRepository: TrendCrawlRunRepository
 
     @Autowired
+    private lateinit var trendCrawlRunRecorder: TrendCrawlRunRecorder
+
+    @Autowired
     private lateinit var cacheManager: CacheManager
 
     @Autowired
@@ -179,6 +182,22 @@ class TrendCrawlingServiceTest {
             )
         assertNotNull(videoKeyword)
         assertEquals(TrendVideoKeywordRelationType.TAG, videoKeyword.relationType)
+    }
+
+    @Test
+    fun `saveCollectedTrends keeps keyword cache until crawl run completes`() {
+        val crawlRun = trendCrawlRunRecorder.start(Generation.TEEN)
+        cacheManager.getCache(CacheNames.KEYWORDS)?.put(Generation.TEEN.name, "stale")
+        cacheManager.getCache(CacheNames.FEED)?.put(Generation.TEEN.name, "stale")
+
+        trendCrawlingService.saveCollectedTrends(requireNotNull(crawlRun.id), collectedBatch())
+
+        assertNotNull(cacheManager.getCache(CacheNames.KEYWORDS)?.get(Generation.TEEN.name))
+        assertNull(cacheManager.getCache(CacheNames.FEED)?.get(Generation.TEEN.name))
+
+        trendCrawlRunRecorder.complete(crawlRun)
+
+        assertNull(cacheManager.getCache(CacheNames.KEYWORDS)?.get(Generation.TEEN.name))
     }
 
     @Test

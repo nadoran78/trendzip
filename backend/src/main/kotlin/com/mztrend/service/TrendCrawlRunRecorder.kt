@@ -1,9 +1,11 @@
 package com.mztrend.service
 
+import com.mztrend.config.CacheNames
 import com.mztrend.domain.Generation
 import com.mztrend.domain.TrendCrawlRun
 import com.mztrend.domain.TrendCrawlRunStatus
 import com.mztrend.repository.command.TrendCrawlRunRepository
+import org.springframework.cache.annotation.CacheEvict
 import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.LocalDateTime
@@ -22,6 +24,7 @@ class TrendCrawlRunRecorder(
             ),
         )
 
+    @CacheEvict(cacheNames = [CacheNames.KEYWORDS], allEntries = true)
     fun complete(crawlRun: TrendCrawlRun) {
         crawlRun.status = TrendCrawlRunStatus.COMPLETED
         crawlRun.completedAt = LocalDateTime.now(clock)

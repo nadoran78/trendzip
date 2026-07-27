@@ -4,9 +4,11 @@ import com.mztrend.config.CacheNames
 import com.mztrend.domain.FeedSection
 import com.mztrend.domain.Generation
 import com.mztrend.domain.RankTrend
+import com.mztrend.domain.TrendCrawlRunStatus
 import com.mztrend.domain.TrendVideoKeywordRelationType
 import com.mztrend.jooq.Tables.KEYWORDS
 import com.mztrend.jooq.Tables.KEYWORD_RELATIONS
+import com.mztrend.jooq.Tables.TREND_CRAWL_RUNS
 import com.mztrend.jooq.Tables.TREND_FEED_ITEMS
 import com.mztrend.jooq.Tables.TREND_LOGS
 import com.mztrend.jooq.Tables.TREND_VIDEOS
@@ -45,6 +47,7 @@ class KeywordControllerTest {
         dsl.deleteFrom(TREND_VIDEO_KEYWORDS).execute()
         dsl.deleteFrom(TREND_FEED_ITEMS).execute()
         dsl.deleteFrom(TREND_LOGS).execute()
+        dsl.deleteFrom(TREND_CRAWL_RUNS).execute()
         dsl.deleteFrom(TREND_VIDEOS).execute()
         dsl.deleteFrom(KEYWORDS).execute()
 
@@ -63,6 +66,8 @@ class KeywordControllerTest {
             .values(2L, "teen-first", Generation.TEEN.name, "game", 1, 1_200_000L, RankTrend.UP.name, 4)
             .values(3L, "twenty-first", Generation.TWENTY.name, "beauty", 1, 744_000L, RankTrend.NEW.name, null)
             .execute()
+
+        insertKeywordListCrawlRuns()
     }
 
     @Test
@@ -105,6 +110,43 @@ class KeywordControllerTest {
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.error.code").value("INVALID_REQUEST"))
+    }
+
+    private fun insertKeywordListCrawlRuns() {
+        dsl
+            .insertInto(
+                TREND_CRAWL_RUNS,
+                TREND_CRAWL_RUNS.ID,
+                TREND_CRAWL_RUNS.GENERATION,
+                TREND_CRAWL_RUNS.STATUS,
+                TREND_CRAWL_RUNS.STARTED_AT,
+                TREND_CRAWL_RUNS.COMPLETED_AT,
+            ).values(
+                1L,
+                Generation.TEEN.name,
+                TrendCrawlRunStatus.COMPLETED.name,
+                java.time.LocalDateTime.of(2026, 7, 26, 3, 0),
+                java.time.LocalDateTime.of(2026, 7, 26, 3, 5),
+            ).values(
+                2L,
+                Generation.TWENTY.name,
+                TrendCrawlRunStatus.COMPLETED.name,
+                java.time.LocalDateTime.of(2026, 7, 26, 3, 10),
+                java.time.LocalDateTime.of(2026, 7, 26, 3, 15),
+            ).execute()
+
+        dsl
+            .insertInto(
+                TREND_LOGS,
+                TREND_LOGS.ID,
+                TREND_LOGS.CRAWL_RUN_ID,
+                TREND_LOGS.KEYWORD_ID,
+                TREND_LOGS.RANK,
+                TREND_LOGS.SCORE,
+            ).values(1L, 1L, 2L, 1, 1_200_000L)
+            .values(2L, 1L, 1L, 2, 982_000L)
+            .values(3L, 2L, 3L, 1, 744_000L)
+            .execute()
     }
 
     @Test
