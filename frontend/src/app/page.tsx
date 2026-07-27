@@ -1,57 +1,77 @@
-import Link from "next/link";
+import { Suspense } from "react";
+
+import { GenerationSelector } from "@/components/landing/GenerationSelector";
+import {
+  LandingTicker,
+  LandingTickerFallback,
+} from "@/components/landing/LandingTicker";
+
+export const dynamic = "force-dynamic";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#0a0a0a] text-zinc-50">
-      <section className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col justify-between px-6 py-8">
-        <div className="flex items-center justify-between text-sm text-zinc-400">
-          <span>MZ 따라잡기</span>
-          <span>Trendzip</span>
-        </div>
+    <main className="min-h-dvh bg-[#070708] text-white">
+      <div className="tz-landing-shell relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col overflow-hidden border-x border-white/[0.04] bg-[#0a0a0a]">
+        <header className="relative z-20 border-b border-[#222] bg-[#0a0a0a]/95 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+          <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-3 px-4">
+            <span className="tz-round justify-self-start text-lg font-bold text-white">
+              tz<span className="text-[#00e5ff]">♡</span>
+            </span>
 
-        <div className="space-y-8">
-          <div className="space-y-4">
-            <p className="text-sm font-medium text-emerald-300">
-              YouTube trend feed
-            </p>
-            <h1 className="text-balance text-5xl font-semibold leading-[1.05]">
-              10대와 20대의 피드를 한눈에
-            </h1>
-            <p className="text-base leading-7 text-zinc-400">
-              세대별 인기 영상과 급상승 키워드를 모아 30~40대도 지금의
-              관심사를 빠르게 따라잡을 수 있게 합니다.
-            </p>
+            <span aria-hidden="true" />
+
+            <span className="tz-round inline-flex items-center gap-1.5 justify-self-end rounded-full border border-white/10 px-2.5 py-1.5 text-[10px] font-bold tracking-normal text-white">
+              <span className="relative size-1.5" aria-hidden="true">
+                <span className="tz-live-pulse absolute inset-0 rounded-full bg-[#ff3b3b]" />
+                <span className="absolute inset-0 rounded-full bg-[#ff3b3b] shadow-[0_0_8px_#ff3b3b]" />
+              </span>
+              LIVE
+            </span>
           </div>
 
-          <div className="grid gap-3">
-            <Link
-              href="/feed/teen"
-              className="flex min-h-14 items-center justify-between rounded-lg border border-emerald-300/30 bg-emerald-300 px-5 text-base font-semibold text-zinc-950 transition hover:bg-emerald-200"
-            >
-              <span>10대 피드</span>
-              <span aria-hidden="true">→</span>
-            </Link>
-            <Link
-              href="/feed/twenty"
-              className="flex min-h-14 items-center justify-between rounded-lg border border-zinc-700 bg-zinc-900 px-5 text-base font-semibold text-zinc-50 transition hover:bg-zinc-800"
-            >
-              <span>20대 피드</span>
-              <span aria-hidden="true">→</span>
-            </Link>
-          </div>
-        </div>
+          <Suspense fallback={<LandingTickerFallback />}>
+            <LandingTicker />
+          </Suspense>
+        </header>
 
-        <div className="grid grid-cols-2 gap-3 text-sm text-zinc-400">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-            <p className="text-2xl font-semibold text-zinc-50">10s</p>
-            <p className="mt-2">Teen feed</p>
+        <section className="relative z-10 flex min-h-[calc(100dvh-90px-env(safe-area-inset-top))] flex-1 flex-col items-center justify-center px-[22px] py-8">
+          <div className="tz-round inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-3.5 py-2 text-[11px] font-semibold text-white/85 backdrop-blur-lg">
+            <span className="relative size-[7px]" aria-hidden="true">
+              <span className="tz-live-pulse absolute inset-0 rounded-full bg-[#ff3b3b]" />
+              <span className="absolute inset-0 rounded-full bg-[#ff3b3b] shadow-[0_0_10px_#ff3b3b]" />
+            </span>
+            <span className="font-bold text-white">LIVE</span>
+            <span className="text-white/55">·</span>
+            지금 유튜브 트렌드
           </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-            <p className="text-2xl font-semibold text-zinc-50">20s</p>
-            <p className="mt-2">Twenty feed</p>
-          </div>
-        </div>
-      </section>
+
+          <h1 className="tz-landing-wordmark tz-round mt-7 text-center font-bold text-white">
+            <span className="block">trend</span>
+            <span className="flex items-baseline justify-center gap-1 text-[#00e5ff] [text-shadow:0_0_28px_rgba(0,229,255,0.22),0_0_60px_rgba(0,229,255,0.12)]">
+              zip
+              <span
+                aria-hidden="true"
+                className="tz-wordmark-heart inline-block text-[#ff2d9b]"
+              >
+                ♡
+              </span>
+            </span>
+          </h1>
+
+          <p className="mt-6 text-center text-lg leading-7 text-white/85">
+            요즘 MZ가 보는 게 궁금하다면
+            <span aria-hidden="true" className="ml-1">
+              ✨
+            </span>
+          </p>
+          <p className="tz-round mt-2.5 text-center text-[11px] font-semibold text-white/45">
+            <span aria-hidden="true">🔥</span> 매일 업데이트되는 한국 유튜브
+            펄스
+          </p>
+
+          <GenerationSelector />
+        </section>
+      </div>
     </main>
   );
 }
