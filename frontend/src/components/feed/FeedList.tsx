@@ -1,4 +1,5 @@
 import { Inbox } from "lucide-react";
+import Link from "next/link";
 
 import { FeedCard } from "@/components/feed/FeedCard";
 import type { FeedVideo, GenerationSlug } from "@/types/api";
@@ -77,6 +78,7 @@ export function FeedList({ videos, generation }: FeedListProps) {
             title="급상승 트렌드"
             subtitle="지금 함께 많이 보는 영상"
             actionLabel="랭킹 보기"
+            actionHref={`/trend/${generation}`}
           />
 
           <div className="mt-2 flex flex-col gap-3.5">
@@ -108,6 +110,7 @@ type SectionHeaderProps = {
   title: string;
   subtitle: string;
   actionLabel?: string;
+  actionHref?: string;
 };
 
 function SectionHeader({
@@ -116,6 +119,7 @@ function SectionHeader({
   title,
   subtitle,
   actionLabel,
+  actionHref,
 }: SectionHeaderProps) {
   return (
     <div className="px-1 pb-0.5 pt-1">
@@ -126,15 +130,13 @@ function SectionHeader({
         <h2 id={id} className="text-[17px] font-extrabold text-white">
           {title}
         </h2>
-        {actionLabel ? (
-          <button
-            type="button"
-            disabled
-            title="랭킹 화면 준비 중"
-            className="ml-auto cursor-not-allowed rounded-full border border-[#00e5ff]/50 bg-[#00e5ff]/[0.06] px-2.5 py-1.5 text-[11px] font-extrabold text-white/55"
+        {actionLabel && actionHref ? (
+          <Link
+            href={actionHref}
+            className="ml-auto rounded-full border border-[#00e5ff]/50 bg-[#00e5ff]/[0.06] px-2.5 py-1.5 text-[11px] font-extrabold text-white/75 transition-colors hover:bg-[#00e5ff]/15 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00e5ff]"
           >
             {actionLabel}
-          </button>
+          </Link>
         ) : null}
       </div>
       <p className="mt-0.5 text-[11px] font-medium text-[#888]">{subtitle}</p>

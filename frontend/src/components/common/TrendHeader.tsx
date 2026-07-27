@@ -1,17 +1,36 @@
 import Link from "next/link";
 
-import { GenerationTab } from "@/components/common/GenerationTab";
+import {
+  GenerationTab,
+  type TrendView,
+} from "@/components/common/GenerationTab";
 import type { GenerationSlug } from "@/types/api";
 
-type FeedHeaderProps = {
+type TrendHeaderProps = {
   generation: GenerationSlug;
+  activeView: TrendView;
   tickerKeywords: string[];
 };
 
-export function FeedHeader({
+const VIEW_OPTIONS: readonly {
+  id: TrendView;
+  label: string;
+}[] = [
+  {
+    id: "feed",
+    label: "피드",
+  },
+  {
+    id: "trend",
+    label: "랭킹",
+  },
+];
+
+export function TrendHeader({
   generation,
+  activeView,
   tickerKeywords,
-}: FeedHeaderProps) {
+}: TrendHeaderProps) {
   const keywords =
     tickerKeywords.length > 0 ? tickerKeywords : ["오늘의 트렌드"];
   const tickerItems = [...keywords, ...keywords, ...keywords];
@@ -27,7 +46,10 @@ export function FeedHeader({
           tz<span className="text-[#00e5ff]">♡</span>
         </Link>
 
-        <GenerationTab activeGeneration={generation} />
+        <GenerationTab
+          activeGeneration={generation}
+          activeView={activeView}
+        />
 
         <div className="justify-self-end">
           <span className="tz-round inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1.5 text-[10px] font-bold text-white">
@@ -55,6 +77,7 @@ export function FeedHeader({
                     ? "bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]"
                     : "bg-[#ff2d9b] shadow-[0_0_8px_#ff2d9b]",
                 ].join(" ")}
+                aria-hidden="true"
               />
               #{keyword}
             </span>
@@ -63,24 +86,29 @@ export function FeedHeader({
       </div>
 
       <nav
-        aria-label="피드 화면"
+        aria-label="트렌드 화면"
         className="flex h-[42px] items-center justify-center gap-2 border-t border-[#151515]"
       >
-        <Link
-          href={`/feed/${generation}`}
-          aria-current="page"
-          className="rounded-full border border-[#00e5ff] bg-[#00e5ff]/10 px-[18px] py-1.5 text-[12px] font-extrabold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00e5ff]"
-        >
-          피드
-        </Link>
-        <button
-          type="button"
-          disabled
-          title="랭킹 화면 준비 중"
-          className="cursor-not-allowed rounded-full border border-white/10 bg-white/[0.03] px-[18px] py-1.5 text-[12px] font-extrabold text-[#888]"
-        >
-          랭킹
-        </button>
+        {VIEW_OPTIONS.map((option) => {
+          const isActive = option.id === activeView;
+
+          return (
+            <Link
+              key={option.id}
+              href={`/${option.id}/${generation}`}
+              aria-current={isActive ? "page" : undefined}
+              className={[
+                "rounded-full border px-[18px] py-1.5 text-[12px] font-extrabold transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00e5ff]",
+                isActive
+                  ? "border-[#00e5ff] bg-[#00e5ff]/10 text-white"
+                  : "border-white/10 bg-white/[0.03] text-[#888] hover:text-white",
+              ].join(" ")}
+            >
+              {option.label}
+            </Link>
+          );
+        })}
       </nav>
     </header>
   );

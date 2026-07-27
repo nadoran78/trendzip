@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { FeedHeader } from "@/components/feed/FeedHeader";
+import { TrendHeader } from "@/components/common/TrendHeader";
 import { FeedList } from "@/components/feed/FeedList";
 import { getGenerationBySlug } from "@/lib/generation";
 import { getFeed } from "@/services/trend-api";
@@ -31,8 +31,9 @@ export default async function FeedPage({ params }: FeedPageProps) {
   return (
     <main className="min-h-dvh bg-[#070708] text-white">
       <div className="mx-auto min-h-dvh w-full max-w-[430px] border-x border-white/[0.04] bg-[#0a0a0a]">
-        <FeedHeader
+        <TrendHeader
           generation={generationOption.slug}
+          activeView="feed"
           tickerKeywords={tickerKeywords}
         />
         <FeedList

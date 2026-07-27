@@ -3,12 +3,16 @@ import Link from "next/link";
 import { GENERATION_OPTIONS } from "@/lib/generation";
 import type { GenerationSlug } from "@/types/api";
 
+export type TrendView = "feed" | "trend";
+
 type GenerationTabProps = {
   activeGeneration: GenerationSlug;
+  activeView: TrendView;
 };
 
 export function GenerationTab({
   activeGeneration,
+  activeView,
 }: GenerationTabProps) {
   return (
     <nav
@@ -22,7 +26,7 @@ export function GenerationTab({
         return (
           <Link
             key={option.slug}
-            href={`/feed/${option.slug}`}
+            href={`/${activeView}/${option.slug}`}
             aria-current={isActive ? "page" : undefined}
             className={[
               "flex h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-[13px] font-extrabold transition-all duration-200",
