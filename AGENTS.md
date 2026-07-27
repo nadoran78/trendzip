@@ -20,6 +20,8 @@
 ```
 /project-root
 ├── AGENTS.md             # 이 파일 (전체 프로젝트 개요)
+├── /design               # 확정 프론트엔드 시안과 화면별 기준 문서
+│   └── README.md          # 서비스 경로와 디자인 원본 매핑
 ├── /backend              # Kotlin + Spring Boot
 │   └── AGENTS.md         # 백엔드 전용 명세
 └── /frontend             # Next.js
@@ -223,6 +225,9 @@ REDIS_TOKEN=
 - 작업을 시작할 때 저장소 루트에서 `./dev/context`를 실행한다.
 - 현재 구현 상태는 `docs/project-status.md`, 비즈니스 흐름은 `docs/business-flow.md`를 기준으로 확인한다.
 - `docs/work-items.md`에서 현재 브랜치와 연결된 `ACTIVE` 작업을 확인하고, 기존 활성 작업을 새 작업보다 우선한다.
+- 프론트엔드 UI 작업은 구현 전에 `design/README.md`와 대상 화면의 JSX·HTML 기준 파일을 확인한다.
+- 활성 `FE-*` 작업에는 `#### 디자인 기준` 섹션과 존재하는 `design/` 경로를 기록한다.
+- 확정 디자인과 다르게 구현하는 항목은 이유와 대체 동작을 작업 문서의 인계 메모에 기록한다.
 - 새 작업은 `READY`의 최상단 항목을 우선하며, 시작 전에 `develop`에서 직접 진행할지 작업 브랜치로 격리할지 결정한다.
 - 작업의 목적, 범위, 제외 범위, 완료 조건 또는 검증 방법이 불명확하면 구현 전에 작업 정의를 보완한다.
 

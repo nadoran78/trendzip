@@ -20,14 +20,19 @@
 ```
 Claude Design (시안 확정)
        ↓
-시안 이미지 + 이 AGENTS.md를 Codex에 함께 전달
+design/README.md에서 대상 경로의 JSX + HTML 확인
        ↓
 Codex가 Next.js + Tailwind로 구현
 ```
 
 **Codex 작업 시 주의사항**
-- 시안 이미지가 제공된 경우 레이아웃/색상/컴포넌트 구조를 최대한 충실히 반영할 것
-- 시안과 다르게 구현해야 할 경우 반드시 주석으로 이유를 명시할 것
+- `design/README.md`의 화면별 매핑을 구현 시작 전에 반드시 확인할 것
+- 활성 `FE-*` 작업의 `#### 디자인 기준`에 상태 `CONFIRMED`와 참조한 `design/` 경로를 기록할 것
+- JSX의 레이아웃, 색상, 컴포넌트 구조와 상호작용을 구현 기준으로 사용할 것
+- HTML은 390x844 기준 브라우저 시각 비교에 사용할 것
+- `ios-frame.jsx`의 기기 프레임과 `tweaks-panel.jsx`의 편집 UI는 제품에 포함하지 않을 것
+- 시안과 다르게 구현해야 할 경우 코드 주석이 아니라 작업 문서의 인계 메모에 이유와 대체 동작을 기록할 것
+- 완료 전 실제 화면을 디자인 원본과 비교하고 `- 디자인 검증: PASS`를 기록할 것
 
 ---
 
@@ -35,8 +40,8 @@ Codex가 Next.js + Tailwind로 구현
 
 - **다크모드 기본** (MZ 감성, 밝은 배경 사용 금지)
 - **모바일 퍼스트** 반응형 (기준 너비 390px)
-- **틱톡 스타일** 세로 풀스크린 카드 피드
-- 폰트: 시스템 폰트 기본, 필요시 Pretendard 적용
+- 페이지별 확정 디자인의 스크롤 및 카드 배치를 우선 적용
+- 폰트: Quicksand + Pretendard, 시스템 폰트 fallback
 - 컬러: 다크 배경(#0a0a0a), 포인트 컬러는 시안 기준
 
 ---
@@ -45,7 +50,7 @@ Codex가 Next.js + Tailwind로 구현
 
 ```
 /                        # 랜딩 + 세대 선택
-/feed/[generation]       # 피드 메인 (틱톡 스타일 세로 스크롤)
+/feed/[generation]       # 피드 메인
 /trend/[generation]      # 이번 주 트렌드 키워드 목록
 /keyword/[id]            # 키워드 상세 (왜 뜨는지 설명)
 ```
@@ -82,12 +87,10 @@ Codex가 Next.js + Tailwind로 구현
 
 ```
 /components
-├── layout
-│   ├── Header.tsx          # 상단 세대 선택 탭
-│   └── BottomNav.tsx       # 하단 네비게이션
 ├── feed
+│   ├── FeedHeader.tsx      # 로고, 세대 탭, 티커와 화면 탭
 │   ├── FeedCard.tsx        # 유튜브 영상 카드
-│   └── FeedList.tsx        # 피드 스크롤 컨테이너
+│   └── FeedList.tsx        # 오늘의 픽과 급상승 피드 섹션
 ├── keyword
 │   ├── KeywordCard.tsx     # 트렌드 키워드 카드
 │   ├── KeywordDetail.tsx   # 키워드 상세 (설명 + 그래프)
@@ -107,7 +110,7 @@ Codex가 Next.js + Tailwind로 구현
 
 ```env
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8080   # 로컬
-NEXT_PUBLIC_API_BASE_URL=https://api.mztrend.kr  # 프로덕션
+NEXT_PUBLIC_API_BASE_URL=https://api-trendzip.nadoran.com  # 프로덕션
 ```
 
 ---
@@ -125,11 +128,11 @@ NEXT_PUBLIC_API_BASE_URL=https://api.mztrend.kr  # 프로덕션
 
 ```
 Week 4: 기반 세팅 + 핵심 페이지
-  [ ] Next.js 16 프로젝트 세팅 (App Router, TypeScript, Tailwind)
+  [x] Next.js 16 프로젝트 세팅 (App Router, TypeScript, Tailwind)
   [ ] next-pwa 설정
-  [ ] 공통 레이아웃 (Header, BottomNav, GenerationTab)
-  [ ] 랜딩 페이지 + 세대 선택 UI
-  [ ] 피드 페이지 (FeedCard, FeedList) + API 연동
+  [x] 공통 레이아웃 (FeedHeader, GenerationTab)
+  [x] 랜딩 페이지 + 세대 선택 UI
+  [x] 피드 페이지 (FeedCard, FeedList) + API 연동
 
 Week 5-6: 나머지 페이지 + 배포
   [ ] 트렌드 키워드 목록 페이지 + API 연동

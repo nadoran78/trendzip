@@ -181,6 +181,7 @@ check_active_work_items() {
     local active_count
     local id title status branch started updated next_action
     local lower_id expected_prefix branch_suffix block heading path paths
+    local design_status design_paths design_path
     local valid=true
 
     active_count="$(section_task_count ACTIVE)"
@@ -257,8 +258,59 @@ check_active_work_items() {
             done <<<"$paths"
         fi
 
+        if [[ "$id" == FE-* ]]; then
+            if ! grep -Fqx -- '#### 디자인 기준' <<<"$block"; then
+                fail "docs/work-items.md: $id is missing '#### 디자인 기준'"
+                valid=false
+            else
+                design_status="$(awk '
+                    $0 == "#### 디자인 기준" { inside = 1; next }
+                    inside && /^#### / { exit }
+                    inside && /^- 상태: / {
+                        line = $0
+                        sub(/^- 상태: /, "", line)
+                        print line
+                        exit
+                    }
+                ' <<<"$block")"
+                if [[ "$design_status" != CONFIRMED ]]; then
+                    fail "docs/work-items.md: $id design status must be CONFIRMED"
+                    valid=false
+                fi
+
+                design_paths="$(awk '
+                    $0 == "#### 디자인 기준" { inside = 1; next }
+                    inside && /^#### / { exit }
+                    inside && /^- `/ {
+                        line = $0
+                        sub(/^- `/, "", line)
+                        sub(/`$/, "", line)
+                        print line
+                    }
+                ' <<<"$block")"
+                if [[ -z "$design_paths" ]]; then
+                    fail "docs/work-items.md: $id must reference at least one design path"
+                    valid=false
+                else
+                    while IFS= read -r design_path; do
+                        if [[ "$design_path" != design/* ]]; then
+                            fail "docs/work-items.md: $id design path must be under design/: $design_path"
+                            valid=false
+                        elif [[ ! -e "$PROJECT_ROOT/$design_path" ]]; then
+                            fail "docs/work-items.md: $id references missing design path: $design_path"
+                            valid=false
+                        fi
+                    done <<<"$design_paths"
+                fi
+            fi
+        fi
+
         if [[ "$status" == REVIEW ]] && ! grep -Fqx -- '- 상태: PASS' <<<"$block"; then
             fail "docs/work-items.md: $id cannot be REVIEW without a PASS validation status"
+            valid=false
+        fi
+        if [[ "$id" == FE-* && "$status" == REVIEW ]] && ! grep -Fqx -- '- 디자인 검증: PASS' <<<"$block"; then
+            fail "docs/work-items.md: $id cannot be REVIEW without PASS design validation"
             valid=false
         fi
 
