@@ -7,10 +7,13 @@ import com.mztrend.domain.TrendCrawlRunStatus
 import com.mztrend.repository.command.TrendCrawlRunRepository
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Propagation
+import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.LocalDateTime
 
 @Service
+@Transactional(propagation = Propagation.REQUIRES_NEW)
 class TrendCrawlRunRecorder(
     private val trendCrawlRunRepository: TrendCrawlRunRepository,
     private val clock: Clock,
