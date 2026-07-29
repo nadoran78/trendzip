@@ -88,16 +88,22 @@ Codex가 Next.js + Tailwind로 구현
 ```
 /components
 ├── feed
-│   ├── FeedHeader.tsx      # 로고, 세대 탭, 티커와 화면 탭
 │   ├── FeedCard.tsx        # 유튜브 영상 카드
 │   └── FeedList.tsx        # 오늘의 픽과 급상승 피드 섹션
 ├── keyword
-│   ├── KeywordCard.tsx     # 트렌드 키워드 카드
+│   ├── KeywordHeader.tsx   # 뒤로 가기, 티커와 화면 탭
+│   ├── KeywordBackButton.tsx
 │   ├── KeywordDetail.tsx   # 키워드 상세 (설명 + 그래프)
 │   └── TrendGraph.tsx      # 최근 4주 트렌드 그래프
+├── trend
+│   ├── TrendRanking.tsx
+│   ├── TrendRow.tsx
+│   └── TrendIndicator.tsx
 └── common
     ├── GenerationTab.tsx   # 세대 선택 탭 공통 컴포넌트
-    └── Tag.tsx             # 키워드 태그
+    ├── TrendHeader.tsx
+    ├── TrendTicker.tsx
+    └── LiveStatus.tsx
 ```
 
 ---
@@ -136,7 +142,7 @@ Week 4: 기반 세팅 + 핵심 페이지
 
 Week 5-6: 나머지 페이지 + 배포
   [x] 트렌드 키워드 목록 페이지 + API 연동
-  [ ] 키워드 상세 페이지 (설명 + TrendGraph) + API 연동
+  [x] 키워드 상세 페이지 (설명 + TrendGraph) + API 연동
   [ ] 다크모드 전체 적용 및 모바일 반응형 점검
   [ ] Vercel 배포 설정
   [ ] PWA 동작 확인 (홈 화면 추가)

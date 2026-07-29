@@ -135,7 +135,14 @@ Response:
 {
   "success": true,
   "data": {
+    "keywordId": 1,
     "keyword": "키워드명",
+    "generation": "TEEN",
+    "category": "음악",
+    "rank": 1,
+    "trendScore": 88982,
+    "rankTrend": "NEW",
+    "rankDelta": null,
     "explain": "이 키워드가 뜨는 이유 설명...",
     "relatedVideos": [
       {
@@ -155,7 +162,8 @@ Response:
     "trendGraph": [
       {
         "period": "2026-06-15",
-        "ratio": 88982
+        "ratio": 88982,
+        "rank": 1
       }
     ],
     "relatedKeywords": [
