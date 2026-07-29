@@ -114,6 +114,8 @@ com.mztrend
 │   ├── TrendCrawlRunRecorder
 │   ├── TrendCrawlingService
 │   ├── TrendCrawlingPersistenceService
+│   ├── mapper
+│   │   └── QueryResponseMappings
 │   └── crawling
 │       ├── CollectedTrendBatch
 │       ├── CollectedKeywordVideoBatch
@@ -382,6 +384,7 @@ fun crawlTrends() {
 
 ## 코드 컨벤션
 
+- 백엔드 구현 및 코드 리뷰 시 세부 규칙은 [`docs/backend-convention.md`](../docs/backend-convention.md)를 반드시 확인
 - Kotlin 공식 코딩 컨벤션 준수
 - 모든 외부 API 호출은 `client` 패키지에서만 담당
 - 트랜잭션은 서비스 레이어에서 관리
@@ -416,6 +419,6 @@ Week 3: 크롤링 스케줄러
 
 Week 4: 키워드 API
   [x] KeywordService + KeywordController 구현 (/api/keywords)
-  [ ] KeywordService 상세 조회 구현 (/api/keywords/{id}/explain)
+  [x] KeywordService 상세 조회 구현 (/api/keywords/{id}/explain)
   [ ] Oracle Cloud 배포 설정
 ```
