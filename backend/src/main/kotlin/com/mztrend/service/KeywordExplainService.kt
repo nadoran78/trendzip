@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional
 class KeywordExplainService(
     private val keywordQueryRepository: KeywordQueryRepository,
 ) {
-    @Cacheable(cacheNames = [CacheNames.KEYWORDS], key = "'explain:v2:' + #id")
+    @Cacheable(cacheNames = [CacheNames.KEYWORDS], key = "'explain:v3:' + #id")
     fun getKeywordExplain(id: Long): KeywordExplainResponse {
         val keyword =
             keywordQueryRepository.findExplainById(id)
@@ -72,4 +72,5 @@ private fun TrendGraphPointQueryResult.toTrendGraphPointResponse(): TrendGraphPo
     TrendGraphPointResponse(
         period = period,
         ratio = ratio,
+        rank = rank,
     )

@@ -22,4 +22,5 @@ data class KeywordExplainResponse(
 data class TrendGraphPointResponse(
     val period: LocalDate,
     val ratio: Long?,
+    val rank: Int?,
 )

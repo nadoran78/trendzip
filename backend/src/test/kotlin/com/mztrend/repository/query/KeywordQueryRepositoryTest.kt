@@ -168,4 +168,40 @@ class KeywordQueryRepositoryTest {
     fun `findExplainById returns null for unknown keyword id`() {
         assertNull(keywordQueryRepository.findExplainById(999L))
     }
+
+    @Test
+    fun `findTrendGraph returns score and rank from each historical log`() {
+        dsl
+            .update(TREND_LOGS)
+            .set(TREND_LOGS.RECORDED_AT, LocalDateTime.of(2026, 7, 26, 3, 5))
+            .where(TREND_LOGS.ID.eq(1001L))
+            .execute()
+        dsl
+            .insertInto(
+                TREND_LOGS,
+                TREND_LOGS.ID,
+                TREND_LOGS.CRAWL_RUN_ID,
+                TREND_LOGS.KEYWORD_ID,
+                TREND_LOGS.RANK,
+                TREND_LOGS.SCORE,
+                TREND_LOGS.RECORDED_AT,
+            ).values(
+                1005L,
+                100L,
+                2L,
+                5,
+                500_000L,
+                LocalDateTime.of(2026, 7, 25, 3, 5),
+            ).execute()
+
+        val results = keywordQueryRepository.findTrendGraph(2L)
+
+        assertEquals(
+            listOf(
+                Triple("2026-07-25", 500_000L, 5),
+                Triple("2026-07-26", 1_200_000L, 1),
+            ),
+            results.map { Triple(it.period.toString(), it.ratio, it.rank) },
+        )
+    }
 }

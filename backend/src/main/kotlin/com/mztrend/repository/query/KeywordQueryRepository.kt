@@ -143,6 +143,7 @@ class KeywordQueryRepository(
             .select(
                 TREND_LOGS.RECORDED_AT,
                 TREND_LOGS.SCORE,
+                TREND_LOGS.RANK,
             ).from(TREND_LOGS)
             .where(TREND_LOGS.KEYWORD_ID.eq(keywordId))
             .orderBy(TREND_LOGS.RECORDED_AT.desc(), TREND_LOGS.ID.desc())
@@ -150,6 +151,7 @@ class KeywordQueryRepository(
                 TrendGraphPointQueryResult(
                     period = record.get(TREND_LOGS.RECORDED_AT).toLocalDate(),
                     ratio = record.get(TREND_LOGS.SCORE),
+                    rank = record.get(TREND_LOGS.RANK),
                 )
             }.distinctBy { it.period }
             .take(TREND_GRAPH_LIMIT)
