@@ -14,6 +14,8 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -119,5 +121,51 @@ class KeywordQueryRepositoryTest {
             .execute()
 
         assertEquals(emptyList(), keywordQueryRepository.findByGeneration(Generation.TWENTY))
+    }
+
+    @Test
+    fun `findExplainById returns rank and score from latest completed crawl run`() {
+        dsl
+            .update(KEYWORDS)
+            .set(KEYWORDS.CURRENT_RANK, 7)
+            .set(KEYWORDS.TREND_SCORE, 7_000_000L)
+            .where(KEYWORDS.ID.eq(2L))
+            .execute()
+        dsl
+            .update(TREND_CRAWL_RUNS)
+            .set(TREND_CRAWL_RUNS.STATUS, TrendCrawlRunStatus.FAILED.name)
+            .set(TREND_CRAWL_RUNS.COMPLETED_AT, LocalDateTime.of(2026, 7, 27, 3, 5))
+            .where(TREND_CRAWL_RUNS.ID.eq(102L))
+            .execute()
+        dsl
+            .insertInto(
+                TREND_LOGS,
+                TREND_LOGS.ID,
+                TREND_LOGS.CRAWL_RUN_ID,
+                TREND_LOGS.KEYWORD_ID,
+                TREND_LOGS.RANK,
+                TREND_LOGS.SCORE,
+            ).values(1005L, 102L, 2L, 7, 7_000_000L)
+            .execute()
+
+        val result = assertNotNull(keywordQueryRepository.findExplainById(2L))
+
+        assertEquals(1, result.rank)
+        assertEquals(1_200_000L, result.trendScore)
+        assertEquals(RankTrend.UP, result.rankTrend)
+        assertEquals(4, result.rankDelta)
+    }
+
+    @Test
+    fun `findExplainById returns null rank and score when keyword is absent from latest completed crawl run`() {
+        val result = assertNotNull(keywordQueryRepository.findExplainById(4L))
+
+        assertNull(result.rank)
+        assertNull(result.trendScore)
+    }
+
+    @Test
+    fun `findExplainById returns null for unknown keyword id`() {
+        assertNull(keywordQueryRepository.findExplainById(999L))
     }
 }

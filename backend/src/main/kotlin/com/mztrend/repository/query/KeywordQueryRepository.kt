@@ -16,6 +16,8 @@ import com.mztrend.repository.query.dto.KeywordExplainQueryResult
 import com.mztrend.repository.query.dto.KeywordSummaryQueryResult
 import com.mztrend.repository.query.dto.TrendGraphPointQueryResult
 import org.jooq.DSLContext
+import org.jooq.Field
+import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -23,14 +25,7 @@ class KeywordQueryRepository(
     private val dsl: DSLContext,
 ) {
     fun findByGeneration(generation: Generation): List<KeywordSummaryQueryResult> {
-        val latestCompletedCrawlRunId =
-            dsl
-                .select(TREND_CRAWL_RUNS.ID)
-                .from(TREND_CRAWL_RUNS)
-                .where(TREND_CRAWL_RUNS.GENERATION.eq(generation.name))
-                .and(TREND_CRAWL_RUNS.STATUS.eq(TrendCrawlRunStatus.COMPLETED.name))
-                .orderBy(TREND_CRAWL_RUNS.STARTED_AT.desc(), TREND_CRAWL_RUNS.ID.desc())
-                .limit(1)
+        val latestCompletedCrawlRunId = latestCompletedCrawlRunId(DSL.inline(generation.name))
 
         return dsl
             .select(
@@ -60,23 +55,41 @@ class KeywordQueryRepository(
             }
     }
 
-    fun findExplainById(id: Long): KeywordExplainQueryResult? =
-        dsl
+    fun findExplainById(id: Long): KeywordExplainQueryResult? {
+        val latestCompletedCrawlRunId = latestCompletedCrawlRunId(KEYWORDS.GENERATION)
+
+        return dsl
             .select(
                 KEYWORDS.ID,
                 KEYWORDS.WORD,
                 KEYWORDS.GENERATION,
+                KEYWORDS.CATEGORY,
+                TREND_LOGS.RANK,
+                TREND_LOGS.SCORE,
+                KEYWORDS.RANK_TREND,
+                KEYWORDS.RANK_DELTA,
                 KEYWORDS.EXPLAIN,
             ).from(KEYWORDS)
-            .where(KEYWORDS.ID.eq(id))
+            .leftJoin(TREND_LOGS)
+            .on(
+                TREND_LOGS.KEYWORD_ID
+                    .eq(KEYWORDS.ID)
+                    .and(TREND_LOGS.CRAWL_RUN_ID.eq(latestCompletedCrawlRunId)),
+            ).where(KEYWORDS.ID.eq(id))
             .fetchOne { record ->
                 KeywordExplainQueryResult(
                     id = record.get(KEYWORDS.ID),
                     word = record.get(KEYWORDS.WORD),
                     generation = Generation.valueOf(record.get(KEYWORDS.GENERATION)),
+                    category = record.get(KEYWORDS.CATEGORY),
+                    rank = record.get(TREND_LOGS.RANK),
+                    trendScore = record.get(TREND_LOGS.SCORE),
+                    rankTrend = record.get(KEYWORDS.RANK_TREND)?.let(RankTrend::valueOf),
+                    rankDelta = record.get(KEYWORDS.RANK_DELTA),
                     explain = record.get(KEYWORDS.EXPLAIN),
                 )
             }
+    }
 
     fun findRelatedVideos(
         keywordId: Long,
@@ -180,6 +193,17 @@ class KeywordQueryRepository(
                 )
             }
     }
+
+    private fun latestCompletedCrawlRunId(generation: Field<String>): Field<Long> =
+        DSL.field(
+            dsl
+                .select(TREND_CRAWL_RUNS.ID)
+                .from(TREND_CRAWL_RUNS)
+                .where(TREND_CRAWL_RUNS.GENERATION.eq(generation))
+                .and(TREND_CRAWL_RUNS.STATUS.eq(TrendCrawlRunStatus.COMPLETED.name))
+                .orderBy(TREND_CRAWL_RUNS.STARTED_AT.desc(), TREND_CRAWL_RUNS.ID.desc())
+                .limit(1),
+        )
 
     private companion object {
         private const val RELATED_VIDEO_LIMIT = 3

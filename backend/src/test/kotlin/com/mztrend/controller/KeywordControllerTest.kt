@@ -157,7 +157,14 @@ class KeywordControllerTest {
             .perform(get("/api/keywords/{id}/explain", 10L))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.keywordId").value(10))
             .andExpect(jsonPath("$.data.keyword").value("동궁"))
+            .andExpect(jsonPath("$.data.generation").value(Generation.TEEN.name))
+            .andExpect(jsonPath("$.data.category").value("방송/영화"))
+            .andExpect(jsonPath("$.data.rank").value(1))
+            .andExpect(jsonPath("$.data.trendScore").value(2_600))
+            .andExpect(jsonPath("$.data.rankTrend").value(RankTrend.NEW.name))
+            .andExpect(jsonPath("$.data.rankDelta").value(nullValue()))
             .andExpect(jsonPath("$.data.explain").value("넷플릭스 신작 공개로 관련 배우와 작품명이 함께 주목받고 있습니다."))
             .andExpect(jsonPath("$.data.relatedVideos.length()").value(2))
             .andExpect(jsonPath("$.data.relatedVideos[0].videoId").value("donggung-trailer"))
@@ -184,7 +191,14 @@ class KeywordControllerTest {
             .perform(get("/api/keywords/{id}/explain", 20L))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.keywordId").value(20))
             .andExpect(jsonPath("$.data.keyword").value("설명없음"))
+            .andExpect(jsonPath("$.data.generation").value(Generation.TEEN.name))
+            .andExpect(jsonPath("$.data.category").value("기타"))
+            .andExpect(jsonPath("$.data.rank").value(nullValue()))
+            .andExpect(jsonPath("$.data.trendScore").value(nullValue()))
+            .andExpect(jsonPath("$.data.rankTrend").value(nullValue()))
+            .andExpect(jsonPath("$.data.rankDelta").value(nullValue()))
             .andExpect(jsonPath("$.data.explain").value(nullValue()))
             .andExpect(jsonPath("$.data.relatedVideos.length()").value(0))
             .andExpect(jsonPath("$.data.trendGraph.length()").value(0))
@@ -253,6 +267,22 @@ class KeywordControllerTest {
                 RankTrend.SAME.name,
                 0,
                 null,
+            ).execute()
+
+        dsl
+            .insertInto(
+                TREND_CRAWL_RUNS,
+                TREND_CRAWL_RUNS.ID,
+                TREND_CRAWL_RUNS.GENERATION,
+                TREND_CRAWL_RUNS.STATUS,
+                TREND_CRAWL_RUNS.STARTED_AT,
+                TREND_CRAWL_RUNS.COMPLETED_AT,
+            ).values(
+                1000L,
+                Generation.TEEN.name,
+                TrendCrawlRunStatus.COMPLETED.name,
+                java.time.LocalDateTime.of(2026, 7, 25, 3, 0),
+                java.time.LocalDateTime.of(2026, 7, 25, 3, 5),
             ).execute()
 
         dsl
@@ -350,13 +380,6 @@ class KeywordControllerTest {
                 TREND_LOGS.SCORE,
                 TREND_LOGS.RECORDED_AT,
             ).values(
-                1000L,
-                1000L,
-                10L,
-                2,
-                2_400L,
-                java.time.LocalDateTime.of(2026, 6, 8, 9, 0),
-            ).values(
                 1001L,
                 1000L,
                 10L,
@@ -365,7 +388,7 @@ class KeywordControllerTest {
                 java.time.LocalDateTime.of(2026, 6, 1, 9, 0),
             ).values(
                 1002L,
-                1001L,
+                1L,
                 10L,
                 1,
                 2_600L,
