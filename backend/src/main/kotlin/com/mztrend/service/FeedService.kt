@@ -2,13 +2,15 @@ package com.mztrend.service
 
 import com.mztrend.config.CacheNames
 import com.mztrend.controller.dto.FeedResponse
-import com.mztrend.controller.dto.FeedVideoResponse
 import com.mztrend.domain.Generation
 import com.mztrend.repository.query.FeedQueryRepository
+import com.mztrend.service.mapper.toFeedVideoResponse
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
+@Transactional(readOnly = true)
 class FeedService(
     private val feedQueryRepository: FeedQueryRepository,
 ) {
@@ -19,20 +21,6 @@ class FeedService(
             videos =
                 feedQueryRepository
                     .findByGeneration(generation)
-                    .map {
-                        FeedVideoResponse(
-                            videoId = it.videoId,
-                            keywordId = it.keywordId,
-                            title = it.title,
-                            channelName = it.channelName,
-                            thumbnailUrl = it.thumbnailUrl,
-                            viewCount = it.viewCount,
-                            keyword = it.keyword,
-                            feedSection = it.feedSection,
-                            badge = it.badge,
-                            publishedAt = it.publishedAt,
-                            durationSeconds = it.durationSeconds,
-                        )
-                    },
+                    .map { it.toFeedVideoResponse() },
         )
 }
