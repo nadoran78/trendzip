@@ -56,10 +56,18 @@ export type KeywordSummary = {
 export type TrendGraphPoint = {
   period: string;
   ratio: number | null;
+  rank: number | null;
 };
 
 export type KeywordExplainResponse = {
+  keywordId: number;
   keyword: string;
+  generation: Generation;
+  category: string | null;
+  rank: number | null;
+  trendScore: number | null;
+  rankTrend: RankTrend | null;
+  rankDelta: number | null;
   explain: string | null;
   relatedVideos: FeedVideo[];
   trendGraph: TrendGraphPoint[];

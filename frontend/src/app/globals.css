@@ -60,6 +60,16 @@ body {
   animation: tz-ticker 42s linear infinite;
 }
 
+.tz-carousel-controls {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tz-carousel-controls {
+    display: flex;
+  }
+}
+
 .tz-landing-shell::before {
   position: absolute;
   inset: 0;

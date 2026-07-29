@@ -1,5 +1,6 @@
 import { Eye, ImageOff, Play } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 import type { FeedVideo, GenerationSlug } from "@/types/api";
 
@@ -105,12 +106,13 @@ export function FeedCard({
         </div>
 
         <div className="mt-2.5 flex flex-wrap gap-1.5">
-          <span
-            title="키워드 상세 화면 준비 중"
-            className="max-w-full truncate rounded-full border border-[#00e5ff] bg-[#00e5ff]/[0.06] px-2.5 py-1 text-[11px] font-semibold text-[#00e5ff]"
+          <Link
+            href={`/keyword/${video.keywordId}`}
+            aria-label={`${video.keyword} 키워드 상세 보기`}
+            className="max-w-full truncate rounded-full border border-[#00e5ff] bg-[#00e5ff]/[0.06] px-2.5 py-1 text-[11px] font-semibold text-[#00e5ff] transition-colors hover:bg-[#00e5ff]/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00e5ff]"
           >
             #{video.keyword}
-          </span>
+          </Link>
         </div>
 
         <div className="mt-3 flex min-h-4 items-center text-[11px] font-medium text-[#888]">

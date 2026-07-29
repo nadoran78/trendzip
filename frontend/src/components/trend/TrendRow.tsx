@@ -1,4 +1,5 @@
 import { Activity } from "lucide-react";
+import Link from "next/link";
 
 import { TrendIndicator } from "@/components/trend/TrendIndicator";
 import type { KeywordSummary } from "@/types/api";
@@ -14,62 +15,65 @@ export function TrendRow({ keyword, isLast }: TrendRowProps) {
   const hasTopRank = keyword.rank !== null && keyword.rank <= 3;
 
   return (
-    <li
-      className={[
-        "grid min-h-[82px] grid-cols-[46px_minmax(0,1fr)_auto] items-center gap-3 px-1 py-3.5",
-        isLast ? "" : "border-b border-[#222]",
-      ].join(" ")}
-    >
-      <span
-        aria-label={
-          keyword.rank === null ? "순위 집계 중" : `${keyword.rank}위`
-        }
-        className={[
-          "tz-round text-center text-[30px] font-bold leading-none text-[#00e5ff]",
-          "[font-variant-numeric:tabular-nums]",
-          hasTopRank ? "[text-shadow:0_0_16px_rgba(0,229,255,0.4)]" : "",
-        ].join(" ")}
+    <li className={isLast ? undefined : "border-b border-[#222]"}>
+      <Link
+        href={`/keyword/${keyword.id}`}
+        aria-label={`${keyword.word} 키워드 상세 보기`}
+        className="grid min-h-[82px] grid-cols-[46px_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-1 py-3.5 transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00e5ff]"
       >
-        {rankLabel}
-      </span>
-
-      <div className="min-w-0">
-        <p
-          title={keyword.word}
-          className="truncate text-[15px] font-bold text-white"
+        <span
+          aria-label={
+            keyword.rank === null ? "순위 집계 중" : `${keyword.rank}위`
+          }
+          className={[
+            "tz-round text-center text-[30px] font-bold leading-none text-[#00e5ff]",
+            "[font-variant-numeric:tabular-nums]",
+            hasTopRank
+              ? "[text-shadow:0_0_16px_rgba(0,229,255,0.4)]"
+              : "",
+          ].join(" ")}
         >
-          #{keyword.word}
-        </p>
+          {rankLabel}
+        </span>
 
-        <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[11px] font-medium text-[#888]">
-          {keyword.category ? (
-            <span className="max-w-[96px] truncate rounded-full border border-[#2a2a2a] bg-[#1a1a1a] px-2.5 py-1 text-[10px] font-semibold text-[#aaa]">
-              {keyword.category}
-            </span>
-          ) : null}
+        <div className="min-w-0">
+          <p
+            title={keyword.word}
+            className="truncate text-[15px] font-bold text-white"
+          >
+            #{keyword.word}
+          </p>
 
-          <span className="inline-flex min-w-0 items-center gap-1">
-            <Activity
-              aria-hidden="true"
-              className="shrink-0"
-              size={12}
-              strokeWidth={1.8}
-            />
-            <span className="truncate">
-              {keyword.trendScore === null
-                ? "점수 집계 중"
-                : `점수 ${formatTrendScore(keyword.trendScore)}`}
+          <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[11px] font-medium text-[#888]">
+            {keyword.category ? (
+              <span className="max-w-[96px] truncate rounded-full border border-[#2a2a2a] bg-[#1a1a1a] px-2.5 py-1 text-[10px] font-semibold text-[#aaa]">
+                {keyword.category}
+              </span>
+            ) : null}
+
+            <span className="inline-flex min-w-0 items-center gap-1">
+              <Activity
+                aria-hidden="true"
+                className="shrink-0"
+                size={12}
+                strokeWidth={1.8}
+              />
+              <span className="truncate">
+                {keyword.trendScore === null
+                  ? "점수 집계 중"
+                  : `점수 ${formatTrendScore(keyword.trendScore)}`}
+              </span>
             </span>
-          </span>
+          </div>
         </div>
-      </div>
 
-      <span className="pr-1">
-        <TrendIndicator
-          rankTrend={keyword.rankTrend}
-          rankDelta={keyword.rankDelta}
-        />
-      </span>
+        <span className="pr-1">
+          <TrendIndicator
+            rankTrend={keyword.rankTrend}
+            rankDelta={keyword.rankDelta}
+          />
+        </span>
+      </Link>
     </li>
   );
 }
