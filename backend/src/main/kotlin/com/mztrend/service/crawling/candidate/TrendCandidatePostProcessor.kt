@@ -73,6 +73,7 @@ class TrendCandidatePostProcessor {
             all { it.isDigit() } ||
             DOMAIN_LIKE_TOKEN_REGEX.matches(normalized) ||
             normalized in HARD_BLOCK_WORDS ||
+            normalized in BLOCKED_PLATFORM_WORDS ||
             isNoisyTitlePhrase()
     }
 
@@ -127,6 +128,11 @@ class TrendCandidatePostProcessor {
                 "video",
                 "you",
                 "채널",
+            )
+        private val BLOCKED_PLATFORM_WORDS =
+            setOf(
+                "chzzk",
+                "치지직",
             )
         private val CANONICAL_WORDS =
             mapOf(

@@ -353,6 +353,8 @@ fun crawlTrends() {
 - 단순 단어 토큰 추출과 불용어 목록은 기본 후보 품질을 보장하기 어렵기 때문에 주 후보 추출 경로로 사용하지 않는다. `YoutubeVideoCandidateExtractor`는 Gemini 후보 추출 결과가 최소 후보 수보다 적을 때만 fallback으로 사용해 후보군을 보강한다.
 - fallback 후보는 Gemini 후보 뒤에 붙이고, Gemini 후보와 같은 단어는 대소문자 무시 기준으로 제외한다. 병합 후 rank는 1부터 다시 부여한다.
 - Gemini 후보 추출 결과는 `confidence`, 근거 영상 수, 조회수를 바탕으로 `TrendCandidate` 점수를 계산한다. 낮은 confidence와 빈 키워드는 제외한다. `evidenceVideoIds`는 점수 보조 신호이므로 누락되거나 입력 영상과 매칭되지 않아도 후보 자체를 버리지 않는다.
+- Gemini와 fallback 후보는 모두 `TrendCandidatePostProcessor`에서 공통 정제한다. `치지직`, `CHZZK`처럼 플랫폼 자체를 나타내는 별칭은 대소문자 무시·정확 일치로 제외하고, 플랫폼명이 포함된 별도 콘텐츠명은 부분 일치로 제거하지 않는다.
+- 플랫폼 필터 도입 전에 저장된 키워드와 트렌드 로그는 이력 보존을 위해 물리 삭제하지 않는다. 배포 후 새 크롤링을 완료해 최신 키워드 목록과 활성 피드에서 자연스럽게 제외한다.
 - 세대별 후보 검증은 네이버 DataLab Search Trend API로 수행하고, `TEEN`은 `ages=["2"]`, `TWENTY`는 `ages=["3","4"]`로 조회한다.
 - `TrendCrawlRunRecorder`는 크롤링 실행 회차의 `RUNNING`, `COMPLETED`, `FAILED` 상태 전환만 담당한다.
 - `TrendCrawlingService`는 정규화된 수집 DTO를 입력받아 크롤링 회차 생성, 최근 완료 회차/로그 조회, 설명 갱신 대상 판정, Gemini 호출, 저장 서비스 호출을 오케스트레이션한다.

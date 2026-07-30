@@ -176,6 +176,7 @@ class YoutubePopularVideoCandidateSourceTest {
                 candidates =
                     listOf(
                         extractedCandidate("ICONIC BY MISTAKE", confidence = 0.9, evidenceVideoIds = listOf("video-1")),
+                        extractedCandidate("치지직", confidence = 0.85, evidenceVideoIds = listOf("video-1")),
                         extractedCandidate("by", confidence = 0.8, evidenceVideoIds = listOf("video-1")),
                         extractedCandidate("mistake", confidence = 0.7, evidenceVideoIds = listOf("video-1")),
                     ),
@@ -229,6 +230,12 @@ class YoutubePopularVideoCandidateSourceTest {
                         tags = listOf("fallbackword"),
                         viewCount = 2_000_000L,
                     ),
+                    youtubeVideo(
+                        videoId = "video-2",
+                        title = "치지직",
+                        tags = listOf("CHZZK", "치지직"),
+                        viewCount = 1_000_000L,
+                    ),
                 ),
             )
         keywordCandidateExtractor.result = KeywordCandidateExtractionResult()
@@ -236,6 +243,7 @@ class YoutubePopularVideoCandidateSourceTest {
         val candidates = source.collectCandidates()
 
         assertTrue(candidates.any { it.word == "fallbackword" })
+        assertTrue(candidates.none { it.word.equals("치지직", ignoreCase = true) || it.word.equals("CHZZK", ignoreCase = true) })
     }
 
     private fun youtubeVideo(
