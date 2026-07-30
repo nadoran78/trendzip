@@ -209,6 +209,28 @@ REDIS_TOKEN=
 
 ---
 
+## 통합 검증
+
+DB 없이 문서, diff, 백엔드 ktlint와 프론트 lint·타입 검사를 빠르게 확인한다.
+
+```bash
+./dev/verify
+# 또는
+./dev/verify --quick
+```
+
+PostgreSQL, Flyway, jOOQ, 백엔드 전체 build와 프론트 production build까지 확인한다.
+
+```bash
+./dev/verify --full
+```
+
+- 전체 검증은 루트 Docker Compose의 PostgreSQL을 시작하고 `mztrend_test`가 없으면 생성한다.
+- 검증이 끝나도 기존 로컬 개발환경을 유지하기 위해 컨테이너를 자동 종료하지 않는다.
+- 실제 YouTube, 네이버 DataLab, Gemini API는 호출하지 않는다.
+
+---
+
 ## 수익화 로드맵 (참고용)
 
 | 단계 | 시점 | 방법 |

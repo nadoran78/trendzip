@@ -22,7 +22,10 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 - `npm run dev`: local dev server
 - `npm run lint`: ESLint
+- `npm run typecheck`: TypeScript type check without emitting files
 - `npm run build`: production build
+
+저장소 전체 검증은 프로젝트 루트의 `./dev/verify` 또는 `./dev/verify --full`을 사용합니다.
 
 ## Environment
 
