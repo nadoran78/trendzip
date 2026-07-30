@@ -33,65 +33,50 @@ export function FeedList({ videos, generation }: FeedListProps) {
     );
   }
 
-  const featuredVideos = videos.slice(0, 2);
-  const featuredIds = new Set(
-    featuredVideos.map((video) => video.videoId),
+  const todayPickVideos = videos
+    .filter((video) => video.feedSection === "TODAY_PICK")
+    .slice(0, 1);
+  const trendingVideos = videos.filter(
+    (video) => video.feedSection === "RISING",
   );
-  const risingVideos = videos.filter(
-    (video) => !featuredIds.has(video.videoId),
+  const relatedVideos = videos.filter(
+    (video) =>
+      video.feedSection === "RELATED" || video.feedSection === null,
   );
 
   return (
     <>
       <h1 className="sr-only">{generationLabel} YouTube 트렌드 피드</h1>
-      <section
-        aria-labelledby="today-pick-heading"
-        className="px-4 pb-2 pt-5"
-      >
-        <SectionHeader
-          id="today-pick-heading"
-          emoji={generation === "teen" ? "🎀" : "🍑"}
-          title={`오늘의 ${generationLabel} 픽`}
-          subtitle={`${formatKoreanDate()} · 실시간 인기 ${videos.length}편`}
-        />
-
-        <div className="mt-2 flex flex-col gap-3.5">
-          {featuredVideos.map((video, index) => (
-            <FeedCard
-              key={video.videoId}
-              video={video}
-              generation={generation}
-              priority={index < 2}
-            />
-          ))}
-        </div>
-      </section>
-
-      {risingVideos.length > 0 ? (
-        <section
-          aria-labelledby="rising-heading"
-          className="px-4 pb-2 pt-4"
-        >
-          <SectionHeader
-            id="rising-heading"
-            emoji="🔥"
-            title="급상승 트렌드"
-            subtitle="지금 함께 많이 보는 영상"
-            actionLabel="랭킹 보기"
-            actionHref={`/trend/${generation}`}
-          />
-
-          <div className="mt-2 flex flex-col gap-3.5">
-            {risingVideos.map((video) => (
-              <FeedCard
-                key={video.videoId}
-                video={video}
-                generation={generation}
-              />
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <FeedVideoSection
+        headingId="today-pick-heading"
+        emoji={generation === "teen" ? "🎀" : "🍑"}
+        title={`오늘의 ${generationLabel} 픽`}
+        subtitle={`${formatKoreanDate()} · 오늘의 대표 영상`}
+        videos={todayPickVideos}
+        generation={generation}
+        className="pt-5"
+        priorityFirst
+      />
+      <FeedVideoSection
+        headingId="trending-heading"
+        emoji="🔥"
+        title="지금 뜨는 트렌드"
+        subtitle="현재 상위 트렌드 키워드 관련 영상"
+        videos={trendingVideos}
+        generation={generation}
+        className="pt-4"
+        actionLabel="랭킹 보기"
+        actionHref={`/trend/${generation}`}
+      />
+      <FeedVideoSection
+        headingId="related-heading"
+        emoji="🔗"
+        title="함께 보면 좋은 영상"
+        subtitle="이어 보기 좋은 관련 영상"
+        videos={relatedVideos}
+        generation={generation}
+        className="pt-4"
+      />
 
       <footer className="tz-round px-4 pb-9 pt-7 text-center text-[13px] font-bold text-white/20">
         trend<span className="text-[#00e5ff]/40">zip</span>
@@ -101,6 +86,61 @@ export function FeedList({ videos, generation }: FeedListProps) {
         </p>
       </footer>
     </>
+  );
+}
+
+type FeedVideoSectionProps = {
+  headingId: string;
+  emoji: string;
+  title: string;
+  subtitle: string;
+  videos: FeedVideo[];
+  generation: GenerationSlug;
+  className: string;
+  priorityFirst?: boolean;
+  actionLabel?: string;
+  actionHref?: string;
+};
+
+function FeedVideoSection({
+  headingId,
+  emoji,
+  title,
+  subtitle,
+  videos,
+  generation,
+  className,
+  priorityFirst = false,
+  actionLabel,
+  actionHref,
+}: FeedVideoSectionProps) {
+  if (videos.length === 0) return null;
+
+  return (
+    <section
+      aria-labelledby={headingId}
+      className={`px-4 pb-2 ${className}`}
+    >
+      <SectionHeader
+        id={headingId}
+        emoji={emoji}
+        title={title}
+        subtitle={subtitle}
+        actionLabel={actionLabel}
+        actionHref={actionHref}
+      />
+
+      <div className="mt-2 flex flex-col gap-3.5">
+        {videos.map((video, index) => (
+          <FeedCard
+            key={video.videoId}
+            video={video}
+            generation={generation}
+            priority={priorityFirst && index === 0}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 

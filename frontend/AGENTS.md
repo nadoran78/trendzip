@@ -89,7 +89,7 @@ Codex가 Next.js + Tailwind로 구현
 /components
 ├── feed
 │   ├── FeedCard.tsx        # 유튜브 영상 카드
-│   └── FeedList.tsx        # 오늘의 픽과 급상승 피드 섹션
+│   └── FeedList.tsx        # 오늘의 픽, 현재 트렌드와 관련 영상 섹션
 ├── keyword
 │   ├── KeywordHeader.tsx   # 뒤로 가기, 티커와 화면 탭
 │   ├── KeywordBackButton.tsx
