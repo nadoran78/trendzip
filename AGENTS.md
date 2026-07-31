@@ -229,6 +229,17 @@ PostgreSQL, Flyway, jOOQ, 백엔드 전체 build와 프론트 production build�
 - 검증이 끝나도 기존 로컬 개발환경을 유지하기 위해 컨테이너를 자동 종료하지 않는다.
 - 실제 YouTube, 네이버 DataLab, Gemini API는 호출하지 않는다.
 
+비밀정보는 커밋 전 staged 변경과 전체 Git 이력을 각각 검사한다.
+
+```bash
+./dev/check-secrets --staged
+./dev/check-secrets --all
+```
+
+- pre-commit과 GitHub Actions가 Gitleaks 검사를 실행한다.
+- 실제 환경변수·API 키·토큰·개인키는 Git에 커밋하지 않는다.
+- 상세한 CI와 비밀정보 관리 기준은 `docs/ci-and-secret-management.md`를 따른다.
+
 ---
 
 ## 수익화 로드맵 (참고용)

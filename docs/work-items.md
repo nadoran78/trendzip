@@ -27,13 +27,7 @@
 
 ## READY
 
-### CHORE-003 GitHub Actions CI 추가
-
-- 상태: READY
-- 브랜치: 미정
-- 다음 행동: `./dev/verify --full`을 pull request와 develop push에서 실행하는 workflow를 설계한다.
-
-로컬 통합 검증 명령을 pull request와 develop push에서 자동 실행한다.
+- 없음
 
 ## LATER
 
@@ -44,6 +38,15 @@
 - 아키텍처 규칙 자동 검사
 
 ## 최근 완료
+
+### CHORE-003 GitHub Actions CI 및 비밀정보 유출 방지
+
+- 상태: DONE
+- 브랜치: develop
+- 완료일: 2026-07-31
+- 결과: pull request와 `develop` push에서 전체 Git 이력의 비밀정보를 검사한 뒤 저장소 전체 build를 실행하는 GitHub Actions CI를 추가했다. 로컬 staged 검사와 pre-commit 차단, 민감 파일 ignore 규칙도 함께 적용했다.
+- 보안 메모: Gitleaks `8.30.1` Docker 이미지는 digest까지 고정하고 외부 GitHub Action은 전체 커밋 SHA로 고정했다. CI는 읽기 권한만 사용하며 맥미니 배포와 분리한다.
+- 검증: 전체 Git 이력 검사, staged 가짜 GitHub 토큰 차단, 실제 pre-commit 훅, CI 모드 빠른·전체 통합 검증과 workflow 문법 검사를 통과했다. 최초 push 후 GitHub의 `Secret scan`, `Full verification` 결과를 확인한다.
 
 ### CHORE-002 통합 검증 명령 추가
 
@@ -84,15 +87,4 @@
 - 디자인 차이: 시안에 없는 데이터 툴팁은 최대 4개로 유지한 축 라벨 사이의 지점도 상세 값을 확인할 수 있도록 추가했다. 그래프의 Y축은 기존 트렌드 점수 기준을 유지한다.
 - 캐시 메모: 그래프 응답에 `rank`가 추가돼 이전 Redis 직렬화 값과 충돌하지 않도록 상세 캐시 키를 `explain:v3:{id}`로 변경했다.
 - 검증: 백엔드 전체 테스트·ktlint, 프론트 lint·build와 diff 검사를 통과했다. 역사적 날짜·점수·순위 응답을 검증하고 1280x800 호버·키보드 이동, 390x844 탭·재탭 닫힘과 툴팁 배치를 실제 Chromium에서 확인했다.
-- 디자인 검증: PASS
-
-### FE-005 관련 영상 데스크톱 탐색 개선
-
-- 상태: DONE
-- 브랜치: develop
-- 완료일: 2026-07-29
-- 결과: 관련 영상 캐러셀을 별도 클라이언트 컴포넌트로 분리하고, 오버플로와 현재 위치에 따라 상태가 바뀌는 좌우 버튼을 정밀 포인터 환경에 추가했다. 모바일 스와이프와 스크롤 스냅은 유지했다.
-- 디자인 기준: `design/keyword.jsx`, `design/trendzip-keyword.html`
-- 디자인 차이: 시안에 없는 좌우 버튼은 스크롤바가 숨겨진 데스크톱 환경의 탐색 가능성을 보완하기 위해 제목 우측에만 표시한다.
-- 검증: `npm run lint`, `npm run build`를 통과했다. 실제 관련 영상 3개 데이터로 1280x800에서 다음 버튼을 통한 세 번째 카드 완전 노출과 키보드 `Space`를 통한 시작점 복귀를 확인했고, 390x844에서는 버튼이 숨겨진 상태로 가로 오버플로가 유지됨을 확인했다.
 - 디자인 검증: PASS

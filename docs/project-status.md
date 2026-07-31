@@ -1,8 +1,8 @@
 # 프로젝트 현재 상태
 
-- 마지막 갱신: 2026-07-30
+- 마지막 갱신: 2026-07-31
 - 현재 단계: 프론트엔드 핵심 사용자 흐름 구현 및 검증 자동화
-- 현재 집중 영역: 통합 검증 명령 기반 CI 준비
+- 현재 집중 영역: GitHub Actions CI 검토 및 저장소 보안 설정
 
 ## 한 줄 상태
 
@@ -35,14 +35,16 @@
 
 - 구현됨: 로컬 PostgreSQL과 Redis용 Docker Compose
 - 구현됨: 백엔드 Docker 이미지와 운영 Compose 구성
-- 일부 구현됨: 수동 배포 절차는 있으나 저장소 통합 CI는 없음
+- 구현됨: Gitleaks 검사 후 전체 통합 검증을 실행하는 GitHub Actions CI
+- 일부 구현됨: 맥미니 수동 배포 절차는 있으나 자동 배포 workflow는 없음
 
 ### 테스트 및 자동화
 
 - 구현됨: 백엔드 ktlint와 Gradle 테스트
 - 구현됨: 외부 API를 실제 호출하지 않는 mock 기반 client 테스트
 - 구현됨: DB 없는 빠른 검사와 PostgreSQL·Flyway·jOOQ·전체 build를 포함하는 저장소 통합 검증 명령
-- 미구현: GitHub Actions CI
+- 구현됨: 전체 Git 이력과 staged 변경을 검사하는 Gitleaks 명령과 pre-commit 훅
+- 구현됨: pull request와 `develop` push용 GitHub Actions CI
 - 미구현: OpenAPI와 프론트엔드 타입의 자동 계약 검증
 
 ## 현재 가능한 사용자 흐름
@@ -58,8 +60,8 @@
 
 ## 주요 미완성 영역
 
-1. 통합 검증 명령을 사용하는 GitHub Actions CI
-2. PWA 및 배포 마무리
+1. PWA 및 프론트 배포 마무리
+2. OpenAPI와 프론트 TypeScript 타입의 계약 자동화
 3. 프론트 핵심 사용자 흐름 자동 테스트
 
 활성 작업, 작업 브랜치와 우선순위는 [작업 목록](work-items.md)을 기준으로 한다.
@@ -71,6 +73,7 @@
 - 프론트엔드에는 사용자 흐름을 검증하는 자동 테스트가 없다.
 - 실제 크롤링 검증은 YouTube, 네이버 DataLab, Gemini API quota를 소비한다.
 - Next.js 16.2.11의 선택 의존성 `sharp`에 고위험 보안 권고가 있으나 현재 호환 범위에서 제공되는 수정 버전은 없다.
+- GitHub Actions workflow의 최초 원격 실행과 저장소 Ruleset·push protection 활성화는 변경사항 push 후 확인해야 한다.
 
 ## 로컬 실행
 
@@ -107,8 +110,16 @@ npm run dev
 ./dev/verify --full
 ```
 
+비밀정보는 커밋 전 staged 변경과 전체 Git 이력을 검사한다.
+
+```bash
+./dev/check-secrets --staged
+./dev/check-secrets --all
+```
+
 ## 관련 문서
 
 - [비즈니스 흐름](business-flow.md)
 - [현재 작업과 다음 작업](work-items.md)
+- [CI와 비밀정보 관리](ci-and-secret-management.md)
 - [프로젝트 작업 규칙](../AGENTS.md)
