@@ -1,0 +1,4 @@
+title = "Trendzip Gitleaks configuration"
+
+[extend]
+useDefault = true
