@@ -4,9 +4,11 @@ import com.mztrend.config.CacheNames
 import com.mztrend.domain.FeedSection
 import com.mztrend.domain.Generation
 import com.mztrend.domain.RankTrend
+import com.mztrend.domain.TrendCrawlRunStatus
 import com.mztrend.domain.TrendVideoKeywordRelationType
 import com.mztrend.jooq.Tables.KEYWORDS
 import com.mztrend.jooq.Tables.KEYWORD_RELATIONS
+import com.mztrend.jooq.Tables.TREND_CRAWL_RUNS
 import com.mztrend.jooq.Tables.TREND_FEED_ITEMS
 import com.mztrend.jooq.Tables.TREND_LOGS
 import com.mztrend.jooq.Tables.TREND_VIDEOS
@@ -45,6 +47,7 @@ class KeywordControllerTest {
         dsl.deleteFrom(TREND_VIDEO_KEYWORDS).execute()
         dsl.deleteFrom(TREND_FEED_ITEMS).execute()
         dsl.deleteFrom(TREND_LOGS).execute()
+        dsl.deleteFrom(TREND_CRAWL_RUNS).execute()
         dsl.deleteFrom(TREND_VIDEOS).execute()
         dsl.deleteFrom(KEYWORDS).execute()
 
@@ -63,6 +66,8 @@ class KeywordControllerTest {
             .values(2L, "teen-first", Generation.TEEN.name, "game", 1, 1_200_000L, RankTrend.UP.name, 4)
             .values(3L, "twenty-first", Generation.TWENTY.name, "beauty", 1, 744_000L, RankTrend.NEW.name, null)
             .execute()
+
+        insertKeywordListCrawlRuns()
     }
 
     @Test
@@ -107,6 +112,43 @@ class KeywordControllerTest {
             .andExpect(jsonPath("$.error.code").value("INVALID_REQUEST"))
     }
 
+    private fun insertKeywordListCrawlRuns() {
+        dsl
+            .insertInto(
+                TREND_CRAWL_RUNS,
+                TREND_CRAWL_RUNS.ID,
+                TREND_CRAWL_RUNS.GENERATION,
+                TREND_CRAWL_RUNS.STATUS,
+                TREND_CRAWL_RUNS.STARTED_AT,
+                TREND_CRAWL_RUNS.COMPLETED_AT,
+            ).values(
+                1L,
+                Generation.TEEN.name,
+                TrendCrawlRunStatus.COMPLETED.name,
+                java.time.LocalDateTime.of(2026, 7, 26, 3, 0),
+                java.time.LocalDateTime.of(2026, 7, 26, 3, 5),
+            ).values(
+                2L,
+                Generation.TWENTY.name,
+                TrendCrawlRunStatus.COMPLETED.name,
+                java.time.LocalDateTime.of(2026, 7, 26, 3, 10),
+                java.time.LocalDateTime.of(2026, 7, 26, 3, 15),
+            ).execute()
+
+        dsl
+            .insertInto(
+                TREND_LOGS,
+                TREND_LOGS.ID,
+                TREND_LOGS.CRAWL_RUN_ID,
+                TREND_LOGS.KEYWORD_ID,
+                TREND_LOGS.RANK,
+                TREND_LOGS.SCORE,
+            ).values(1L, 1L, 2L, 1, 1_200_000L)
+            .values(2L, 1L, 1L, 2, 982_000L)
+            .values(3L, 2L, 3L, 1, 744_000L)
+            .execute()
+    }
+
     @Test
     fun `getKeywordExplain returns keyword explanation detail`() {
         insertKeywordExplainFixture()
@@ -115,7 +157,14 @@ class KeywordControllerTest {
             .perform(get("/api/keywords/{id}/explain", 10L))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.keywordId").value(10))
             .andExpect(jsonPath("$.data.keyword").value("동궁"))
+            .andExpect(jsonPath("$.data.generation").value(Generation.TEEN.name))
+            .andExpect(jsonPath("$.data.category").value("방송/영화"))
+            .andExpect(jsonPath("$.data.rank").value(1))
+            .andExpect(jsonPath("$.data.trendScore").value(2_600))
+            .andExpect(jsonPath("$.data.rankTrend").value(RankTrend.NEW.name))
+            .andExpect(jsonPath("$.data.rankDelta").value(nullValue()))
             .andExpect(jsonPath("$.data.explain").value("넷플릭스 신작 공개로 관련 배우와 작품명이 함께 주목받고 있습니다."))
             .andExpect(jsonPath("$.data.relatedVideos.length()").value(2))
             .andExpect(jsonPath("$.data.relatedVideos[0].videoId").value("donggung-trailer"))
@@ -127,8 +176,10 @@ class KeywordControllerTest {
             .andExpect(jsonPath("$.data.trendGraph.length()").value(2))
             .andExpect(jsonPath("$.data.trendGraph[0].period").value("2026-06-01"))
             .andExpect(jsonPath("$.data.trendGraph[0].ratio").value(1200))
+            .andExpect(jsonPath("$.data.trendGraph[0].rank").value(4))
             .andExpect(jsonPath("$.data.trendGraph[1].period").value("2026-06-08"))
             .andExpect(jsonPath("$.data.trendGraph[1].ratio").value(2600))
+            .andExpect(jsonPath("$.data.trendGraph[1].rank").value(1))
             .andExpect(jsonPath("$.data.relatedKeywords.length()").value(1))
             .andExpect(jsonPath("$.data.relatedKeywords[0].word").value("남주혁"))
             .andExpect(jsonPath("$.data.relatedKeywords[0].rankTrend").value(RankTrend.UP.name))
@@ -142,7 +193,14 @@ class KeywordControllerTest {
             .perform(get("/api/keywords/{id}/explain", 20L))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.keywordId").value(20))
             .andExpect(jsonPath("$.data.keyword").value("설명없음"))
+            .andExpect(jsonPath("$.data.generation").value(Generation.TEEN.name))
+            .andExpect(jsonPath("$.data.category").value("기타"))
+            .andExpect(jsonPath("$.data.rank").value(nullValue()))
+            .andExpect(jsonPath("$.data.trendScore").value(nullValue()))
+            .andExpect(jsonPath("$.data.rankTrend").value(nullValue()))
+            .andExpect(jsonPath("$.data.rankDelta").value(nullValue()))
             .andExpect(jsonPath("$.data.explain").value(nullValue()))
             .andExpect(jsonPath("$.data.relatedVideos.length()").value(0))
             .andExpect(jsonPath("$.data.trendGraph.length()").value(0))
@@ -211,6 +269,22 @@ class KeywordControllerTest {
                 RankTrend.SAME.name,
                 0,
                 null,
+            ).execute()
+
+        dsl
+            .insertInto(
+                TREND_CRAWL_RUNS,
+                TREND_CRAWL_RUNS.ID,
+                TREND_CRAWL_RUNS.GENERATION,
+                TREND_CRAWL_RUNS.STATUS,
+                TREND_CRAWL_RUNS.STARTED_AT,
+                TREND_CRAWL_RUNS.COMPLETED_AT,
+            ).values(
+                1000L,
+                Generation.TEEN.name,
+                TrendCrawlRunStatus.COMPLETED.name,
+                java.time.LocalDateTime.of(2026, 7, 25, 3, 0),
+                java.time.LocalDateTime.of(2026, 7, 25, 3, 5),
             ).execute()
 
         dsl
@@ -308,13 +382,6 @@ class KeywordControllerTest {
                 TREND_LOGS.SCORE,
                 TREND_LOGS.RECORDED_AT,
             ).values(
-                1000L,
-                1000L,
-                10L,
-                2,
-                2_400L,
-                java.time.LocalDateTime.of(2026, 6, 8, 9, 0),
-            ).values(
                 1001L,
                 1000L,
                 10L,
@@ -323,7 +390,7 @@ class KeywordControllerTest {
                 java.time.LocalDateTime.of(2026, 6, 1, 9, 0),
             ).values(
                 1002L,
-                1001L,
+                1L,
                 10L,
                 1,
                 2_600L,

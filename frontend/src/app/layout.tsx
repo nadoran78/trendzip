@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import "@fontsource/quicksand/600.css";
+import "@fontsource/quicksand/700.css";
+import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

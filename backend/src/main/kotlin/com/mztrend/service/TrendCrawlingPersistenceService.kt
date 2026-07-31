@@ -26,7 +26,6 @@ import com.mztrend.service.crawling.CollectedVideo
 import com.mztrend.service.crawling.CollectedVideoKeyword
 import com.mztrend.service.crawling.TrendCrawlingResult
 import org.springframework.cache.annotation.CacheEvict
-import org.springframework.cache.annotation.Caching
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -43,12 +42,7 @@ class TrendCrawlingPersistenceService(
     private val keywordRelationRepository: KeywordRelationRepository,
     private val collectedTrendBatchValidator: CollectedTrendBatchValidator,
 ) {
-    @Caching(
-        evict = [
-            CacheEvict(cacheNames = [CacheNames.KEYWORDS], allEntries = true),
-            CacheEvict(cacheNames = [CacheNames.FEED], allEntries = true),
-        ],
-    )
+    @CacheEvict(cacheNames = [CacheNames.FEED], allEntries = true)
     @Transactional
     fun saveCollectedTrends(
         crawlRunId: Long,

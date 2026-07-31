@@ -2,13 +2,15 @@ package com.mztrend.service
 
 import com.mztrend.config.CacheNames
 import com.mztrend.controller.dto.KeywordListResponse
-import com.mztrend.controller.dto.KeywordSummaryResponse
 import com.mztrend.domain.Generation
 import com.mztrend.repository.query.KeywordQueryRepository
+import com.mztrend.service.mapper.toKeywordSummaryResponse
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
+@Transactional(readOnly = true)
 class KeywordService(
     private val keywordQueryRepository: KeywordQueryRepository,
 ) {
@@ -19,16 +21,6 @@ class KeywordService(
             keywords =
                 keywordQueryRepository
                     .findByGeneration(generation)
-                    .map {
-                        KeywordSummaryResponse(
-                            id = it.id,
-                            word = it.word,
-                            rank = it.rank,
-                            category = it.category,
-                            trendScore = it.trendScore,
-                            rankTrend = it.rankTrend,
-                            rankDelta = it.rankDelta,
-                        )
-                    },
+                    .map { it.toKeywordSummaryResponse() },
         )
 }

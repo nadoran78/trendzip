@@ -3,8 +3,10 @@ package com.mztrend.repository.query
 import com.mztrend.domain.FeedSection
 import com.mztrend.domain.Generation
 import com.mztrend.domain.RankTrend
+import com.mztrend.domain.TrendCrawlRunStatus
 import com.mztrend.jooq.Tables.KEYWORDS
 import com.mztrend.jooq.Tables.KEYWORD_RELATIONS
+import com.mztrend.jooq.Tables.TREND_CRAWL_RUNS
 import com.mztrend.jooq.Tables.TREND_FEED_ITEMS
 import com.mztrend.jooq.Tables.TREND_LOGS
 import com.mztrend.jooq.Tables.TREND_VIDEOS
@@ -14,54 +16,80 @@ import com.mztrend.repository.query.dto.KeywordExplainQueryResult
 import com.mztrend.repository.query.dto.KeywordSummaryQueryResult
 import com.mztrend.repository.query.dto.TrendGraphPointQueryResult
 import org.jooq.DSLContext
+import org.jooq.Field
+import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
 
 @Repository
 class KeywordQueryRepository(
     private val dsl: DSLContext,
 ) {
-    fun findByGeneration(generation: Generation): List<KeywordSummaryQueryResult> =
-        dsl
+    fun findByGeneration(generation: Generation): List<KeywordSummaryQueryResult> {
+        val latestCompletedCrawlRunId = latestCompletedCrawlRunId(DSL.inline(generation.name))
+
+        return dsl
             .select(
                 KEYWORDS.ID,
                 KEYWORDS.WORD,
-                KEYWORDS.CURRENT_RANK,
+                TREND_LOGS.RANK,
                 KEYWORDS.CATEGORY,
-                KEYWORDS.TREND_SCORE,
+                TREND_LOGS.SCORE,
                 KEYWORDS.RANK_TREND,
                 KEYWORDS.RANK_DELTA,
-            ).from(KEYWORDS)
-            .where(KEYWORDS.GENERATION.eq(generation.name))
-            .orderBy(KEYWORDS.CURRENT_RANK.asc().nullsLast(), KEYWORDS.ID.asc())
+            ).from(TREND_LOGS)
+            .join(KEYWORDS)
+            .on(KEYWORDS.ID.eq(TREND_LOGS.KEYWORD_ID))
+            .where(TREND_LOGS.CRAWL_RUN_ID.eq(latestCompletedCrawlRunId))
+            .and(KEYWORDS.GENERATION.eq(generation.name))
+            .orderBy(TREND_LOGS.RANK.asc().nullsLast(), TREND_LOGS.ID.asc())
             .fetch { record ->
                 KeywordSummaryQueryResult(
                     id = record.get(KEYWORDS.ID),
                     word = record.get(KEYWORDS.WORD),
-                    rank = record.get(KEYWORDS.CURRENT_RANK),
+                    rank = record.get(TREND_LOGS.RANK),
                     category = record.get(KEYWORDS.CATEGORY),
-                    trendScore = record.get(KEYWORDS.TREND_SCORE),
+                    trendScore = record.get(TREND_LOGS.SCORE),
                     rankTrend = record.get(KEYWORDS.RANK_TREND)?.let(RankTrend::valueOf),
                     rankDelta = record.get(KEYWORDS.RANK_DELTA),
                 )
             }
+    }
 
-    fun findExplainById(id: Long): KeywordExplainQueryResult? =
-        dsl
+    fun findExplainById(id: Long): KeywordExplainQueryResult? {
+        val latestCompletedCrawlRunId = latestCompletedCrawlRunId(KEYWORDS.GENERATION)
+
+        return dsl
             .select(
                 KEYWORDS.ID,
                 KEYWORDS.WORD,
                 KEYWORDS.GENERATION,
+                KEYWORDS.CATEGORY,
+                TREND_LOGS.RANK,
+                TREND_LOGS.SCORE,
+                KEYWORDS.RANK_TREND,
+                KEYWORDS.RANK_DELTA,
                 KEYWORDS.EXPLAIN,
             ).from(KEYWORDS)
-            .where(KEYWORDS.ID.eq(id))
+            .leftJoin(TREND_LOGS)
+            .on(
+                TREND_LOGS.KEYWORD_ID
+                    .eq(KEYWORDS.ID)
+                    .and(TREND_LOGS.CRAWL_RUN_ID.eq(latestCompletedCrawlRunId)),
+            ).where(KEYWORDS.ID.eq(id))
             .fetchOne { record ->
                 KeywordExplainQueryResult(
                     id = record.get(KEYWORDS.ID),
                     word = record.get(KEYWORDS.WORD),
                     generation = Generation.valueOf(record.get(KEYWORDS.GENERATION)),
+                    category = record.get(KEYWORDS.CATEGORY),
+                    rank = record.get(TREND_LOGS.RANK),
+                    trendScore = record.get(TREND_LOGS.SCORE),
+                    rankTrend = record.get(KEYWORDS.RANK_TREND)?.let(RankTrend::valueOf),
+                    rankDelta = record.get(KEYWORDS.RANK_DELTA),
                     explain = record.get(KEYWORDS.EXPLAIN),
                 )
             }
+    }
 
     fun findRelatedVideos(
         keywordId: Long,
@@ -115,6 +143,7 @@ class KeywordQueryRepository(
             .select(
                 TREND_LOGS.RECORDED_AT,
                 TREND_LOGS.SCORE,
+                TREND_LOGS.RANK,
             ).from(TREND_LOGS)
             .where(TREND_LOGS.KEYWORD_ID.eq(keywordId))
             .orderBy(TREND_LOGS.RECORDED_AT.desc(), TREND_LOGS.ID.desc())
@@ -122,6 +151,7 @@ class KeywordQueryRepository(
                 TrendGraphPointQueryResult(
                     period = record.get(TREND_LOGS.RECORDED_AT).toLocalDate(),
                     ratio = record.get(TREND_LOGS.SCORE),
+                    rank = record.get(TREND_LOGS.RANK),
                 )
             }.distinctBy { it.period }
             .take(TREND_GRAPH_LIMIT)
@@ -165,6 +195,17 @@ class KeywordQueryRepository(
                 )
             }
     }
+
+    private fun latestCompletedCrawlRunId(generation: Field<String>): Field<Long> =
+        DSL.field(
+            dsl
+                .select(TREND_CRAWL_RUNS.ID)
+                .from(TREND_CRAWL_RUNS)
+                .where(TREND_CRAWL_RUNS.GENERATION.eq(generation))
+                .and(TREND_CRAWL_RUNS.STATUS.eq(TrendCrawlRunStatus.COMPLETED.name))
+                .orderBy(TREND_CRAWL_RUNS.STARTED_AT.desc(), TREND_CRAWL_RUNS.ID.desc())
+                .limit(1),
+        )
 
     private companion object {
         private const val RELATED_VIDEO_LIMIT = 3

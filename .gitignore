@@ -10,6 +10,20 @@
 !.env.example
 !.env.*.example
 
+# Credentials / private keys
+secrets/
+.secrets/
+credentials*.json
+service-account*.json
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+id_rsa
+id_ed25519
+
 # Logs
 logs/
 *.log

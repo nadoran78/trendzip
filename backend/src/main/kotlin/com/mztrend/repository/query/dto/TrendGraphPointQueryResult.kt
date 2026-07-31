@@ -5,4 +5,5 @@ import java.time.LocalDate
 data class TrendGraphPointQueryResult(
     val period: LocalDate,
     val ratio: Long?,
+    val rank: Int?,
 )

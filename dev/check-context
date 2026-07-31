@@ -1,0 +1,442 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_STATUS="$PROJECT_ROOT/docs/project-status.md"
+BUSINESS_FLOW="$PROJECT_ROOT/docs/business-flow.md"
+WORK_ITEMS="$PROJECT_ROOT/docs/work-items.md"
+QUIET=false
+STRICT=false
+CHECK_CURRENT_BRANCH=true
+ERROR_COUNT=0
+
+usage() {
+    cat <<'EOF'
+Usage: ./dev/check-context [--quiet] [--strict] [--no-branch-check] [--help]
+
+Validates the project context documents and task-to-branch mappings.
+
+Options:
+  --quiet            Print only failures.
+  --strict           Also require every ACTIVE local branch to exist.
+  --no-branch-check  Skip mapping validation for the checked-out branch.
+  --help             Show this help.
+EOF
+}
+
+pass() {
+    if [[ "$QUIET" == false ]]; then
+        printf '  PASS %s\n' "$1"
+    fi
+}
+
+fail() {
+    printf '  FAIL %s\n' "$1" >&2
+    ERROR_COUNT=$((ERROR_COUNT + 1))
+}
+
+require_fixed_line() {
+    local file="$1"
+    local line="$2"
+
+    if grep -Fqx -- "$line" "$file"; then
+        return 0
+    fi
+
+    fail "${file#"$PROJECT_ROOT"/}: missing heading '$line'"
+    return 1
+}
+
+section_task_count() {
+    local section="$1"
+
+    awk -v section="$section" '
+        $0 == "## " section { inside = 1; next }
+        inside && /^## / { exit }
+        inside && /^### [A-Z]+-[0-9][0-9][0-9] / { count++ }
+        END { print count + 0 }
+    ' "$WORK_ITEMS"
+}
+
+task_records() {
+    local section="$1"
+
+    awk -v section="$section" '
+        function emit() {
+            if (id != "") {
+                printf "%s|%s|%s|%s|%s|%s|%s\n", id, title, status, branch, started, updated, next_action
+                id = ""
+            }
+        }
+        $0 == "## " section { inside = 1; next }
+        inside && /^## / { emit(); exit }
+        inside && /^### [A-Z]+-[0-9][0-9][0-9] / {
+            emit()
+            line = $0
+            sub(/^### /, "", line)
+            split(line, parts, " ")
+            id = parts[1]
+            title = line
+            sub(/^[^ ]+ /, "", title)
+            status = branch = started = updated = next_action = ""
+            details = 0
+            next
+        }
+        inside && id != "" && /^#### / { details = 1 }
+        inside && id != "" && !details && /^- 상태: / { status = $0; sub(/^- 상태: /, "", status); next }
+        inside && id != "" && !details && /^- 브랜치: / { branch = $0; sub(/^- 브랜치: /, "", branch); next }
+        inside && id != "" && !details && /^- 시작일: / { started = $0; sub(/^- 시작일: /, "", started); next }
+        inside && id != "" && !details && /^- 마지막 갱신: / { updated = $0; sub(/^- 마지막 갱신: /, "", updated); next }
+        inside && id != "" && !details && /^- 다음 행동: / { next_action = $0; sub(/^- 다음 행동: /, "", next_action); next }
+        END { if (inside) emit() }
+    ' "$WORK_ITEMS"
+}
+
+task_block() {
+    local section="$1"
+    local task_id="$2"
+
+    awk -v section="$section" -v task_id="$task_id" '
+        $0 == "## " section { in_section = 1; next }
+        in_section && /^## / { exit }
+        in_section && $0 ~ "^### " task_id " " { inside = 1 }
+        inside && $0 ~ /^### / && $0 !~ "^### " task_id " " { exit }
+        inside { print }
+    ' "$WORK_ITEMS"
+}
+
+check_required_files() {
+    local missing=false
+    local file
+
+    for file in "$PROJECT_STATUS" "$BUSINESS_FLOW" "$WORK_ITEMS"; do
+        if [[ -f "$file" ]]; then
+            pass "${file#"$PROJECT_ROOT"/}"
+        else
+            fail "${file#"$PROJECT_ROOT"/}: file not found"
+            missing=true
+        fi
+    done
+
+    [[ "$missing" == false ]]
+}
+
+check_project_status() {
+    local valid=true
+    local heading
+
+    if ! grep -Eq '^- 마지막 갱신: [0-9]{4}-[0-9]{2}-[0-9]{2}$' "$PROJECT_STATUS"; then
+        fail 'docs/project-status.md: invalid or missing last-updated date'
+        valid=false
+    fi
+    if ! grep -Eq '^- 현재 단계: .+' "$PROJECT_STATUS"; then
+        fail 'docs/project-status.md: missing current phase'
+        valid=false
+    fi
+    if ! grep -Eq '^- 현재 집중 영역: .+' "$PROJECT_STATUS"; then
+        fail 'docs/project-status.md: missing current focus'
+        valid=false
+    fi
+
+    for heading in \
+        '## 한 줄 상태' \
+        '## 구현 현황' \
+        '## 현재 가능한 사용자 흐름' \
+        '## 주요 미완성 영역' \
+        '## 알려진 문제와 제약' \
+        '## 로컬 실행'; do
+        require_fixed_line "$PROJECT_STATUS" "$heading" || valid=false
+    done
+
+    if [[ "$valid" == true ]]; then
+        pass 'project status structure'
+    fi
+}
+
+check_business_flow() {
+    local valid=true
+    local heading
+
+    for heading in \
+        '## 서비스 목적' \
+        '## 핵심 용어' \
+        '## 사용자 흐름' \
+        '## 트렌드 수집 흐름' \
+        '## 피드 생성 흐름' \
+        '## 키워드 설명 흐름' \
+        '## 데이터와 API 연결' \
+        '## 주요 비즈니스 규칙' \
+        '## 코드 탐색 지도'; do
+        require_fixed_line "$BUSINESS_FLOW" "$heading" || valid=false
+    done
+
+    if [[ "$valid" == true ]]; then
+        pass 'business flow structure'
+    fi
+}
+
+check_active_work_items() {
+    local active_count
+    local id title status branch started updated next_action
+    local lower_id expected_prefix branch_suffix block heading path paths
+    local design_status design_paths design_path
+    local valid=true
+
+    active_count="$(section_task_count ACTIVE)"
+    pass "ACTIVE contains $active_count work item(s)"
+
+    while IFS='|' read -r id title status branch started updated next_action; do
+        [[ -n "$id" ]] || continue
+
+        case "$status" in
+            IN_PROGRESS|BLOCKED|REVIEW) ;;
+            *)
+                fail "docs/work-items.md: $id has invalid ACTIVE status '$status'"
+                valid=false
+                ;;
+        esac
+
+        if [[ "$branch" != develop ]]; then
+            lower_id="$(printf '%s' "$id" | tr '[:upper:]' '[:lower:]')"
+            expected_prefix="codex/${lower_id}-"
+            branch_suffix="${branch#"$expected_prefix"}"
+            if [[ "$branch" != "$expected_prefix"* ]] || [[ ! "$branch_suffix" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+                fail "docs/work-items.md: $id branch must be develop or match ${expected_prefix}<description>"
+                valid=false
+            fi
+        fi
+        if [[ ! "$started" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            fail "docs/work-items.md: $id has invalid or missing start date"
+            valid=false
+        fi
+        if [[ ! "$updated" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            fail "docs/work-items.md: $id has invalid or missing last-updated date"
+            valid=false
+        fi
+        if [[ -z "$next_action" ]]; then
+            fail "docs/work-items.md: $id is missing next action"
+            valid=false
+        fi
+
+        block="$(task_block ACTIVE "$id")"
+        for heading in \
+            '#### 목적' \
+            '#### 범위' \
+            '#### 제외 범위' \
+            '#### 진행 상황' \
+            '#### 완료 조건' \
+            '#### 관련 코드' \
+            '#### 검증' \
+            '#### 인계 메모'; do
+            if ! grep -Fqx -- "$heading" <<<"$block"; then
+                fail "docs/work-items.md: $id is missing '$heading'"
+                valid=false
+            fi
+        done
+
+        paths="$(awk '
+            $0 == "#### 관련 코드" { inside = 1; next }
+            inside && /^#### / { exit }
+            inside && /^- `/ {
+                line = $0
+                sub(/^- `/, "", line)
+                sub(/`$/, "", line)
+                print line
+            }
+        ' <<<"$block")"
+        if [[ -z "$paths" ]]; then
+            fail "docs/work-items.md: $id must reference at least one code path"
+            valid=false
+        else
+            while IFS= read -r path; do
+                if [[ ! -e "$PROJECT_ROOT/$path" ]]; then
+                    fail "docs/work-items.md: $id references missing path: $path"
+                    valid=false
+                fi
+            done <<<"$paths"
+        fi
+
+        if [[ "$id" == FE-* ]]; then
+            if ! grep -Fqx -- '#### 디자인 기준' <<<"$block"; then
+                fail "docs/work-items.md: $id is missing '#### 디자인 기준'"
+                valid=false
+            else
+                design_status="$(awk '
+                    $0 == "#### 디자인 기준" { inside = 1; next }
+                    inside && /^#### / { exit }
+                    inside && /^- 상태: / {
+                        line = $0
+                        sub(/^- 상태: /, "", line)
+                        print line
+                        exit
+                    }
+                ' <<<"$block")"
+                if [[ "$design_status" != CONFIRMED ]]; then
+                    fail "docs/work-items.md: $id design status must be CONFIRMED"
+                    valid=false
+                fi
+
+                design_paths="$(awk '
+                    $0 == "#### 디자인 기준" { inside = 1; next }
+                    inside && /^#### / { exit }
+                    inside && /^- `/ {
+                        line = $0
+                        sub(/^- `/, "", line)
+                        sub(/`$/, "", line)
+                        print line
+                    }
+                ' <<<"$block")"
+                if [[ -z "$design_paths" ]]; then
+                    fail "docs/work-items.md: $id must reference at least one design path"
+                    valid=false
+                else
+                    while IFS= read -r design_path; do
+                        if [[ "$design_path" != design/* ]]; then
+                            fail "docs/work-items.md: $id design path must be under design/: $design_path"
+                            valid=false
+                        elif [[ ! -e "$PROJECT_ROOT/$design_path" ]]; then
+                            fail "docs/work-items.md: $id references missing design path: $design_path"
+                            valid=false
+                        fi
+                    done <<<"$design_paths"
+                fi
+            fi
+        fi
+
+        if [[ "$status" == REVIEW ]] && ! grep -Fqx -- '- 상태: PASS' <<<"$block"; then
+            fail "docs/work-items.md: $id cannot be REVIEW without a PASS validation status"
+            valid=false
+        fi
+        if [[ "$id" == FE-* && "$status" == REVIEW ]] && ! grep -Fqx -- '- 디자인 검증: PASS' <<<"$block"; then
+            fail "docs/work-items.md: $id cannot be REVIEW without PASS design validation"
+            valid=false
+        fi
+
+        if [[ "$STRICT" == true ]] && ! git -C "$PROJECT_ROOT" show-ref --verify --quiet "refs/heads/$branch"; then
+            fail "docs/work-items.md: ACTIVE branch does not exist locally: $branch"
+            valid=false
+        fi
+    done < <(task_records ACTIVE)
+
+    if [[ "$active_count" -gt 0 ]]; then
+        local duplicate_branches
+        duplicate_branches="$(task_records ACTIVE | cut -d '|' -f4 | sort | uniq -d)"
+        if [[ -n "$duplicate_branches" ]]; then
+            fail "docs/work-items.md: duplicate ACTIVE branch: $duplicate_branches"
+            valid=false
+        fi
+    fi
+
+    if [[ "$valid" == true ]]; then
+        pass 'ACTIVE work item metadata and branches'
+    fi
+}
+
+check_ready_work_items() {
+    local ready_count
+    local id title status branch started updated next_action
+    local valid=true
+
+    ready_count="$(section_task_count READY)"
+    if [[ "$ready_count" -gt 5 ]]; then
+        fail "docs/work-items.md: READY must contain at most five work items, found $ready_count"
+        valid=false
+    else
+        pass "READY contains $ready_count work item(s)"
+    fi
+
+    while IFS='|' read -r id title status branch started updated next_action; do
+        [[ -n "$id" ]] || continue
+        if [[ "$status" != READY ]]; then
+            fail "docs/work-items.md: $id in READY must have status READY"
+            valid=false
+        fi
+        if [[ "$branch" != '미정' ]]; then
+            fail "docs/work-items.md: $id in READY must have branch '미정'"
+            valid=false
+        fi
+        if [[ -z "$next_action" ]]; then
+            fail "docs/work-items.md: $id in READY is missing next action"
+            valid=false
+        fi
+    done < <(task_records READY)
+
+    if [[ "$valid" == true ]]; then
+        pass 'READY work item metadata'
+    fi
+}
+
+check_current_branch_mapping() {
+    local current_branch matching_count
+
+    if [[ "$CHECK_CURRENT_BRANCH" != true ]]; then
+        return 0
+    fi
+    current_branch="$(git -C "$PROJECT_ROOT" branch --show-current)"
+
+    case "$current_branch" in
+        codex/*)
+            matching_count="$(task_records ACTIVE | awk -F '|' -v branch="$current_branch" '$4 == branch { count++ } END { print count + 0 }')"
+            if [[ "$matching_count" -ne 1 ]]; then
+                fail "current branch '$current_branch' must map to exactly one ACTIVE work item"
+            else
+                pass "current branch maps to one ACTIVE work item"
+            fi
+            ;;
+        develop|main)
+            pass "current branch is integration branch '$current_branch'"
+            ;;
+        '')
+            fail 'detached HEAD is not supported for implementation work'
+            ;;
+        *)
+            fail "current implementation branch must use codex/* naming: $current_branch"
+            ;;
+    esac
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --quiet) QUIET=true ;;
+        --strict) STRICT=true ;;
+        --no-branch-check) CHECK_CURRENT_BRANCH=false ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            usage >&2
+            exit 2
+            ;;
+    esac
+    shift
+done
+
+if [[ "$QUIET" == false ]]; then
+    printf 'Context harness check\n'
+fi
+
+if ! check_required_files; then
+    exit 1
+fi
+
+for heading in '## ACTIVE' '## READY' '## LATER' '## 최근 완료'; do
+    require_fixed_line "$WORK_ITEMS" "$heading" || true
+done
+
+check_project_status
+check_business_flow
+check_active_work_items
+check_ready_work_items
+check_current_branch_mapping
+
+if [[ "$ERROR_COUNT" -gt 0 ]]; then
+    printf '\nContext harness has %d error(s).\n' "$ERROR_COUNT" >&2
+    exit 1
+fi
+
+if [[ "$QUIET" == false ]]; then
+    printf '\nContext harness is valid.\n'
+fi

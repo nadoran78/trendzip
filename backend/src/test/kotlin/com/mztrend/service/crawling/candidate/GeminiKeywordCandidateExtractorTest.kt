@@ -69,6 +69,7 @@ class GeminiKeywordCandidateExtractorTest {
                 .text
         assertContains(prompt, "반드시 JSON만 출력한다")
         assertContains(prompt, "by, to, on, it, you")
+        assertContains(prompt, "치지직/CHZZK 같은 플랫폼명")
         assertContains(prompt, "videoId: video-1")
         assertContains(prompt, "title: 다비치 컴백 무대")
         assertContains(prompt, "description: 설명")

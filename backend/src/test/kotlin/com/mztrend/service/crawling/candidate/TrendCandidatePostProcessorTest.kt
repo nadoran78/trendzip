@@ -28,6 +28,22 @@ class TrendCandidatePostProcessorTest {
     }
 
     @Test
+    fun `process removes exact platform candidates and reranks remaining candidates`() {
+        val processed =
+            postProcessor.process(
+                listOf(
+                    candidate("치지직", score = 1_000),
+                    candidate("CHZZK", score = 900),
+                    candidate("치지직컵", score = 800),
+                    candidate("아이브", score = 700),
+                ),
+            )
+
+        assertEquals(listOf("치지직컵", "아이브"), processed.map { it.word })
+        assertEquals(listOf(1, 2), processed.map { it.rank })
+    }
+
+    @Test
     fun `process keeps phrase candidate and removes split phrase tokens`() {
         val processed =
             postProcessor.process(
