@@ -2,7 +2,7 @@
 
 - 마지막 갱신: 2026-07-31
 - 현재 단계: 프론트엔드 핵심 사용자 흐름 구현 및 검증 자동화
-- 현재 집중 영역: GitHub Actions CI 검토 및 저장소 보안 설정
+- 현재 집중 영역: 프론트엔드 배포 준비
 
 ## 한 줄 상태
 
@@ -46,6 +46,11 @@
 - 구현됨: 전체 Git 이력과 staged 변경을 검사하는 Gitleaks 명령과 pre-commit 훅
 - 구현됨: pull request와 `develop` push용 GitHub Actions CI
 - 미구현: OpenAPI와 프론트엔드 타입의 자동 계약 검증
+
+### 문서화
+
+- 구현됨: 서비스 소개, 실제 화면, 데이터 흐름, 아키텍처, 로컬 실행과 검증 절차를 제공하는 루트 README
+- 구현됨: 프로젝트 상태, 비즈니스 흐름, 백엔드 컨벤션과 Mac mini 운영 문서
 
 ## 현재 가능한 사용자 흐름
 
@@ -119,6 +124,7 @@ npm run dev
 
 ## 관련 문서
 
+- [프로젝트 README](../README.md)
 - [비즈니스 흐름](business-flow.md)
 - [현재 작업과 다음 작업](work-items.md)
 - [CI와 비밀정보 관리](ci-and-secret-management.md)
