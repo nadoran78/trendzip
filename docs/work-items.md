@@ -29,7 +29,7 @@
 - 브랜치: develop
 - 시작일: 2026-08-02
 - 마지막 갱신: 2026-08-02
-- 다음 행동: GitHub Environment의 `main` 브랜치 제한을 확인하고 변경을 `main`에 반영한 뒤 `Deploy Frontend` workflow를 실행한다.
+- 다음 행동: Vercel CLI 경로 수정분을 `main`에 반영한 뒤 `Deploy Frontend` workflow를 다시 실행한다.
 
 #### 목적
 
@@ -53,8 +53,9 @@ Git push와 Vercel production 배포를 분리하고 GitHub Actions에서 `main`
 
 - 수동 production 배포 workflow와 운영 문서를 구현했다.
 - `production-frontend` GitHub Environment Secret 등록을 완료했다.
+- 첫 원격 실행에서 인증을 확인했고, Vercel 프로젝트의 `frontend` Root Directory와 workflow 작업 디렉터리가 중복 적용되는 문제를 수정했다.
 - 첫 수동 배포 성공 전까지 Vercel Git 자동 배포는 유지한다.
-- Environment의 `main` 브랜치 제한 확인과 원격 workflow 실행은 남아 있다.
+- 수정된 workflow의 production 재실행과 smoke test 확인이 남아 있다.
 
 #### 완료 조건
 
@@ -78,7 +79,8 @@ Git push와 Vercel production 배포를 분리하고 GitHub Actions에서 `main`
 - `API_BASE_URL=https://api-trendzip.nadoran.com npm run build` 통과
 - workflow YAML 구문 검사 통과
 - `./dev/check-secrets --all` 통과
-- GitHub Actions production 배포 미실행
+- GitHub Actions 첫 실행에서 `vercel pull` 인증 성공
+- `vercel build`의 중복 경로 오류 수정 후 production 재검증 필요
 
 #### 인계 메모
 
