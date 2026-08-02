@@ -40,5 +40,6 @@ out/
 # Node / frontend
 node_modules/
 .next/
+.vercel/
 dist/
 coverage/
