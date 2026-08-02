@@ -23,7 +23,67 @@
 
 ## ACTIVE
 
-- 없음
+### CHORE-004 프론트엔드 수동 배포 Workflow
+
+- 상태: IN_PROGRESS
+- 브랜치: develop
+- 시작일: 2026-08-02
+- 마지막 갱신: 2026-08-02
+- 다음 행동: GitHub Environment의 `main` 브랜치 제한을 확인하고 변경을 `main`에 반영한 뒤 `Deploy Frontend` workflow를 실행한다.
+
+#### 목적
+
+Git push와 Vercel production 배포를 분리하고 GitHub Actions에서 `main`을 명시적으로 선택해 수동 배포한다.
+
+#### 범위
+
+- Vercel CLI 기반 production 설정 동기화, build와 deploy
+- GitHub Environment Secret 사전 검증과 최소 workflow 권한
+- production 중복 배포 방지와 배포 후 smoke test
+- 최초 전환 순서와 문제 해결 절차 문서화
+
+#### 제외 범위
+
+- 백엔드 배포 workflow
+- Cloudflare Access 적용
+- 프론트엔드 롤백 workflow
+- 첫 수동 배포 성공 전 Vercel Git 자동 배포 비활성화
+
+#### 진행 상황
+
+- 수동 production 배포 workflow와 운영 문서를 구현했다.
+- `production-frontend` GitHub Environment Secret 등록을 완료했다.
+- 첫 수동 배포 성공 전까지 Vercel Git 자동 배포는 유지한다.
+- Environment의 `main` 브랜치 제한 확인과 원격 workflow 실행은 남아 있다.
+
+#### 완료 조건
+
+- `production-frontend` Environment에 필요한 Secret과 `main` 브랜치 제한이 설정된다.
+- `main`에서 수동 workflow가 성공한다.
+- Vercel 기본 배포 URL과 `trendzip.nadoran.com`의 핵심 경로가 정상 응답한다.
+- 첫 수동 배포 검증 후 Git 자동 배포를 비활성화한다.
+
+#### 관련 코드
+
+- `.github/workflows/deploy-frontend.yml`
+- `docs/ops/frontend-deployment.md`
+- `docs/ci-and-secret-management.md`
+- `docs/project-status.md`
+- `docs/work-items.md`
+- `frontend/AGENTS.md`
+
+#### 검증
+
+- `./dev/verify --quick` 통과
+- `API_BASE_URL=https://api-trendzip.nadoran.com npm run build` 통과
+- workflow YAML 구문 검사 통과
+- `./dev/check-secrets --all` 통과
+- GitHub Actions production 배포 미실행
+
+#### 인계 메모
+
+- Vercel CLI `58.4.4`를 프론트 devDependency로 추가하면 CLI 전이 의존성 때문에 audit 결과가 크게 증가해, 애플리케이션 의존성과 분리하고 workflow의 일회성 runner에 정확한 버전으로 설치한다.
+- 수동 workflow를 production에서 검증하기 전에는 `frontend/vercel.json`을 추가하지 않는다.
 
 ## READY
 
@@ -32,6 +92,7 @@
 ## LATER
 
 - PWA 설정 및 홈 화면 추가 검증
+- 프론트엔드 이전 production deployment 수동 롤백 workflow
 - 운영 API 노출 정책 강화: 운영 Swagger/OpenAPI 비활성화, Cloudflare rate limit 적용, 프론트 배포 도메인 기반 CORS 제한
 - OpenAPI와 프론트 TypeScript 타입의 계약 자동화
 - 외부 API fixture 기반 크롤링 전체 시나리오 테스트

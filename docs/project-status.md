@@ -2,7 +2,7 @@
 
 - 마지막 갱신: 2026-08-02
 - 현재 단계: 핵심 사용자 흐름 공개 배포 및 운영 보완
-- 현재 집중 영역: PWA와 프론트엔드 자동 검증 준비
+- 현재 집중 영역: Vercel 프론트엔드 수동 배포 전환
 
 ## 한 줄 상태
 
@@ -38,6 +38,7 @@
 - 구현됨: 백엔드 Docker 이미지와 운영 Compose 구성
 - 구현됨: Gitleaks 검사 후 전체 통합 검증을 실행하는 GitHub Actions CI
 - 구현됨: Vercel 프론트엔드 production 배포와 `trendzip.nadoran.com` 커스텀 도메인
+- 일부 구현됨: GitHub Actions 프론트엔드 수동 배포 workflow는 로컬 구현됐으며 production 원격 검증과 Git 자동 배포 비활성화가 남아 있음
 - 일부 구현됨: 맥미니 수동 배포 절차는 있으나 자동 배포 workflow는 없음
 
 ### 테스트 및 자동화
@@ -52,7 +53,7 @@
 ### 문서화
 
 - 구현됨: 서비스 소개, 실제 화면, 데이터 흐름, 아키텍처, 로컬 실행과 검증 절차를 제공하는 루트 README
-- 구현됨: 프로젝트 상태, 비즈니스 흐름, 백엔드 컨벤션과 Mac mini 운영 문서
+- 구현됨: 프로젝트 상태, 비즈니스 흐름, 백엔드 컨벤션, Mac mini와 Vercel 프론트엔드 운영 문서
 
 ## 현재 가능한 사용자 흐름
 
@@ -70,6 +71,7 @@
 1. PWA 설정과 홈 화면 추가 검증
 2. OpenAPI와 프론트 TypeScript 타입의 계약 자동화
 3. 프론트 핵심 사용자 흐름 자동 테스트
+4. 프론트 수동 배포 production 검증과 Git 자동 배포 비활성화
 
 활성 작업, 작업 브랜치와 우선순위는 [작업 목록](work-items.md)을 기준으로 한다.
 
@@ -129,4 +131,5 @@ npm run dev
 - [비즈니스 흐름](business-flow.md)
 - [현재 작업과 다음 작업](work-items.md)
 - [CI와 비밀정보 관리](ci-and-secret-management.md)
+- [Vercel 프론트엔드 수동 배포](ops/frontend-deployment.md)
 - [프로젝트 작업 규칙](../AGENTS.md)
