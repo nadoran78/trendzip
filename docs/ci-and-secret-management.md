@@ -2,7 +2,7 @@
 
 ## 목적
 
-pull request와 `develop` push에서 동일한 통합 검증을 실행하고, API 키·토큰·개인키가 Git 이력에 포함되기 전에 차단한다. CI는 검증만 담당하며 맥미니 배포와 운영 환경변수 주입은 별도 절차로 유지한다.
+pull request와 `develop` push에서 동일한 통합 검증을 실행하고, API 키·토큰·개인키가 Git 이력에 포함되기 전에 차단한다. CI는 검증만 담당하며 배포는 별도 workflow와 운영 절차로 분리한다. 맥미니 배포는 로컬 수동 절차를 유지하고, Vercel 프론트엔드는 `main`에서 수동 실행하는 별도 workflow를 사용한다.
 
 ## GitHub Actions CI
 
@@ -23,6 +23,8 @@ GitHub 저장소의 Ruleset 또는 Branch protection에서 `develop`에 다음 s
 - `Full verification`
 
 액션 버전을 올릴 때는 공식 저장소의 release와 태그를 확인하고 전체 커밋 SHA와 옆의 버전 주석을 함께 변경한다.
+
+프론트엔드 production 배포 workflow와 Secret 설정은 [Vercel 프론트엔드 수동 배포](ops/frontend-deployment.md)를 따른다.
 
 ## 로컬 비밀정보 검사
 

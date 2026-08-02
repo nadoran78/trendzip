@@ -23,89 +23,67 @@
 
 ## ACTIVE
 
-### FE-008 Vercel 프론트엔드 배포
+### CHORE-004 프론트엔드 수동 배포 Workflow
 
 - 상태: IN_PROGRESS
 - 브랜치: develop
 - 시작일: 2026-08-02
 - 마지막 갱신: 2026-08-02
-- 다음 행동: `develop`을 push해 CI를 확인하고 `main`에 반영한 뒤 Vercel에 `API_BASE_URL`을 등록해 첫 배포를 실행한다.
+- 다음 행동: GitHub Environment의 `main` 브랜치 제한을 확인하고 변경을 `main`에 반영한 뒤 `Deploy Frontend` workflow를 실행한다.
 
 #### 목적
 
-Next.js 프론트엔드를 Vercel Hobby에 안전하게 배포하고 운영 API를 사용하는 핵심 사용자 흐름을 공개 도메인에서 제공한다.
+Git push와 Vercel production 배포를 분리하고 GitHub Actions에서 `main`을 명시적으로 선택해 수동 배포한다.
 
 #### 범위
 
-- API base URL을 서버 전용 환경변수로 전환
-- 서버 API 요청의 기본 timeout 적용
-- Vercel과 CI의 Node.js 런타임 정합성 확보
-- Vercel 로컬 메타데이터의 Git 추적 방지
-- 운영 API 기반 production build 검증
-- Vercel 기본 도메인과 커스텀 도메인 배포 검증
-- 배포 완료 후 README와 프로젝트 상태 갱신
+- Vercel CLI 기반 production 설정 동기화, build와 deploy
+- GitHub Environment Secret 사전 검증과 최소 workflow 권한
+- production 중복 배포 방지와 배포 후 smoke test
+- 최초 전환 순서와 문제 해결 절차 문서화
 
 #### 제외 범위
 
-- PWA와 서비스 워커 설정
-- 백엔드 CORS 변경
-- 운영 Swagger/OpenAPI 비활성화
-- Cloudflare API rate limit 적용
-- Vercel 유료 리전과 다중 리전 구성
-
-#### 디자인 기준
-
-- 상태: CONFIRMED
-- `design/README.md`
-- `design/app.jsx`
-- `design/feed.jsx`
-- `design/trend.jsx`
-- `design/keyword.jsx`
-- 배포 구성 작업이므로 UI를 변경하지 않고 기존 확정 화면과 동일하게 렌더링되는지만 검증한다.
+- 백엔드 배포 workflow
+- Cloudflare Access 적용
+- 프론트엔드 롤백 workflow
+- 첫 수동 배포 성공 전 Vercel Git 자동 배포 비활성화
 
 #### 진행 상황
 
-- API base URL을 `API_BASE_URL` 서버 전용 환경변수로 전환했다.
-- API 요청에 기본 10초 timeout을 적용하고 호출자 `AbortSignal` 우선 규칙을 유지했다.
-- Vercel과 CI가 Node.js 24를 사용하도록 런타임을 명시했다.
-- `.vercel/`을 Git 추적 대상에서 제외하고 관련 환경변수 문서를 동기화했다.
-- 운영 API 주소를 사용한 production build와 로컬 정적 검증을 완료했다.
+- 수동 production 배포 workflow와 운영 문서를 구현했다.
+- `production-frontend` GitHub Environment Secret 등록을 완료했다.
+- 첫 수동 배포 성공 전까지 Vercel Git 자동 배포는 유지한다.
+- Environment의 `main` 브랜치 제한 확인과 원격 workflow 실행은 남아 있다.
 
 #### 완료 조건
 
-- 브라우저 공개 환경변수 없이 Vercel 서버에서 운영 API를 호출한다.
-- 백엔드 응답 지연이 무기한 Vercel 렌더링 대기로 이어지지 않는다.
-- Node.js 24와 Next.js 기본 빌드 설정으로 production build가 성공한다.
-- Vercel 기본 도메인에서 랜딩, 피드, 랭킹과 키워드 상세가 정상 동작한다.
-- `trendzip.nadoran.com`에서 HTTPS와 핵심 사용자 흐름이 정상 동작한다.
-- README와 프로젝트 상태가 실제 배포 결과와 일치한다.
+- `production-frontend` Environment에 필요한 Secret과 `main` 브랜치 제한이 설정된다.
+- `main`에서 수동 workflow가 성공한다.
+- Vercel 기본 배포 URL과 `trendzip.nadoran.com`의 핵심 경로가 정상 응답한다.
+- 첫 수동 배포 검증 후 Git 자동 배포를 비활성화한다.
 
 #### 관련 코드
 
-- `frontend/src/lib/env.ts`
-- `frontend/src/lib/api-client.ts`
-- `frontend/package.json`
-- `frontend/.env.example`
-- `.gitignore`
-- `README.md`
-- `frontend/README.md`
+- `.github/workflows/deploy-frontend.yml`
+- `docs/ops/frontend-deployment.md`
+- `docs/ci-and-secret-management.md`
+- `docs/project-status.md`
+- `docs/work-items.md`
 - `frontend/AGENTS.md`
 
 #### 검증
 
-- 상태: PARTIAL
-- 통과: `npm run lint`
-- 통과: `npm run typecheck`
-- 통과: 운영 API 환경변수를 사용한 `npm run build`
-- 통과: `./dev/verify --quick`
-- 통과: `./dev/check-secrets --staged`
-- 예정: Vercel 기본·커스텀 도메인의 모바일·데스크톱 실제 화면
+- `./dev/verify --quick` 통과
+- `API_BASE_URL=https://api-trendzip.nadoran.com npm run build` 통과
+- workflow YAML 구문 검사 통과
+- `./dev/check-secrets --all` 통과
+- GitHub Actions production 배포 미실행
 
 #### 인계 메모
 
-- 모든 API 조회는 서버 컴포넌트에서 수행되므로 이번 작업에서 브라우저 CORS 허용 설정을 추가하지 않는다.
-- Hobby에서는 서울 Function 리전을 사용하지 않고 기본 리전 응답시간을 먼저 측정한다.
-- 실제 Vercel 배포와 도메인 연결 전까지 작업을 `IN_PROGRESS`로 유지한다.
+- Vercel CLI `58.4.4`를 프론트 devDependency로 추가하면 CLI 전이 의존성 때문에 audit 결과가 크게 증가해, 애플리케이션 의존성과 분리하고 workflow의 일회성 runner에 정확한 버전으로 설치한다.
+- 수동 workflow를 production에서 검증하기 전에는 `frontend/vercel.json`을 추가하지 않는다.
 
 ## READY
 
@@ -114,6 +92,7 @@ Next.js 프론트엔드를 Vercel Hobby에 안전하게 배포하고 운영 API�
 ## LATER
 
 - PWA 설정 및 홈 화면 추가 검증
+- 프론트엔드 이전 production deployment 수동 롤백 workflow
 - 운영 API 노출 정책 강화: 운영 Swagger/OpenAPI 비활성화, Cloudflare rate limit 적용, 프론트 배포 도메인 기반 CORS 제한
 - OpenAPI와 프론트 TypeScript 타입의 계약 자동화
 - 외부 API fixture 기반 크롤링 전체 시나리오 테스트
@@ -121,6 +100,15 @@ Next.js 프론트엔드를 Vercel Hobby에 안전하게 배포하고 운영 API�
 - 아키텍처 규칙 자동 검사
 
 ## 최근 완료
+
+### FE-008 Vercel 프론트엔드 배포
+
+- 상태: DONE
+- 브랜치: develop
+- 완료일: 2026-08-02
+- 결과: Next.js 프론트엔드를 Vercel Hobby에 배포하고 `trendzip.nadoran.com` 커스텀 도메인에서 운영 API 기반 핵심 사용자 흐름을 제공한다.
+- 운영 메모: API 주소는 서버 전용 `API_BASE_URL`로 관리하며 기본 10초 timeout과 Node.js 24 런타임을 적용했다. Cloudflare는 프론트 도메인의 DNS만 관리하고 트래픽은 Vercel로 직접 전달한다.
+- 검증: Vercel 기본·커스텀 도메인의 랜딩, TEEN/TWENTY 피드와 랭킹, 키워드 상세가 정상 응답했다. 데스크톱 실제 화면과 390x844 모바일 화면, 가로 넘침 및 브라우저 오류 부재를 확인했다.
 
 ### DOCS-001 프로젝트 README 작성
 
@@ -158,14 +146,3 @@ Next.js 프론트엔드를 Vercel Hobby에 안전하게 배포하고 운영 API�
 - 결과: Gemini와 fallback 후보의 공통 후처리 단계에서 `치지직`, `CHZZK` 플랫폼명을 대소문자 무시·정확 일치 기준으로 제외하고 Gemini 프롬프트에도 구체적인 제외 예시를 추가했다.
 - 데이터 메모: 기존 키워드와 트렌드 로그는 이력 보존을 위해 물리 삭제하지 않는다. 백엔드 배포 후 정상 크롤링을 한 번 완료하면 최신 키워드 목록과 활성 피드에서 제외된다.
 - 검증: 후보 후처리, Gemini 프롬프트와 YouTube 후보 수집 회귀 테스트를 추가했다. `치지직컵` 부분 일치 표현 유지와 필터링 후 순위 재계산을 확인하고 백엔드 전체 테스트, `ktlintCheck`와 build를 통과했다.
-
-### FE-007 피드 섹션 정합성 개선
-
-- 상태: DONE
-- 브랜치: develop
-- 완료일: 2026-07-30
-- 결과: 피드 배열 위치가 아닌 API `feedSection`을 기준으로 섹션을 구성한다. 첫 `TODAY_PICK` 한 편은 오늘의 픽, `RISING`은 지금 뜨는 트렌드, `RELATED`와 분류되지 않은 항목은 함께 보면 좋은 영상에 표시한다.
-- 디자인 기준: `design/feed.jsx`, `design/trendzip-feed.html`
-- 디자인 차이: 실제 상승 폭을 판정하지 않는 기존 `RISING`은 급상승 대신 `지금 뜨는 트렌드`로 표현한다. 시안에 없는 관련 영상 섹션은 `RELATED` 항목을 현재 트렌드로 오인하지 않도록 추가했다.
-- 검증: `npm run lint`, `npm run build`를 통과했다. 섞인 API 순서, 복수 `TODAY_PICK`, 분류되지 않은 항목과 `TODAY_PICK` 부재를 검증했으며 1280x800·390x844 실제 Chromium 화면에서 섹션 순서와 가로 넘침 없음을 확인했다.
-- 디자인 검증: PASS

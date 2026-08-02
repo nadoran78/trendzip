@@ -147,6 +147,6 @@ Week 5-6: 나머지 페이지 + 배포
   [x] 트렌드 키워드 목록 페이지 + API 연동
   [x] 키워드 상세 페이지 (설명 + TrendGraph) + API 연동
   [ ] 다크모드 전체 적용 및 모바일 반응형 점검
-  [ ] Vercel 배포 설정
+  [x] Vercel production 및 수동 배포 workflow 설정
   [ ] PWA 동작 확인 (홈 화면 추가)
 ```
