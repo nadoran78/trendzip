@@ -26,6 +26,8 @@ Vercel production 배포
 
 workflow 파일은 `.github/workflows/deploy-frontend.yml`이다.
 
+Vercel 프로젝트의 Root Directory가 `frontend`로 설정되어 있으므로 `npm ci`, lint와 typecheck만 `frontend`에서 실행한다. `vercel pull`, `vercel build`, `vercel deploy`는 저장소 루트에서 실행해야 Vercel이 Root Directory를 한 번만 적용한다.
+
 ## 안전장치
 
 - `workflow_dispatch` 외에는 배포를 시작하지 않는다.
@@ -119,6 +121,10 @@ workflow 실행 브랜치가 `main`인지 확인한다.
 ### Vercel 프로젝트를 찾지 못하는 경우
 
 `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`가 현재 `nadoran-lab`의 Trendzip 프로젝트 값인지 확인한다. 토큰이 해당 팀에 접근 가능한지도 확인한다.
+
+### frontend/frontend/package.json을 찾는 경우
+
+Vercel 프로젝트의 Root Directory `frontend`가 두 번 적용된 상태다. Vercel CLI 단계에 `working-directory: frontend`가 없는지 확인한다. 프론트 검증 명령과 달리 Vercel CLI는 저장소 루트에서 실행한다.
 
 ### build는 성공했지만 smoke test가 실패하는 경우
 

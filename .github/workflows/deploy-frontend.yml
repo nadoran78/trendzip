@@ -62,16 +62,13 @@ jobs:
         run: npm install --global "vercel@${VERCEL_CLI_VERSION}"
 
       - name: Pull Vercel production configuration
-        working-directory: frontend
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Build Vercel production artifacts
-        working-directory: frontend
         run: vercel build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy Vercel production artifacts
         id: deploy
-        working-directory: frontend
         shell: bash
         run: |
           deployment_url="$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")"
