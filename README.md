@@ -9,7 +9,7 @@
 
 Trendzip의 서비스명은 **MZ 따라잡기**입니다. 한국 YouTube 인기 영상에서 키워드 후보를 찾고, 세대별 검색 관심도를 검증한 뒤 각 키워드가 왜 주목받는지 설명합니다. 사용자는 로그인 없이 10대 또는 20대 피드, 키워드 순위와 상세 분석을 탐색할 수 있습니다.
 
-- Frontend: 배포 준비 중
+- Service: [https://trendzip.nadoran.com](https://trendzip.nadoran.com)
 
 ## Screens
 
@@ -83,7 +83,7 @@ flowchart LR
     Spring --> GeminiAPI
 ```
 
-백엔드, PostgreSQL과 Redis는 Mac mini의 Docker Compose에서 프로젝트 단위로 실행됩니다. Cloudflare Tunnel과 Caddy가 공개 API 요청을 백엔드 컨테이너로 전달하며, 백엔드 Docker 이미지는 GHCR을 통해 배포합니다. 프론트엔드 공개 배포는 준비 중입니다.
+백엔드, PostgreSQL과 Redis는 Mac mini의 Docker Compose에서 프로젝트 단위로 실행됩니다. Cloudflare Tunnel과 Caddy가 공개 API 요청을 백엔드 컨테이너로 전달하며, 백엔드 Docker 이미지는 GHCR을 통해 배포합니다. Next.js 프론트엔드는 Vercel에 배포되어 `trendzip.nadoran.com`에서 서비스됩니다.
 
 ## Tech Stack
 
@@ -94,7 +94,7 @@ flowchart LR
 | Persistence | Spring Data JPA, jOOQ, Flyway |
 | Data | PostgreSQL 16, Redis 7 |
 | External API | YouTube Data API v3, Naver DataLab, Gemini 3.1 Flash-Lite |
-| Infra | Docker Compose, GHCR, Cloudflare Tunnel, Caddy, Mac mini |
+| Infra | Vercel, Docker Compose, GHCR, Cloudflare Tunnel, Caddy, Mac mini |
 | Quality | Gradle Test, ktlint, ESLint, TypeScript, Gitleaks, GitHub Actions |
 
 ## Repository Structure
@@ -213,11 +213,11 @@ GitHub Actions는 pull request와 `develop` push에서 Gitleaks 검사를 먼저
 
 ## Project Status
 
-현재 랜딩, 세대별 피드, 트렌드 랭킹과 키워드 상세의 핵심 사용자 흐름이 구현되어 있습니다. 백엔드는 운영 환경에 수동 배포되어 있고 프론트엔드 공개 배포를 준비하고 있습니다.
+현재 랜딩, 세대별 피드, 트렌드 랭킹과 키워드 상세의 핵심 사용자 흐름이 구현되어 있습니다. 백엔드는 Mac mini 운영 환경에 수동 배포되어 있으며, 프론트엔드는 Vercel을 통해 [trendzip.nadoran.com](https://trendzip.nadoran.com)에서 제공됩니다.
 
 다음 우선순위는 다음과 같습니다.
 
-1. PWA 및 프론트엔드 배포
+1. PWA 설정과 홈 화면 추가 검증
 2. OpenAPI 기반 frontend 타입 계약 자동화
 3. 핵심 사용자 흐름 E2E 테스트
 
