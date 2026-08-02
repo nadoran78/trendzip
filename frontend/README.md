@@ -30,11 +30,13 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Environment
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+API_BASE_URL=http://localhost:8080
 ```
 
 Production API:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=https://api-trendzip.nadoran.com
+API_BASE_URL=https://api-trendzip.nadoran.com
 ```
+
+`API_BASE_URL`은 Next.js 서버 컴포넌트에서만 사용하며 브라우저 공개 환경변수로 노출하지 않습니다.

@@ -3,6 +3,8 @@ import type { ApiResponse } from "@/types/api";
 
 type QueryValue = string | number | boolean | null | undefined;
 
+const DEFAULT_API_REQUEST_TIMEOUT_MS = 10_000;
+
 export type FetchApiOptions = Omit<RequestInit, "body"> & {
   body?: BodyInit | null;
   query?: Record<string, QueryValue>;
@@ -27,8 +29,11 @@ export async function fetchApi<T>(
   path: string,
   options: FetchApiOptions = {},
 ): Promise<T> {
+  const signal =
+    options.signal ?? AbortSignal.timeout(DEFAULT_API_REQUEST_TIMEOUT_MS);
   const response = await fetch(buildApiUrl(path, options.query), {
     ...options,
+    signal,
     headers: {
       Accept: "application/json",
       ...options.headers,
