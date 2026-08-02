@@ -115,9 +115,12 @@ Codex가 Next.js + Tailwind로 구현
 - 로딩/에러 상태는 각 페이지의 loading.tsx / error.tsx로 처리
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8080   # 로컬
-NEXT_PUBLIC_API_BASE_URL=https://api-trendzip.nadoran.com  # 프로덕션
+API_BASE_URL=http://localhost:8080   # 로컬
+API_BASE_URL=https://api-trendzip.nadoran.com  # 프로덕션
 ```
+
+- `API_BASE_URL`은 서버 컴포넌트에서만 읽는 서버 전용 환경변수다.
+- API client는 기본 10초 timeout을 적용하며 호출자가 전달한 `AbortSignal`을 우선한다.
 
 ---
 

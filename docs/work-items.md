@@ -23,7 +23,89 @@
 
 ## ACTIVE
 
-- 없음
+### FE-008 Vercel 프론트엔드 배포
+
+- 상태: IN_PROGRESS
+- 브랜치: develop
+- 시작일: 2026-08-02
+- 마지막 갱신: 2026-08-02
+- 다음 행동: `develop`을 push해 CI를 확인하고 `main`에 반영한 뒤 Vercel에 `API_BASE_URL`을 등록해 첫 배포를 실행한다.
+
+#### 목적
+
+Next.js 프론트엔드를 Vercel Hobby에 안전하게 배포하고 운영 API를 사용하는 핵심 사용자 흐름을 공개 도메인에서 제공한다.
+
+#### 범위
+
+- API base URL을 서버 전용 환경변수로 전환
+- 서버 API 요청의 기본 timeout 적용
+- Vercel과 CI의 Node.js 런타임 정합성 확보
+- Vercel 로컬 메타데이터의 Git 추적 방지
+- 운영 API 기반 production build 검증
+- Vercel 기본 도메인과 커스텀 도메인 배포 검증
+- 배포 완료 후 README와 프로젝트 상태 갱신
+
+#### 제외 범위
+
+- PWA와 서비스 워커 설정
+- 백엔드 CORS 변경
+- 운영 Swagger/OpenAPI 비활성화
+- Cloudflare API rate limit 적용
+- Vercel 유료 리전과 다중 리전 구성
+
+#### 디자인 기준
+
+- 상태: CONFIRMED
+- `design/README.md`
+- `design/app.jsx`
+- `design/feed.jsx`
+- `design/trend.jsx`
+- `design/keyword.jsx`
+- 배포 구성 작업이므로 UI를 변경하지 않고 기존 확정 화면과 동일하게 렌더링되는지만 검증한다.
+
+#### 진행 상황
+
+- API base URL을 `API_BASE_URL` 서버 전용 환경변수로 전환했다.
+- API 요청에 기본 10초 timeout을 적용하고 호출자 `AbortSignal` 우선 규칙을 유지했다.
+- Vercel과 CI가 Node.js 24를 사용하도록 런타임을 명시했다.
+- `.vercel/`을 Git 추적 대상에서 제외하고 관련 환경변수 문서를 동기화했다.
+- 운영 API 주소를 사용한 production build와 로컬 정적 검증을 완료했다.
+
+#### 완료 조건
+
+- 브라우저 공개 환경변수 없이 Vercel 서버에서 운영 API를 호출한다.
+- 백엔드 응답 지연이 무기한 Vercel 렌더링 대기로 이어지지 않는다.
+- Node.js 24와 Next.js 기본 빌드 설정으로 production build가 성공한다.
+- Vercel 기본 도메인에서 랜딩, 피드, 랭킹과 키워드 상세가 정상 동작한다.
+- `trendzip.nadoran.com`에서 HTTPS와 핵심 사용자 흐름이 정상 동작한다.
+- README와 프로젝트 상태가 실제 배포 결과와 일치한다.
+
+#### 관련 코드
+
+- `frontend/src/lib/env.ts`
+- `frontend/src/lib/api-client.ts`
+- `frontend/package.json`
+- `frontend/.env.example`
+- `.gitignore`
+- `README.md`
+- `frontend/README.md`
+- `frontend/AGENTS.md`
+
+#### 검증
+
+- 상태: PARTIAL
+- 통과: `npm run lint`
+- 통과: `npm run typecheck`
+- 통과: 운영 API 환경변수를 사용한 `npm run build`
+- 통과: `./dev/verify --quick`
+- 통과: `./dev/check-secrets --staged`
+- 예정: Vercel 기본·커스텀 도메인의 모바일·데스크톱 실제 화면
+
+#### 인계 메모
+
+- 모든 API 조회는 서버 컴포넌트에서 수행되므로 이번 작업에서 브라우저 CORS 허용 설정을 추가하지 않는다.
+- Hobby에서는 서울 Function 리전을 사용하지 않고 기본 리전 응답시간을 먼저 측정한다.
+- 실제 Vercel 배포와 도메인 연결 전까지 작업을 `IN_PROGRESS`로 유지한다.
 
 ## READY
 
@@ -31,7 +113,7 @@
 
 ## LATER
 
-- PWA 및 프론트 배포 마무리
+- PWA 설정 및 홈 화면 추가 검증
 - 운영 API 노출 정책 강화: 운영 Swagger/OpenAPI 비활성화, Cloudflare rate limit 적용, 프론트 배포 도메인 기반 CORS 제한
 - OpenAPI와 프론트 TypeScript 타입의 계약 자동화
 - 외부 API fixture 기반 크롤링 전체 시나리오 테스트
