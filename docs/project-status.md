@@ -1,6 +1,6 @@
 # 프로젝트 현재 상태
 
-- 마지막 갱신: 2026-08-02
+- 마지막 갱신: 2026-08-03
 - 현재 단계: 핵심 사용자 흐름 공개 배포 및 운영 보완
 - 현재 집중 영역: Vercel 프론트엔드 수동 배포 전환
 
@@ -38,7 +38,7 @@
 - 구현됨: 백엔드 Docker 이미지와 운영 Compose 구성
 - 구현됨: Gitleaks 검사 후 전체 통합 검증을 실행하는 GitHub Actions CI
 - 구현됨: Vercel 프론트엔드 production 배포와 `trendzip.nadoran.com` 커스텀 도메인
-- 일부 구현됨: GitHub Actions 프론트엔드 수동 배포 workflow는 로컬 구현됐으며 production 원격 검증과 Git 자동 배포 비활성화가 남아 있음
+- 일부 구현됨: GitHub Actions 프론트엔드 수동 production 배포는 검증됐으며 Git 자동 배포 비활성화 설정의 원격 검증이 남아 있음
 - 일부 구현됨: 맥미니 수동 배포 절차는 있으나 자동 배포 workflow는 없음
 
 ### 테스트 및 자동화

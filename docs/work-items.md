@@ -28,8 +28,8 @@
 - 상태: IN_PROGRESS
 - 브랜치: develop
 - 시작일: 2026-08-02
-- 마지막 갱신: 2026-08-02
-- 다음 행동: Vercel CLI 경로 수정분을 `main`에 반영한 뒤 `Deploy Frontend` workflow를 다시 실행한다.
+- 마지막 갱신: 2026-08-03
+- 다음 행동: Git 자동 배포 비활성화 설정을 원격에 반영하고 자동 배포 미생성과 수동 production 재배포를 확인한다.
 
 #### 목적
 
@@ -41,21 +41,22 @@ Git push와 Vercel production 배포를 분리하고 GitHub Actions에서 `main`
 - GitHub Environment Secret 사전 검증과 최소 workflow 권한
 - production 중복 배포 방지와 배포 후 smoke test
 - 최초 전환 순서와 문제 해결 절차 문서화
+- Vercel Git 연동 자동 배포 비활성화
 
 #### 제외 범위
 
 - 백엔드 배포 workflow
 - Cloudflare Access 적용
 - 프론트엔드 롤백 workflow
-- 첫 수동 배포 성공 전 Vercel Git 자동 배포 비활성화
 
 #### 진행 상황
 
 - 수동 production 배포 workflow와 운영 문서를 구현했다.
 - `production-frontend` GitHub Environment Secret 등록을 완료했다.
 - 첫 원격 실행에서 인증을 확인했고, Vercel 프로젝트의 `frontend` Root Directory와 workflow 작업 디렉터리가 중복 적용되는 문제를 수정했다.
-- 첫 수동 배포 성공 전까지 Vercel Git 자동 배포는 유지한다.
-- 수정된 workflow의 production 재실행과 smoke test 확인이 남아 있다.
+- 수정된 workflow의 production 배포와 기본·커스텀 도메인 smoke test가 성공했다.
+- `frontend/vercel.json`에 모든 브랜치의 Git 자동 배포 비활성화 설정을 추가했다.
+- 자동 배포 미생성과 수동 workflow 재배포에 대한 원격 확인이 남아 있다.
 
 #### 완료 조건
 
@@ -67,6 +68,7 @@ Git push와 Vercel production 배포를 분리하고 GitHub Actions에서 `main`
 #### 관련 코드
 
 - `.github/workflows/deploy-frontend.yml`
+- `frontend/vercel.json`
 - `docs/ops/frontend-deployment.md`
 - `docs/ci-and-secret-management.md`
 - `docs/project-status.md`
@@ -80,12 +82,15 @@ Git push와 Vercel production 배포를 분리하고 GitHub Actions에서 `main`
 - workflow YAML 구문 검사 통과
 - `./dev/check-secrets --all` 통과
 - GitHub Actions 첫 실행에서 `vercel pull` 인증 성공
-- `vercel build`의 중복 경로 오류 수정 후 production 재검증 필요
+- GitHub Actions production build·deploy 및 smoke test 성공
+- `frontend/vercel.json` JSON 구문 검사 통과
+- Git 자동 배포 비활성화 변경 후 `./dev/verify --quick`과 프론트 production build 통과
+- Git 자동 배포 비활성화는 원격 검증 필요
 
 #### 인계 메모
 
 - Vercel CLI `58.4.4`를 프론트 devDependency로 추가하면 CLI 전이 의존성 때문에 audit 결과가 크게 증가해, 애플리케이션 의존성과 분리하고 workflow의 일회성 runner에 정확한 버전으로 설치한다.
-- 수동 workflow를 production에서 검증하기 전에는 `frontend/vercel.json`을 추가하지 않는다.
+- 수동 workflow의 production 검증 성공 후 `frontend/vercel.json`을 추가했다. 원격 검증 전까지 작업을 완료 처리하지 않는다.
 
 ## READY
 

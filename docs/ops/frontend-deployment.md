@@ -80,7 +80,7 @@ Git 자동 배포를 끄기 전에 수동 workflow가 정상 동작하는지 먼
 
 ## Git 자동 배포 비활성화
 
-최초 수동 배포 성공을 확인한 뒤에만 `frontend/vercel.json`을 다음 내용으로 추가한다.
+최초 수동 배포 성공을 확인한 뒤 `frontend/vercel.json`에 다음 설정을 적용했다.
 
 ```json
 {
@@ -91,9 +91,15 @@ Git 자동 배포를 끄기 전에 수동 workflow가 정상 동작하는지 먼
 }
 ```
 
-이 설정은 수동 workflow 구현과 별도 커밋으로 반영한다. 설정 반영 후에는 Git push만으로 Vercel 배포가 생성되지 않고 `Deploy Frontend` workflow를 실행했을 때만 production이 갱신되는지 확인한다.
+이 설정은 GitHub 연동을 해제하지 않고 모든 브랜치의 Git push 자동 배포만 중지한다. Vercel CLI를 사용하는 `Deploy Frontend` workflow에는 영향을 주지 않는다.
 
-최초 workflow 원격 검증 전에는 서비스 배포 경로를 잃지 않도록 이 설정을 추가하지 않는다.
+설정 반영 후에는 다음 항목을 확인한다.
+
+1. `develop` push로 Preview deployment가 자동 생성되지 않는다.
+2. `main` 반영으로 Production deployment가 자동 생성되지 않는다.
+3. `Deploy Frontend` workflow를 `main`에서 수동 실행하면 Production이 갱신된다.
+
+Git 자동 배포를 복구해야 하면 `frontend/vercel.json`의 `git.deploymentEnabled`를 `true`로 변경하거나 해당 설정을 제거한다.
 
 ## 배포 후 확인
 
