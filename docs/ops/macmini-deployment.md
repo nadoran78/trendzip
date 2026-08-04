@@ -768,15 +768,26 @@ docker-compose --env-file backend/.env.prod -f docker-compose.prod.yml logs --ta
 외부 헬스체크:
 
 ```bash
-curl https://api-trendzip.nadoran.com/api/health
+curl \
+  --header "CF-Access-Client-Id: ${CLOUDFLARE_ACCESS_CLIENT_ID:?}" \
+  --header "CF-Access-Client-Secret: ${CLOUDFLARE_ACCESS_CLIENT_SECRET:?}" \
+  https://api-trendzip.nadoran.com/api/health
 ```
 
 백엔드 API도 직접 호출한다.
 
 ```bash
-curl "https://api-trendzip.nadoran.com/api/feed?generation=TEEN"
-curl "https://api-trendzip.nadoran.com/api/keywords?generation=TEEN"
+curl \
+  --header "CF-Access-Client-Id: ${CLOUDFLARE_ACCESS_CLIENT_ID:?}" \
+  --header "CF-Access-Client-Secret: ${CLOUDFLARE_ACCESS_CLIENT_SECRET:?}" \
+  "https://api-trendzip.nadoran.com/api/feed?generation=TEEN"
+curl \
+  --header "CF-Access-Client-Id: ${CLOUDFLARE_ACCESS_CLIENT_ID:?}" \
+  --header "CF-Access-Client-Secret: ${CLOUDFLARE_ACCESS_CLIENT_SECRET:?}" \
+  "https://api-trendzip.nadoran.com/api/keywords?generation=TEEN"
 ```
+
+Cloudflare Access 최초 적용 검증에서는 현재 shell에 Vercel production Service Token 값을 안전하게 주입한 뒤 위 명령을 실행한다. 실제 Client ID와 Client Secret을 문서, shell history나 저장소 파일에 기록하지 않는다. 인증 헤더 없이 같은 외부 URL을 호출하면 Access에서 거부되어야 한다. 이후 일상적인 맥미니 origin 확인은 Service Token을 재사용하지 않고 앞 절의 `localhost:8080` Caddy 요청을 사용한다.
 
 ### 12.4 시간대 검증
 

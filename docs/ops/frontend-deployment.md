@@ -63,6 +63,41 @@ GitHub 저장소에서 다음 순서로 Environment를 만든다.
 
 `VERCEL_PROJECT_ID`는 Trendzip 프로젝트의 `Settings > General`에서 확인한다. `VERCEL_ORG_ID`는 Vercel 팀 설정의 Team ID를 사용한다. 로컬에서 Vercel 프로젝트를 link한 경우 `frontend/.vercel/project.json`의 `projectId`, `orgId`로도 확인할 수 있지만 이 파일은 Git에 커밋하지 않는다.
 
+## Cloudflare Access 서비스 인증
+
+운영 API 전체를 Cloudflare Access로 보호한 뒤에는 사용자 브라우저가 아니라 Vercel의 Next.js 서버만 서비스 토큰으로 API를 호출한다.
+
+```text
+사용자 브라우저
+  -> Vercel Next.js 서버
+  -> Cloudflare Access
+  -> Cloudflare Tunnel
+  -> Caddy
+  -> Spring Boot
+```
+
+Vercel 프로젝트의 Production 환경변수에 다음 값을 등록한다.
+
+| 환경변수 | 용도 |
+|---|---|
+| `API_BASE_URL` | `https://api-trendzip.nadoran.com` 운영 API 주소 |
+| `CLOUDFLARE_ACCESS_CLIENT_ID` | Vercel production 전용 Access Service Token Client ID |
+| `CLOUDFLARE_ACCESS_CLIENT_SECRET` | Vercel production 전용 Access Service Token Client Secret |
+
+두 Access 환경변수는 서버 전용이며 `NEXT_PUBLIC_` 접두사를 사용하지 않는다. 실제 값은 GitHub Secret, 저장소 파일, 문서와 로그에 중복 기록하지 않고 Vercel Production 환경에서 관리한다. `vercel pull --environment=production`이 build에 필요한 운영 설정을 가져오므로 배포 workflow Secret에 별도로 추가할 필요가 없다.
+
+Access를 처음 적용할 때는 다음 순서를 지켜 API 차단 시간을 만들지 않는다.
+
+1. Cloudflare에서 Vercel production 전용 Service Token을 생성한다.
+2. Vercel Production 환경변수에 Client ID와 Client Secret을 등록한다.
+3. Access 헤더를 추가하는 프론트 코드를 production에 배포한다.
+4. 랜딩, 피드, 랭킹과 키워드 상세가 기존 공개 API에서 정상인지 확인한다.
+5. Cloudflare Access에서 `api-trendzip.nadoran.com/*` Self-hosted application을 만든다.
+6. `Service Auth` 정책에 해당 Service Token만 포함한다.
+7. 인증 없는 직접 API 호출이 거부되고 프론트 사용자 흐름은 정상인지 확인한다.
+
+`Everyone`, `Bypass`, `Any Access Service Token` 정책은 사용하지 않는다. `/api/health`, Swagger와 OpenAPI도 같은 호스트 정책으로 보호한다.
+
 ## 최초 수동 배포
 
 Git 자동 배포를 끄기 전에 수동 workflow가 정상 동작하는지 먼저 확인한다.
@@ -136,6 +171,12 @@ Vercel 프로젝트의 Root Directory `frontend`가 두 번 적용된 상태다.
 
 Vercel 로그에서 서버 컴포넌트의 `API_BASE_URL` 설정과 운영 API 응답을 확인한다. `API_BASE_URL`은 Vercel 프로젝트의 Production 환경변수로 관리하며 GitHub Actions Secret으로 중복 저장하지 않는다.
 
+### Cloudflare Access 활성화 후 API 요청이 실패하는 경우
+
+Vercel Production 환경에 두 Access 환경변수가 모두 설정됐는지 확인하고 환경변수 등록 이후 프론트를 다시 배포했는지 확인한다. Cloudflare Access application의 보호 hostname과 `Service Auth` 정책이 `api-trendzip.nadoran.com/*`, Vercel production 전용 Service Token을 정확히 가리키는지도 확인한다. 한쪽 자격 증명만 설정되면 프론트 API client가 설정 오류를 발생시킨다.
+
 ## 롤백
 
 이번 작업에는 롤백 workflow를 포함하지 않는다. 긴급한 경우 Vercel Dashboard에서 이전 정상 production deployment를 확인해 복구하고, 배포가 안정화된 뒤 이전 deployment를 선택적으로 승격하는 수동 롤백 workflow를 별도 구현한다.
+
+Cloudflare Access 적용 직후 프론트 전체가 API 인증 오류로 동작하지 않으면 Access application을 일시적으로 비활성화해 공개 API 경로를 복구한다. 원인을 수정하고 프론트를 재배포한 다음 정책을 다시 활성화한다. 프론트가 보내는 Access 헤더는 Access application이 비활성화된 동안에도 기존 Spring Boot API 동작에 영향을 주지 않는다.
