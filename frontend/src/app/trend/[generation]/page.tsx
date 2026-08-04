@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { TrendHeader } from "@/components/common/TrendHeader";
 import { TrendRanking } from "@/components/trend/TrendRanking";
 import { getGenerationBySlug } from "@/lib/generation";
+import { createPageMetadata } from "@/lib/seo";
 import { getKeywords } from "@/services/trend-api";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,23 @@ type TrendPageProps = {
     generation: string;
   }>;
 };
+
+export async function generateMetadata({
+  params,
+}: TrendPageProps): Promise<Metadata> {
+  const { generation } = await params;
+  const generationOption = getGenerationBySlug(generation);
+
+  if (!generationOption) {
+    notFound();
+  }
+
+  return createPageMetadata({
+    title: `${generationOption.label} 인기 키워드 순위`,
+    description: `${generationOption.label} 사이에서 지금 주목받는 유튜브 트렌드 키워드와 순위 변화를 확인하세요.`,
+    path: `/trend/${generationOption.slug}`,
+  });
+}
 
 export default async function TrendPage({ params }: TrendPageProps) {
   const { generation } = await params;

@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { TrendHeader } from "@/components/common/TrendHeader";
 import { FeedList } from "@/components/feed/FeedList";
 import { getGenerationBySlug } from "@/lib/generation";
+import { createPageMetadata } from "@/lib/seo";
 import { getFeed } from "@/services/trend-api";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,23 @@ type FeedPageProps = {
     generation: string;
   }>;
 };
+
+export async function generateMetadata({
+  params,
+}: FeedPageProps): Promise<Metadata> {
+  const { generation } = await params;
+  const generationOption = getGenerationBySlug(generation);
+
+  if (!generationOption) {
+    notFound();
+  }
+
+  return createPageMetadata({
+    title: `${generationOption.label} 유튜브 트렌드 피드`,
+    description: `${generationOption.label}가 지금 보고 있는 인기 유튜브 영상과 관련 키워드를 trendzip에서 확인하세요.`,
+    path: `/feed/${generationOption.slug}`,
+  });
+}
 
 export default async function FeedPage({ params }: FeedPageProps) {
   const { generation } = await params;
