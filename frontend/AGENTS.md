@@ -117,9 +117,14 @@ Codex가 Next.js + Tailwind로 구현
 ```env
 API_BASE_URL=http://localhost:8080   # 로컬
 API_BASE_URL=https://api-trendzip.nadoran.com  # 프로덕션
+CLOUDFLARE_ACCESS_CLIENT_ID=         # 운영 Vercel 서버 전용
+CLOUDFLARE_ACCESS_CLIENT_SECRET=     # 운영 Vercel 서버 전용
 ```
 
 - `API_BASE_URL`은 서버 컴포넌트에서만 읽는 서버 전용 환경변수다.
+- Cloudflare Access Client ID와 Client Secret은 반드시 함께 설정하며 `NEXT_PUBLIC_` 접두사를 사용하지 않는다.
+- 로컬 API처럼 Cloudflare Access가 적용되지 않은 환경에서는 두 Access 환경변수를 모두 비워둔다.
+- API client는 Access 자격 증명이 설정된 경우 모든 백엔드 요청에 서비스 인증 헤더를 추가한다.
 - API client는 기본 10초 timeout을 적용하며 호출자가 전달한 `AbortSignal`을 우선한다.
 
 ---
