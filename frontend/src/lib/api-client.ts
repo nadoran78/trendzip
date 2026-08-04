@@ -1,4 +1,7 @@
-import { getApiBaseUrl } from "@/lib/env";
+import {
+  getApiBaseUrl,
+  getCloudflareAccessCredentials,
+} from "@/lib/env";
 import type { ApiResponse } from "@/types/api";
 
 type QueryValue = string | number | boolean | null | undefined;
@@ -34,10 +37,7 @@ export async function fetchApi<T>(
   const response = await fetch(buildApiUrl(path, options.query), {
     ...options,
     signal,
-    headers: {
-      Accept: "application/json",
-      ...options.headers,
-    },
+    headers: buildApiHeaders(options.headers),
   });
 
   const responseBody = await readJson<ApiResponse<T>>(response);
@@ -79,6 +79,25 @@ function buildApiUrl(
   });
 
   return url.toString();
+}
+
+function buildApiHeaders(requestHeaders?: HeadersInit): Headers {
+  const headers = new Headers(requestHeaders);
+  const accessCredentials = getCloudflareAccessCredentials();
+
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
+  }
+
+  headers.delete("CF-Access-Client-Id");
+  headers.delete("CF-Access-Client-Secret");
+
+  if (accessCredentials) {
+    headers.set("CF-Access-Client-Id", accessCredentials.clientId);
+    headers.set("CF-Access-Client-Secret", accessCredentials.clientSecret);
+  }
+
+  return headers;
 }
 
 async function readJson<T>(response: Response): Promise<T | null> {

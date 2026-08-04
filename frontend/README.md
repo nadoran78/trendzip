@@ -31,12 +31,16 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ```env
 API_BASE_URL=http://localhost:8080
+CLOUDFLARE_ACCESS_CLIENT_ID=
+CLOUDFLARE_ACCESS_CLIENT_SECRET=
 ```
 
 Production API:
 
 ```env
 API_BASE_URL=https://api-trendzip.nadoran.com
+CLOUDFLARE_ACCESS_CLIENT_ID=<Cloudflare Access service token client ID>
+CLOUDFLARE_ACCESS_CLIENT_SECRET=<Cloudflare Access service token client secret>
 ```
 
-`API_BASE_URL`은 Next.js 서버 컴포넌트에서만 사용하며 브라우저 공개 환경변수로 노출하지 않습니다.
+세 환경변수는 Next.js 서버에서만 사용하며 브라우저 공개 환경변수로 노출하지 않습니다. 로컬 API가 Cloudflare Access로 보호되지 않는 경우 두 Access 환경변수는 비워둘 수 있습니다. Client ID와 Client Secret은 반드시 함께 설정하며 `NEXT_PUBLIC_` 접두사를 사용하지 않습니다.
