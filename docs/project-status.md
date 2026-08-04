@@ -31,6 +31,7 @@
 - 구현됨: 피드 키워드 태그와 랭킹 행에서 상세 화면으로 이어지는 탐색 경로
 - 구현됨: 서버 전용 API 환경변수와 Node.js 24 기반 Vercel 공개 배포
 - 구현됨: Vercel 서버의 운영 API 요청에 Cloudflare Access Service Token 헤더를 추가하는 서비스 인증 설정
+- 구현됨: 페이지별 SEO metadata와 canonical URL, Open Graph·Twitter 공유 이미지, robots와 동적 sitemap
 - 미구현: PWA 설정과 프론트엔드 자동 테스트
 
 ### 인프라 및 배포
@@ -70,11 +71,10 @@
 
 ## 주요 미완성 영역
 
-1. 페이지별 SEO metadata, sitemap과 Open Graph 설정
-2. PWA 설정과 홈 화면 추가 검증
-3. 프론트 핵심 사용자 흐름 자동 테스트
-4. OpenAPI와 프론트 TypeScript 타입의 계약 자동화
-5. 프론트엔드 이전 production deployment 수동 롤백
+1. PWA 설정과 홈 화면 추가 검증
+2. 프론트 핵심 사용자 흐름 자동 테스트
+3. OpenAPI와 프론트 TypeScript 타입의 계약 자동화
+4. 프론트엔드 이전 production deployment 수동 롤백
 
 활성 작업, 작업 브랜치와 우선순위는 [작업 목록](work-items.md)을 기준으로 한다.
 

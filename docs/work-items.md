@@ -23,7 +23,88 @@
 
 ## ACTIVE
 
-- 없음
+### FE-009 SEO 및 Open Graph 설정
+
+- 상태: REVIEW
+- 브랜치: develop
+- 시작일: 2026-08-04
+- 마지막 갱신: 2026-08-04
+- 다음 행동: 변경 내용을 검토하고 커밋한 뒤 production에 배포해 Search Console과 SNS 미리보기를 확인한다.
+
+#### 목적
+
+공개 프론트엔드의 검색 결과와 SNS 공유 미리보기에 페이지별로 정확한 제목, 설명, canonical URL과 브랜드 이미지를 제공한다.
+
+#### 범위
+
+- 공통·페이지별 metadata와 canonical URL
+- 키워드 상세 데이터 기반 동적 metadata
+- Open Graph와 Twitter Card 공통 공유 이미지
+- `robots.txt`와 정적·동적 URL을 포함한 `sitemap.xml`
+
+#### 제외 범위
+
+- 화면 레이아웃 변경
+- 키워드별 전용 공유 이미지
+- JSON-LD 구조화 데이터
+- Google Search Console과 SNS 디버거의 외부 설정
+
+#### 진행 상황
+
+- 공통 SEO 상수와 페이지 metadata 생성 함수를 구현했다.
+- 피드·랭킹은 세대별 metadata를, 키워드 상세는 API 데이터 기반 metadata를 생성한다.
+- 키워드 상세 렌더링과 metadata 조회가 요청 단위 캐시를 공유하도록 정리했다.
+- 공유 이미지, robots와 동적 키워드 URL을 포함하는 sitemap을 구현했다.
+
+#### 완료 조건
+
+- 공개 경로의 title, description, canonical과 OG/Twitter 태그가 운영 도메인 기준으로 생성된다.
+- robots, sitemap과 `1200x630` 공유 이미지가 정상 응답한다.
+- sitemap은 키워드 API 장애 시에도 정적 공개 경로를 반환한다.
+- 프론트 lint·타입 검사·production build와 저장소 빠른 검증을 통과한다.
+
+#### 관련 코드
+
+- `frontend/src/app/layout.tsx`
+- `frontend/src/app/feed/[generation]/page.tsx`
+- `frontend/src/app/trend/[generation]/page.tsx`
+- `frontend/src/app/keyword/[id]/page.tsx`
+- `frontend/src/app/opengraph-image.tsx`
+- `frontend/src/app/twitter-image.tsx`
+- `frontend/src/app/robots.ts`
+- `frontend/src/app/sitemap.ts`
+- `frontend/src/lib/seo.ts`
+- `frontend/src/lib/social-image.tsx`
+- `frontend/src/services/keyword-detail.ts`
+- `design/app.jsx`
+- `design/trendzip.html`
+
+#### 디자인 기준
+
+- 상태: CONFIRMED
+- `design/README.md`
+- `design/app.jsx`
+- `design/trendzip.html`
+- 적용 범위: 화면 UI는 변경하지 않고 공유 이미지에 랜딩 페이지의 워드마크, 다크 배경과 청록·분홍 포인트를 반영한다.
+
+#### 검증
+
+- 상태: PASS
+- 디자인 검증: PASS
+- 공유 이미지 `1200x630` 렌더링 확인, 화면 UI 변경 없음
+- `npm run lint` 통과
+- `npm run typecheck` 통과
+- mock API 기반 `npm run build` 통과
+- robots, 정적·동적 sitemap, 페이지별 metadata와 공유 이미지 응답 확인
+- `./dev/verify --quick` 통과
+- `./dev/check-secrets --all` 통과
+- 배포 후 검증: Search Console sitemap 제출과 SNS 공유 미리보기 확인 필요
+
+#### 인계 메모
+
+- 공유 이미지는 소셜 크롤러가 키워드 API 상태에 영향받지 않도록 모든 페이지에서 동일한 정적 생성 이미지를 사용한다.
+- sitemap의 키워드 URL 조회는 실패를 허용하며, API 장애 시 랜딩·피드·랭킹 경로만 반환한다.
+- 확정 화면 디자인은 변경하지 않았고 공유 이미지에 `design/app.jsx`, `design/trendzip.html`의 워드마크와 색상만 반영했다.
 
 ## READY
 
@@ -32,7 +113,6 @@
 ## LATER
 
 - PWA 설정 및 홈 화면 추가 검증
-- SEO 및 Open Graph 설정: 페이지별 metadata·canonical URL, `robots.txt`, `sitemap.xml`, 공유용 OG 이미지와 Twitter Card를 구성하고 검색·SNS 미리보기를 검증
 - 프론트엔드 이전 production deployment 수동 롤백 workflow
 - 운영 API 노출 정책 강화: 운영 Swagger/OpenAPI 비활성화, Cloudflare rate limit 적용, 프론트 배포 도메인 기반 CORS 제한
 - OpenAPI와 프론트 TypeScript 타입의 계약 자동화
