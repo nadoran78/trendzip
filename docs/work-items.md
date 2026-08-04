@@ -100,6 +100,7 @@ Git push와 Vercel production 배포를 분리하고 GitHub Actions에서 `main`
 
 - Cloudflare Access 운영 활성화: 서비스 인증 헤더가 포함된 프론트를 재배포한 뒤 `api-trendzip.nadoran.com/*`에 특정 Service Token만 허용하는 `Service Auth` 정책을 적용하고 직접 API 차단·프론트 정상 동작을 검증
 - PWA 설정 및 홈 화면 추가 검증
+- SEO 및 Open Graph 설정: 페이지별 metadata·canonical URL, `robots.txt`, `sitemap.xml`, 공유용 OG 이미지와 Twitter Card를 구성하고 검색·SNS 미리보기를 검증
 - 프론트엔드 이전 production deployment 수동 롤백 workflow
 - 운영 API 노출 정책 강화: 운영 Swagger/OpenAPI 비활성화, Cloudflare rate limit 적용, 프론트 배포 도메인 기반 CORS 제한
 - OpenAPI와 프론트 TypeScript 타입의 계약 자동화
