@@ -2,11 +2,11 @@
 
 - 마지막 갱신: 2026-08-04
 - 현재 단계: 핵심 사용자 흐름 공개 배포 및 운영 보완
-- 현재 집중 영역: Vercel 프론트엔드 수동 배포 전환
+- 현재 집중 영역: 공개 서비스 SEO 및 운영 품질 보완
 
 ## 한 줄 상태
 
-백엔드의 트렌드 수집·저장·조회 API와 확정 디자인을 반영한 랜딩·세대별 피드·랭킹·키워드 상세 화면이 구현됐으며 `trendzip.nadoran.com`에서 핵심 탐색 흐름을 사용할 수 있다.
+백엔드의 트렌드 수집·저장·조회 API와 확정 디자인을 반영한 랜딩·세대별 피드·랭킹·키워드 상세 화면이 구현됐으며, 운영 API를 Cloudflare Access로 보호한 상태에서 `trendzip.nadoran.com`의 핵심 탐색 흐름을 사용할 수 있다.
 
 ## 구현 현황
 
@@ -30,7 +30,8 @@
 - 구현됨: 키워드 설명, 검색 관심도 그래프, 관련 영상과 관련 키워드를 제공하는 상세 화면
 - 구현됨: 피드 키워드 태그와 랭킹 행에서 상세 화면으로 이어지는 탐색 경로
 - 구현됨: 서버 전용 API 환경변수와 Node.js 24 기반 Vercel 공개 배포
-- 구현됨: Vercel 서버의 운영 API 요청에 Cloudflare Access Service Token 헤더를 추가하는 선택적 인증 설정
+- 구현됨: Vercel 서버의 운영 API 요청에 Cloudflare Access Service Token 헤더를 추가하는 서비스 인증 설정
+- 구현됨: 페이지별 SEO metadata와 canonical URL, Open Graph·Twitter 공유 이미지, robots와 동적 sitemap
 - 미구현: PWA 설정과 프론트엔드 자동 테스트
 
 ### 인프라 및 배포
@@ -39,8 +40,8 @@
 - 구현됨: 백엔드 Docker 이미지와 운영 Compose 구성
 - 구현됨: Gitleaks 검사 후 전체 통합 검증을 실행하는 GitHub Actions CI
 - 구현됨: Vercel 프론트엔드 production 배포와 `trendzip.nadoran.com` 커스텀 도메인
-- 일부 구현됨: GitHub Actions 프론트엔드 수동 production 배포는 검증됐으며 Git 자동 배포 비활성화 설정의 원격 검증이 남아 있음
-- 일부 구현됨: Cloudflare Access 서비스 인증 코드는 준비됐으며 프론트 재배포와 Access application 활성화 검증이 남아 있음
+- 구현됨: `main`에서 수동 실행하는 GitHub Actions 프론트엔드 production 배포와 Git 자동 배포 비활성화
+- 구현됨: 특정 Vercel Service Token만 허용하는 Cloudflare Access 기반 운영 API 보호
 - 일부 구현됨: 맥미니 수동 배포 절차는 있으나 자동 배포 workflow는 없음
 
 ### 테스트 및 자동화
@@ -70,11 +71,10 @@
 
 ## 주요 미완성 영역
 
-1. Cloudflare Access 인증 코드 배포와 운영 application 활성화 검증
-2. PWA 설정과 홈 화면 추가 검증
+1. PWA 설정과 홈 화면 추가 검증
+2. 프론트 핵심 사용자 흐름 자동 테스트
 3. OpenAPI와 프론트 TypeScript 타입의 계약 자동화
-4. 프론트 핵심 사용자 흐름 자동 테스트
-5. 프론트 수동 배포 production 검증과 Git 자동 배포 비활성화
+4. 프론트엔드 이전 production deployment 수동 롤백
 
 활성 작업, 작업 브랜치와 우선순위는 [작업 목록](work-items.md)을 기준으로 한다.
 
@@ -84,7 +84,6 @@
 - API 계약이 Kotlin DTO, 루트 API 예시, 프론트 TypeScript 타입에 중복되어 있다.
 - 프론트엔드에는 사용자 흐름을 검증하는 자동 테스트가 없다.
 - 실제 크롤링 검증은 YouTube, 네이버 DataLab, Gemini API quota를 소비한다.
-- Cloudflare Access application을 활성화하기 전까지 운영 API는 서비스 토큰 없이 직접 호출할 수 있다.
 - Next.js 16.2.11의 선택 의존성 `sharp`에 고위험 보안 권고가 있으나 현재 호환 범위에서 제공되는 수정 버전은 없다.
 
 ## 로컬 실행

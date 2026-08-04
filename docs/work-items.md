@@ -23,74 +23,88 @@
 
 ## ACTIVE
 
-### CHORE-004 프론트엔드 수동 배포 Workflow
+### FE-009 SEO 및 Open Graph 설정
 
-- 상태: IN_PROGRESS
+- 상태: REVIEW
 - 브랜치: develop
-- 시작일: 2026-08-02
-- 마지막 갱신: 2026-08-03
-- 다음 행동: Git 자동 배포 비활성화 설정을 원격에 반영하고 자동 배포 미생성과 수동 production 재배포를 확인한다.
+- 시작일: 2026-08-04
+- 마지막 갱신: 2026-08-04
+- 다음 행동: 변경 내용을 검토하고 커밋한 뒤 production에 배포해 Search Console과 SNS 미리보기를 확인한다.
 
 #### 목적
 
-Git push와 Vercel production 배포를 분리하고 GitHub Actions에서 `main`을 명시적으로 선택해 수동 배포한다.
+공개 프론트엔드의 검색 결과와 SNS 공유 미리보기에 페이지별로 정확한 제목, 설명, canonical URL과 브랜드 이미지를 제공한다.
 
 #### 범위
 
-- Vercel CLI 기반 production 설정 동기화, build와 deploy
-- GitHub Environment Secret 사전 검증과 최소 workflow 권한
-- production 중복 배포 방지와 배포 후 smoke test
-- 최초 전환 순서와 문제 해결 절차 문서화
-- Vercel Git 연동 자동 배포 비활성화
+- 공통·페이지별 metadata와 canonical URL
+- 키워드 상세 데이터 기반 동적 metadata
+- Open Graph와 Twitter Card 공통 공유 이미지
+- `robots.txt`와 정적·동적 URL을 포함한 `sitemap.xml`
 
 #### 제외 범위
 
-- 백엔드 배포 workflow
-- Cloudflare Access 적용
-- 프론트엔드 롤백 workflow
+- 화면 레이아웃 변경
+- 키워드별 전용 공유 이미지
+- JSON-LD 구조화 데이터
+- Google Search Console과 SNS 디버거의 외부 설정
 
 #### 진행 상황
 
-- 수동 production 배포 workflow와 운영 문서를 구현했다.
-- `production-frontend` GitHub Environment Secret 등록을 완료했다.
-- 첫 원격 실행에서 인증을 확인했고, Vercel 프로젝트의 `frontend` Root Directory와 workflow 작업 디렉터리가 중복 적용되는 문제를 수정했다.
-- 수정된 workflow의 production 배포와 기본·커스텀 도메인 smoke test가 성공했다.
-- `frontend/vercel.json`에 모든 브랜치의 Git 자동 배포 비활성화 설정을 추가했다.
-- 자동 배포 미생성과 수동 workflow 재배포에 대한 원격 확인이 남아 있다.
+- 공통 SEO 상수와 페이지 metadata 생성 함수를 구현했다.
+- 피드·랭킹은 세대별 metadata를, 키워드 상세는 API 데이터 기반 metadata를 생성한다.
+- 키워드 상세 렌더링과 metadata 조회가 요청 단위 캐시를 공유하도록 정리했다.
+- 공유 이미지, robots와 동적 키워드 URL을 포함하는 sitemap을 구현했다.
 
 #### 완료 조건
 
-- `production-frontend` Environment에 필요한 Secret과 `main` 브랜치 제한이 설정된다.
-- `main`에서 수동 workflow가 성공한다.
-- Vercel 기본 배포 URL과 `trendzip.nadoran.com`의 핵심 경로가 정상 응답한다.
-- 첫 수동 배포 검증 후 Git 자동 배포를 비활성화한다.
+- 공개 경로의 title, description, canonical과 OG/Twitter 태그가 운영 도메인 기준으로 생성된다.
+- robots, sitemap과 `1200x630` 공유 이미지가 정상 응답한다.
+- sitemap은 키워드 API 장애 시에도 정적 공개 경로를 반환한다.
+- 프론트 lint·타입 검사·production build와 저장소 빠른 검증을 통과한다.
 
 #### 관련 코드
 
-- `.github/workflows/deploy-frontend.yml`
-- `frontend/vercel.json`
-- `docs/ops/frontend-deployment.md`
-- `docs/ci-and-secret-management.md`
-- `docs/project-status.md`
-- `docs/work-items.md`
-- `frontend/AGENTS.md`
+- `frontend/src/app/layout.tsx`
+- `frontend/src/app/feed/[generation]/page.tsx`
+- `frontend/src/app/trend/[generation]/page.tsx`
+- `frontend/src/app/keyword/[id]/page.tsx`
+- `frontend/src/app/opengraph-image.tsx`
+- `frontend/src/app/twitter-image.tsx`
+- `frontend/src/app/robots.ts`
+- `frontend/src/app/sitemap.ts`
+- `frontend/src/lib/seo.ts`
+- `frontend/src/lib/social-image.tsx`
+- `frontend/src/services/keyword-detail.ts`
+- `design/app.jsx`
+- `design/trendzip.html`
+
+#### 디자인 기준
+
+- 상태: CONFIRMED
+- `design/README.md`
+- `design/app.jsx`
+- `design/trendzip.html`
+- 적용 범위: 화면 UI는 변경하지 않고 공유 이미지에 랜딩 페이지의 워드마크, 다크 배경과 청록·분홍 포인트를 반영한다.
 
 #### 검증
 
+- 상태: PASS
+- 디자인 검증: PASS
+- 공유 이미지 `1200x630` 렌더링 확인, 화면 UI 변경 없음
+- `npm run lint` 통과
+- `npm run typecheck` 통과
+- mock API 기반 `npm run build` 통과
+- robots, 정적·동적 sitemap, 페이지별 metadata와 공유 이미지 응답 확인
 - `./dev/verify --quick` 통과
-- `API_BASE_URL=https://api-trendzip.nadoran.com npm run build` 통과
-- workflow YAML 구문 검사 통과
 - `./dev/check-secrets --all` 통과
-- GitHub Actions 첫 실행에서 `vercel pull` 인증 성공
-- GitHub Actions production build·deploy 및 smoke test 성공
-- `frontend/vercel.json` JSON 구문 검사 통과
-- Git 자동 배포 비활성화 변경 후 `./dev/verify --quick`과 프론트 production build 통과
-- Git 자동 배포 비활성화는 원격 검증 필요
+- 배포 후 검증: Search Console sitemap 제출과 SNS 공유 미리보기 확인 필요
 
 #### 인계 메모
 
-- Vercel CLI `58.4.4`를 프론트 devDependency로 추가하면 CLI 전이 의존성 때문에 audit 결과가 크게 증가해, 애플리케이션 의존성과 분리하고 workflow의 일회성 runner에 정확한 버전으로 설치한다.
-- 수동 workflow의 production 검증 성공 후 `frontend/vercel.json`을 추가했다. 원격 검증 전까지 작업을 완료 처리하지 않는다.
+- 공유 이미지는 소셜 크롤러가 키워드 API 상태에 영향받지 않도록 모든 페이지에서 동일한 정적 생성 이미지를 사용한다.
+- sitemap의 키워드 URL 조회는 실패를 허용하며, API 장애 시 랜딩·피드·랭킹 경로만 반환한다.
+- 확정 화면 디자인은 변경하지 않았고 공유 이미지에 `design/app.jsx`, `design/trendzip.html`의 워드마크와 색상만 반영했다.
 
 ## READY
 
@@ -98,9 +112,7 @@ Git push와 Vercel production 배포를 분리하고 GitHub Actions에서 `main`
 
 ## LATER
 
-- Cloudflare Access 운영 활성화: 서비스 인증 헤더가 포함된 프론트를 재배포한 뒤 `api-trendzip.nadoran.com/*`에 특정 Service Token만 허용하는 `Service Auth` 정책을 적용하고 직접 API 차단·프론트 정상 동작을 검증
 - PWA 설정 및 홈 화면 추가 검증
-- SEO 및 Open Graph 설정: 페이지별 metadata·canonical URL, `robots.txt`, `sitemap.xml`, 공유용 OG 이미지와 Twitter Card를 구성하고 검색·SNS 미리보기를 검증
 - 프론트엔드 이전 production deployment 수동 롤백 workflow
 - 운영 API 노출 정책 강화: 운영 Swagger/OpenAPI 비활성화, Cloudflare rate limit 적용, 프론트 배포 도메인 기반 CORS 제한
 - OpenAPI와 프론트 TypeScript 타입의 계약 자동화
@@ -109,6 +121,24 @@ Git push와 Vercel production 배포를 분리하고 GitHub Actions에서 `main`
 - 아키텍처 규칙 자동 검사
 
 ## 최근 완료
+
+### SEC-001 Cloudflare Access API 보호
+
+- 상태: DONE
+- 브랜치: develop
+- 완료일: 2026-08-04
+- 결과: Vercel Next.js 서버가 전용 Service Token으로 운영 API를 호출하고 Cloudflare Access가 `api-trendzip.nadoran.com` 전체 경로의 직접 접근을 차단한다.
+- 보안 메모: Client ID와 Client Secret은 Vercel Production 서버 환경에서만 관리하며 브라우저 공개 변수와 저장소에는 포함하지 않는다. Access 정책은 특정 Service Token만 허용하는 `Service Auth`로 구성했다.
+- 검증: 인증 없는 헬스체크, Swagger UI와 OpenAPI 요청은 `401`, 동적 피드와 랭킹 페이지는 실제 데이터를 포함해 `200`으로 응답했다. 프론트 응답에서 Access 자격 증명 표식이 노출되지 않는 것도 확인했다.
+
+### CHORE-004 프론트엔드 수동 배포 Workflow
+
+- 상태: DONE
+- 브랜치: develop
+- 완료일: 2026-08-04
+- 결과: Git push와 Vercel production 배포를 분리하고 `main`에서 수동 실행하는 GitHub Actions workflow로 프론트 운영 배포를 수행한다. Vercel Git 연동의 자동 배포는 비활성화했다.
+- 운영 메모: 배포 Secret은 `production-frontend` GitHub Environment에 격리하고 Vercel CLI 버전과 workflow 외부 Action 커밋을 고정했다.
+- 검증: 수동 production build·deploy와 Vercel 기본·커스텀 도메인 smoke test가 성공했고, Access 적용 코드를 포함한 재배포 후 랜딩·피드·랭킹을 확인했다.
 
 ### FE-008 Vercel 프론트엔드 배포
 
@@ -137,21 +167,3 @@ Git push와 Vercel production 배포를 분리하고 GitHub Actions에서 `main`
 - 결과: pull request와 `develop` push에서 전체 Git 이력의 비밀정보를 검사한 뒤 저장소 전체 build를 실행하는 GitHub Actions CI를 추가했다. 로컬 staged 검사와 pre-commit 차단, 민감 파일 ignore 규칙도 함께 적용했다.
 - 보안 메모: Gitleaks `8.30.1` Docker 이미지는 digest까지 고정하고 외부 GitHub Action은 전체 커밋 SHA로 고정했다. CI는 읽기 권한만 사용하며 맥미니 배포와 분리한다.
 - 검증: 전체 Git 이력 검사, staged 가짜 GitHub 토큰 차단, 실제 pre-commit 훅, CI 모드 빠른·전체 통합 검증과 workflow 문법 검사를 통과했다. 최초 push 후 GitHub의 `Secret scan`, `Full verification` 결과를 확인한다.
-
-### CHORE-002 통합 검증 명령 추가
-
-- 상태: DONE
-- 브랜치: develop
-- 완료일: 2026-07-30
-- 결과: 저장소 루트에 DB 없는 빠른 검증과 PostgreSQL·Flyway·jOOQ·백엔드 및 프론트 전체 build를 실행하는 `./dev/verify` 명령을 추가하고 프론트 TypeScript 타입 검사를 분리했다.
-- 운영 메모: 전체 검증은 로컬 PostgreSQL과 누락된 `mztrend_test`를 준비하지만 기존 개발환경을 유지하기 위해 컨테이너를 자동 종료하지 않는다. 실제 외부 API는 호출하지 않는다.
-- 검증: help와 잘못된 인자 종료 코드, 루트·하위 디렉터리 빠른 검사 및 DB 포함 전체 검사를 확인했다. 백엔드 전체 build와 프론트 production build를 포함한 모든 단계가 통과했다.
-
-### BE-001 플랫폼 키워드 후보 제외
-
-- 상태: DONE
-- 브랜치: develop
-- 완료일: 2026-07-30
-- 결과: Gemini와 fallback 후보의 공통 후처리 단계에서 `치지직`, `CHZZK` 플랫폼명을 대소문자 무시·정확 일치 기준으로 제외하고 Gemini 프롬프트에도 구체적인 제외 예시를 추가했다.
-- 데이터 메모: 기존 키워드와 트렌드 로그는 이력 보존을 위해 물리 삭제하지 않는다. 백엔드 배포 후 정상 크롤링을 한 번 완료하면 최신 키워드 목록과 활성 피드에서 제외된다.
-- 검증: 후보 후처리, Gemini 프롬프트와 YouTube 후보 수집 회귀 테스트를 추가했다. `치지직컵` 부분 일치 표현 유지와 필터링 후 순위 재계산을 확인하고 백엔드 전체 테스트, `ktlintCheck`와 build를 통과했다.
