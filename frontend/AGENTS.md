@@ -8,7 +8,7 @@
 |------|------|
 | 프레임워크 | Next.js 16 (App Router) |
 | 스타일링 | Tailwind CSS |
-| PWA | next-pwa |
+| PWA | Serwist (`@serwist/turbopack`) |
 | 배포 | Vercel |
 
 ---
@@ -143,7 +143,7 @@ CLOUDFLARE_ACCESS_CLIENT_SECRET=     # 운영 Vercel 서버 전용
 ```
 Week 4: 기반 세팅 + 핵심 페이지
   [x] Next.js 16 프로젝트 세팅 (App Router, TypeScript, Tailwind)
-  [ ] next-pwa 설정
+  [x] Serwist 기반 PWA 설정
   [x] 공통 레이아웃 (FeedHeader, GenerationTab)
   [x] 랜딩 페이지 + 세대 선택 UI
   [x] 피드 페이지 (FeedCard, FeedList) + API 연동
@@ -153,5 +153,6 @@ Week 5-6: 나머지 페이지 + 배포
   [x] 키워드 상세 페이지 (설명 + TrendGraph) + API 연동
   [ ] 다크모드 전체 적용 및 모바일 반응형 점검
   [x] Vercel production 및 수동 배포 workflow 설정
-  [ ] PWA 동작 확인 (홈 화면 추가)
+  [x] PWA manifest·서비스 워커·오프라인 fallback 검증
+  [ ] production 배포 후 Android/iOS 홈 화면 추가 확인
 ```
