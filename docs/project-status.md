@@ -2,11 +2,11 @@
 
 - 마지막 갱신: 2026-08-05
 - 현재 단계: 핵심 사용자 흐름 공개 배포 및 운영 보완
-- 현재 집중 영역: PWA 설치 경험 및 운영 품질 보완
+- 현재 집중 영역: 프론트엔드 운영 안정성과 자동 검증 보완
 
 ## 한 줄 상태
 
-백엔드의 트렌드 수집·저장·조회 API와 확정 디자인을 반영한 랜딩·세대별 피드·랭킹·키워드 상세 화면이 구현됐으며, 운영 API를 Cloudflare Access로 보호한 상태에서 `trendzip.nadoran.com`의 핵심 탐색 흐름을 사용할 수 있다.
+백엔드의 트렌드 수집·저장·조회 API와 확정 디자인을 반영한 랜딩·세대별 피드·랭킹·키워드 상세 화면이 구현됐으며, 운영 API를 Cloudflare Access로 보호한 상태에서 `trendzip.nadoran.com`의 핵심 탐색 흐름과 iOS 홈 화면 설치를 사용할 수 있다.
 
 ## 구현 현황
 
@@ -33,7 +33,8 @@
 - 구현됨: Vercel 서버의 운영 API 요청에 Cloudflare Access Service Token 헤더를 추가하는 서비스 인증 설정
 - 구현됨: 페이지별 SEO metadata와 canonical URL, Open Graph·Twitter 공유 이미지, robots와 동적 sitemap
 - 구현됨: Web App Manifest, 일반·maskable·Apple 아이콘, Serwist 서비스 워커와 오프라인 fallback
-- 미구현: 실제 Android/iOS 홈 화면 추가 확인과 프론트엔드 자동 테스트
+- 검증됨: 운영 iOS Safari 홈 화면 추가
+- 미구현: Android Chrome 홈 화면 설치 확인과 프론트엔드 자동 테스트
 
 ### 인프라 및 배포
 
@@ -72,10 +73,10 @@
 
 ## 주요 미완성 영역
 
-1. production 배포 후 Android/iOS 홈 화면 추가 검증
-2. 프론트 핵심 사용자 흐름 자동 테스트
-3. OpenAPI와 프론트 TypeScript 타입의 계약 자동화
-4. 프론트엔드 이전 production deployment 수동 롤백
+1. 프론트 핵심 사용자 흐름 자동 테스트
+2. OpenAPI와 프론트 TypeScript 타입의 계약 자동화
+3. 프론트엔드 이전 production deployment 수동 롤백
+4. Android Chrome 홈 화면 설치 호환성 확인
 
 활성 작업, 작업 브랜치와 우선순위는 [작업 목록](work-items.md)을 기준으로 한다.
 
@@ -85,7 +86,7 @@
 - API 계약이 Kotlin DTO, 루트 API 예시, 프론트 TypeScript 타입에 중복되어 있다.
 - 프론트엔드에는 사용자 흐름을 검증하는 자동 테스트가 없다.
 - 실제 크롤링 검증은 YouTube, 네이버 DataLab, Gemini API quota를 소비한다.
-- PWA 설치 메뉴와 홈 화면 아이콘 표현은 브라우저와 OS별로 달라 production 배포 후 Android와 iOS 실기기 확인이 필요하다.
+- PWA 설치 메뉴와 홈 화면 아이콘 표현은 브라우저와 OS별로 달라 Android 실기기 동작은 아직 확인하지 못했다.
 
 ## 로컬 실행
 
