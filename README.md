@@ -5,7 +5,7 @@
 [![CI](https://github.com/nadoran78/trendzip/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/nadoran78/trendzip/actions/workflows/ci.yml)
 ![Java](https://img.shields.io/badge/Java-17-007396)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.4-6DB33F)
-![Next.js](https://img.shields.io/badge/Next.js-16.2.11-000000)
+![Next.js](https://img.shields.io/badge/Next.js-16.3.0-000000)
 
 Trendzip의 서비스명은 **MZ 따라잡기**입니다. 한국 YouTube 인기 영상에서 키워드 후보를 찾고, 세대별 검색 관심도를 검증한 뒤 각 키워드가 왜 주목받는지 설명합니다. 사용자는 로그인 없이 10대 또는 20대 피드, 키워드 순위와 상세 분석을 탐색할 수 있습니다.
 
@@ -39,6 +39,7 @@ Trendzip의 서비스명은 **MZ 따라잡기**입니다. 한국 YouTube 인기 
 - **왜 뜨는지 설명**: 근거가 되는 YouTube 영상과 과거 순위를 바탕으로 Gemini가 생성한 설명을 제공합니다.
 - **트렌드 그래프**: 날짜별 검색 관심도와 당시 순위를 데스크톱 호버, 모바일 탭과 키보드로 확인할 수 있습니다.
 - **관련 콘텐츠 탐색**: 키워드와 연결된 영상 및 함께 살펴볼 키워드로 이동할 수 있습니다.
+- **PWA 지원**: 모바일 홈 화면에 설치할 수 있으며 네트워크가 끊기면 전용 오프라인 상태를 제공합니다.
 - **자동 수집**: 스케줄러가 외부 API 수집, 점수 산정, 설명 생성, 피드 교체와 캐시 무효화를 수행합니다.
 
 ## Data Pipeline
@@ -217,7 +218,7 @@ GitHub Actions는 pull request와 `develop` push에서 Gitleaks 검사를 먼저
 
 다음 우선순위는 다음과 같습니다.
 
-1. PWA 설정과 홈 화면 추가 검증
+1. production 배포 후 Android/iOS 홈 화면 추가 검증
 2. OpenAPI 기반 frontend 타입 계약 자동화
 3. 핵심 사용자 흐름 E2E 테스트
 

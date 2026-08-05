@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import { SerwistProvider } from "@serwist/turbopack/react";
+import type { Metadata, Viewport } from "next";
 import "@fontsource/quicksand/600.css";
 import "@fontsource/quicksand/700.css";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
@@ -25,6 +26,27 @@ export const metadata: Metadata = {
     default: DEFAULT_TITLE,
     template: `%s | ${SITE_NAME}`,
   },
+  manifest: "/manifest.webmanifest",
+  icons: {
+    apple: [
+      {
+        url: "/icons/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: SITE_NAME,
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
   robots: {
     index: true,
     follow: true,
@@ -38,6 +60,11 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  colorScheme: "dark",
+  themeColor: "#0a0a0a",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -45,7 +72,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        <SerwistProvider
+          swUrl="/serwist/sw.js"
+          disable={process.env.NODE_ENV !== "production"}
+          cacheOnNavigation={false}
+        >
+          {children}
+        </SerwistProvider>
+      </body>
     </html>
   );
 }

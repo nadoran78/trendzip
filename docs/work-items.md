@@ -23,59 +23,57 @@
 
 ## ACTIVE
 
-### FE-009 SEO 및 Open Graph 설정
+### FE-010 PWA 설정 및 홈 화면 추가 검증
 
 - 상태: REVIEW
 - 브랜치: develop
-- 시작일: 2026-08-04
-- 마지막 갱신: 2026-08-04
-- 다음 행동: 변경 내용을 검토하고 커밋한 뒤 production에 배포해 Search Console과 SNS 미리보기를 확인한다.
+- 시작일: 2026-08-05
+- 마지막 갱신: 2026-08-05
+- 다음 행동: 변경 내용을 검토·커밋해 production에 배포한 뒤 Android Chrome 설치와 iOS Safari 홈 화면 추가를 실기기에서 확인한다.
 
 #### 목적
 
-공개 프론트엔드의 검색 결과와 SNS 공유 미리보기에 페이지별로 정확한 제목, 설명, canonical URL과 브랜드 이미지를 제공한다.
+모바일 사용자가 trendzip을 홈 화면에 설치해 독립 실행형 웹앱으로 사용할 수 있게 하고, 일시적인 네트워크 장애에도 명확한 오프라인 상태를 제공한다.
 
 #### 범위
 
-- 공통·페이지별 metadata와 canonical URL
-- 키워드 상세 데이터 기반 동적 metadata
-- Open Graph와 Twitter Card 공통 공유 이미지
-- `robots.txt`와 정적·동적 URL을 포함한 `sitemap.xml`
+- Web App Manifest와 일반·maskable·Apple Touch 아이콘
+- Next.js 16 Turbopack과 호환되는 Serwist 서비스 워커
+- 정적 자산 중심의 보수적인 런타임 캐시와 문서 탐색 오프라인 fallback
+- iOS 홈 화면 추가를 위한 metadata
+- production build 기반 manifest·서비스 워커·오프라인 동작 검증
 
 #### 제외 범위
 
-- 화면 레이아웃 변경
-- 키워드별 전용 공유 이미지
-- JSON-LD 구조화 데이터
-- Google Search Console과 SNS 디버거의 외부 설정
+- 앱 내부의 별도 설치 유도 배너
+- 푸시 알림, Background Sync와 앱 스토어 배포
+- API 응답 및 동적 피드 페이지의 오프라인 데이터 제공
+- 기존 랜딩·피드·랭킹·키워드 상세 화면의 레이아웃 변경
 
 #### 진행 상황
 
-- 공통 SEO 상수와 페이지 metadata 생성 함수를 구현했다.
-- 피드·랭킹은 세대별 metadata를, 키워드 상세는 API 데이터 기반 metadata를 생성한다.
-- 키워드 상세 렌더링과 metadata 조회가 요청 단위 캐시를 공유하도록 정리했다.
-- 공유 이미지, robots와 동적 키워드 URL을 포함하는 sitemap을 구현했다.
+- 일반·maskable·Apple Touch 아이콘과 Web App Manifest를 추가했다.
+- Serwist Turbopack route와 루트 scope 서비스 워커 등록을 구현했다.
+- 동적 문서·RSC·API 요청은 NetworkOnly로 유지하고 정적 자산과 이미지만 제한적으로 캐시한다.
+- 문서 탐색 실패 시 표시할 브랜드 기준 오프라인 화면과 재시도 동작을 구현했다.
+- Next.js와 ESLint 설정을 `16.3.0`으로 맞추고 npm audit 취약점을 해소했다.
 
 #### 완료 조건
 
-- 공개 경로의 title, description, canonical과 OG/Twitter 태그가 운영 도메인 기준으로 생성된다.
-- robots, sitemap과 `1200x630` 공유 이미지가 정상 응답한다.
-- sitemap은 키워드 API 장애 시에도 정적 공개 경로를 반환한다.
+- manifest에 앱 이름, 시작 URL, 표시 모드, 테마 색상과 목적별 아이콘이 제공된다.
+- production 환경에서 서비스 워커가 루트 scope로 등록되고 오프라인 문서 탐색에 fallback 화면을 반환한다.
+- 동적 페이지와 API 응답은 서비스 워커 캐시에 남기지 않고 정적 자산만 안전하게 재사용한다.
 - 프론트 lint·타입 검사·production build와 저장소 빠른 검증을 통과한다.
 
 #### 관련 코드
 
 - `frontend/src/app/layout.tsx`
-- `frontend/src/app/feed/[generation]/page.tsx`
-- `frontend/src/app/trend/[generation]/page.tsx`
-- `frontend/src/app/keyword/[id]/page.tsx`
-- `frontend/src/app/opengraph-image.tsx`
-- `frontend/src/app/twitter-image.tsx`
-- `frontend/src/app/robots.ts`
-- `frontend/src/app/sitemap.ts`
-- `frontend/src/lib/seo.ts`
-- `frontend/src/lib/social-image.tsx`
-- `frontend/src/services/keyword-detail.ts`
+- `frontend/src/app/manifest.ts`
+- `frontend/src/app/sw.ts`
+- `frontend/src/app/serwist/[path]/route.ts`
+- `frontend/src/app/~offline/page.tsx`
+- `frontend/next.config.ts`
+- `frontend/public/icons/`
 - `design/app.jsx`
 - `design/trendzip.html`
 
@@ -85,26 +83,30 @@
 - `design/README.md`
 - `design/app.jsx`
 - `design/trendzip.html`
-- 적용 범위: 화면 UI는 변경하지 않고 공유 이미지에 랜딩 페이지의 워드마크, 다크 배경과 청록·분홍 포인트를 반영한다.
+- 적용 범위: 기존 화면 UI는 변경하지 않고 PWA 아이콘과 오프라인 상태에 랜딩 페이지의 워드마크, 다크 배경과 청록·분홍 포인트를 반영한다.
 
 #### 검증
 
 - 상태: PASS
 - 디자인 검증: PASS
-- 공유 이미지 `1200x630` 렌더링 확인, 화면 UI 변경 없음
+- 일반·maskable·Apple Touch 아이콘 크기와 실제 렌더링 확인
+- 390x844 오프라인 화면에서 텍스트·아이콘·버튼 배치와 가로 넘침 없음 확인
 - `npm run lint` 통과
 - `npm run typecheck` 통과
-- mock API 기반 `npm run build` 통과
-- robots, 정적·동적 sitemap, 페이지별 metadata와 공유 이미지 응답 확인
+- mock API 주소 기반 `npm run build` 통과
+- Chrome manifest 파싱 오류 및 installability 오류 없음 확인
+- 서비스 워커 활성화, 루트 scope 제어와 정적 자산 전용 cache 확인
+- 서버 중단 후 `/feed/teen` 탐색 시 오프라인 fallback 표시 확인
+- `npm audit` 취약점 0건 확인
 - `./dev/verify --quick` 통과
 - `./dev/check-secrets --all` 통과
-- 배포 후 검증: Search Console sitemap 제출과 SNS 공유 미리보기 확인 필요
+- 배포 후 검증: Android Chrome 설치와 iOS Safari 홈 화면 추가 확인 필요
 
 #### 인계 메모
 
-- 공유 이미지는 소셜 크롤러가 키워드 API 상태에 영향받지 않도록 모든 페이지에서 동일한 정적 생성 이미지를 사용한다.
-- sitemap의 키워드 URL 조회는 실패를 허용하며, API 장애 시 랜딩·피드·랭킹 경로만 반환한다.
-- 확정 화면 디자인은 변경하지 않았고 공유 이미지에 `design/app.jsx`, `design/trendzip.html`의 워드마크와 색상만 반영했다.
+- 동적 피드의 최신성을 우선해 페이지 문서와 API 응답은 런타임 캐시 대상에서 제외한다.
+- 브라우저별 설치 UI 차이가 크므로 첫 버전에서는 브라우저의 기본 설치 기능과 iOS 공유 메뉴를 사용한다.
+- Chrome 로컬 production 환경에서 manifest와 서비스 워커 검증은 완료했으며, OS별 홈 화면 아이콘과 standalone 실행은 production 배포 후 실기기에서 확인한다.
 
 ## READY
 
@@ -112,7 +114,6 @@
 
 ## LATER
 
-- PWA 설정 및 홈 화면 추가 검증
 - 프론트엔드 이전 production deployment 수동 롤백 workflow
 - 운영 API 노출 정책 강화: 운영 Swagger/OpenAPI 비활성화, Cloudflare rate limit 적용, 프론트 배포 도메인 기반 CORS 제한
 - OpenAPI와 프론트 TypeScript 타입의 계약 자동화
@@ -121,6 +122,15 @@
 - 아키텍처 규칙 자동 검사
 
 ## 최근 완료
+
+### FE-009 SEO 및 Open Graph 설정
+
+- 상태: DONE
+- 브랜치: develop
+- 완료일: 2026-08-05
+- 결과: 공개 경로의 페이지별 title, description, canonical과 OG/Twitter 메타데이터를 운영 도메인 기준으로 제공하고 robots, sitemap과 공통 공유 이미지를 구현했다.
+- 운영 메모: sitemap의 키워드 조회는 API 장애를 허용하며, 실패 시에도 정적 공개 경로를 반환한다. Google Search Console에 도메인 속성과 sitemap 제출을 완료했다.
+- 검증: 프론트 lint·타입 검사·production build와 저장소 빠른 검증을 통과했고, 운영 배포 후 Search Console 등록과 공개 SEO 리소스 응답을 확인했다.
 
 ### SEC-001 Cloudflare Access API 보호
 
@@ -158,12 +168,3 @@
 - 공개 범위: 프론트엔드는 배포 준비 상태로 표시하고 운영 API와 Swagger의 공개 주소, 내부 IP, 운영 계정과 실제 환경변수 값은 제외했다.
 - 후속 작업: 운영 Swagger/OpenAPI 비활성화, Cloudflare rate limit과 프론트 배포 도메인 기반 CORS 제한은 LATER 항목에서 관리한다.
 - 검증: 실제 Chromium 화면과 이미지 크기, README 로컬 링크, Gitleaks staged 검사, context strict 검사와 diff 검사를 통과했다.
-
-### CHORE-003 GitHub Actions CI 및 비밀정보 유출 방지
-
-- 상태: DONE
-- 브랜치: develop
-- 완료일: 2026-07-31
-- 결과: pull request와 `develop` push에서 전체 Git 이력의 비밀정보를 검사한 뒤 저장소 전체 build를 실행하는 GitHub Actions CI를 추가했다. 로컬 staged 검사와 pre-commit 차단, 민감 파일 ignore 규칙도 함께 적용했다.
-- 보안 메모: Gitleaks `8.30.1` Docker 이미지는 digest까지 고정하고 외부 GitHub Action은 전체 커밋 SHA로 고정했다. CI는 읽기 권한만 사용하며 맥미니 배포와 분리한다.
-- 검증: 전체 Git 이력 검사, staged 가짜 GitHub 토큰 차단, 실제 pre-commit 훅, CI 모드 빠른·전체 통합 검증과 workflow 문법 검사를 통과했다. 최초 push 후 GitHub의 `Secret scan`, `Full verification` 결과를 확인한다.

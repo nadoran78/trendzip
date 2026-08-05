@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0a0a0a"/>
+  <circle cx="256" cy="256" r="192" fill="#111111" stroke="#222222" stroke-width="6"/>
+  <text x="256" y="298" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="150" font-weight="700" letter-spacing="0" text-anchor="middle">tz</text>
+  <path d="M339 322c-30-21-45-36-45-58 0-19 14-33 32-33 11 0 22 6 28 14 7-8 17-14 29-14 18 0 32 14 32 33 0 22-15 37-45 58l-16 11-15-11Z" fill="none" stroke="#ff2d9b" stroke-width="13" stroke-linejoin="round"/>
+  <path d="M143 349h226" stroke="#00e5ff" stroke-width="9" stroke-linecap="round"/>
+</svg>
