@@ -91,9 +91,20 @@ class YoutubePopularVideoCandidateSource(
     ): List<TrendCandidate> {
         val videosById = popularVideos.associateBy { it.videoId }
         val candidates =
-            candidates.map { candidate ->
-                val evidenceVideos = candidate.evidenceVideoIds.mapNotNull(videosById::get).distinctBy { it.videoId }
-                val evidenceCount = evidenceVideos.size.coerceAtLeast(1)
+            candidates.mapNotNull { candidate ->
+                val evidenceVideos =
+                    candidate.evidenceVideoIds
+                        .mapNotNull(videosById::get)
+                        .distinctBy { it.videoId }
+                        .filter { video ->
+                            KeywordEvidenceMatcher.isMentionedIn(
+                                keyword = candidate.keyword,
+                                texts = listOf(video.title, video.channelName, video.description.orEmpty()) + video.tags,
+                            )
+                        }
+                if (evidenceVideos.isEmpty()) return@mapNotNull null
+
+                val evidenceCount = evidenceVideos.size
                 CandidateContext(
                     candidate = candidate,
                     evidenceCount = evidenceCount,
@@ -144,6 +155,7 @@ class YoutubePopularVideoCandidateSource(
             videoId = videoId,
             title = title,
             channelName = channelName,
+            tags = tags,
             description = description?.take(properties.gemini.candidateExtractionMaxDescriptionLength),
             viewCount = viewCount,
         )

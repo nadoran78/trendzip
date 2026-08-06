@@ -10,6 +10,7 @@ class TrendCandidatePostProcessor {
             candidates
                 .asSequence()
                 .mapNotNull { candidate -> candidate.toCanonicalCandidate(phraseTokenWords) }
+                .filterNot { candidate -> candidate.isUnsupportedContextualCandidate(candidates) }
                 .groupBy { it.word.lowercase() }
                 .values
                 .map { group -> group.merge() }
@@ -79,6 +80,48 @@ class TrendCandidatePostProcessor {
 
     private fun String.isNoisyTitlePhrase(): Boolean = contains(" ") && TITLE_NOISE_PHRASE_REGEX.containsMatchIn(this)
 
+    private fun TrendCandidate.isUnsupportedContextualCandidate(candidates: List<TrendCandidate>): Boolean {
+        val normalizedWord = word.lowercase()
+        if (normalizedWord !in CONTEXTUAL_FRAGMENT_WORDS) return false
+        if (!hasStandaloneEvidence()) return true
+
+        val evidenceVideoIds = evidenceVideos.map { it.videoId }.toSet()
+        return candidates.any { phraseCandidate ->
+            phraseCandidate.word.containsCandidateToken(normalizedWord) &&
+                phraseCandidate.evidenceVideos.any { it.videoId in evidenceVideoIds }
+        }
+    }
+
+    private fun TrendCandidate.hasStandaloneEvidence(): Boolean =
+        evidenceVideos.any { evidenceVideo -> evidenceVideo.hasStandaloneEvidence(word) }
+
+    private fun TrendCandidateEvidenceVideo.hasStandaloneEvidence(candidateWord: String): Boolean {
+        val normalizedCandidate = candidateWord.normalizeComparable()
+        val normalizedTitle = title.normalizeComparable()
+        if (normalizedTitle == normalizedCandidate) return true
+        if (normalizedTitle.startsWith("$normalizedCandidate ")) {
+            val titleSuffix = normalizedTitle.removePrefix(normalizedCandidate).trim()
+            if (TITLE_METADATA_PREFIX_REGEX.containsMatchIn(titleSuffix)) return true
+        }
+
+        return title
+            .split(TITLE_SEGMENT_DELIMITER_REGEX)
+            .any { segment -> segment.normalizeComparable() == normalizedCandidate }
+    }
+
+    private fun String.containsCandidateToken(candidateWord: String): Boolean {
+        val normalizedPhrase = normalizeComparable()
+        if (!normalizedPhrase.contains(" ") || normalizedPhrase.isNoisyTitlePhrase()) return false
+
+        return normalizedPhrase.split(" ").any { token -> token == candidateWord }
+    }
+
+    private fun String.normalizeComparable(): String =
+        lowercase()
+            .trim()
+            .trim('_', '-', '.', '+', ':', ';', ',', '!', '?', '#', '"', '\'', '`', '(', ')', '[', ']', '《', '》')
+            .replace(MULTIPLE_WHITESPACE_REGEX, " ")
+
     private fun String.toCanonicalWord(): String = CANONICAL_WORDS[lowercase()] ?: this
 
     private fun List<TrendCandidate>.merge(): TrendCandidate {
@@ -126,9 +169,30 @@ class TrendCandidatePostProcessor {
                 "to",
                 "trailer",
                 "video",
+                "review",
                 "you",
+                "게임",
+                "리뷰",
                 "채널",
             )
+        private val CONTEXTUAL_FRAGMENT_WORDS =
+            setOf(
+                "autumn",
+                "fall",
+                "korea",
+                "korean",
+                "spring",
+                "summer",
+                "winter",
+                "가을",
+                "겨울",
+                "여름",
+                "코리아",
+                "한국",
+            )
+        private val TITLE_SEGMENT_DELIMITER_REGEX = Regex("""\s*[:|/·]\s*""")
+        private val TITLE_METADATA_PREFIX_REGEX =
+            Regex("""(?i)^(?:official|mv|music video|teaser|trailer|공식|예고|예고편|티저)(?:\s|$)""")
         private val BLOCKED_PLATFORM_WORDS =
             setOf(
                 "chzzk",

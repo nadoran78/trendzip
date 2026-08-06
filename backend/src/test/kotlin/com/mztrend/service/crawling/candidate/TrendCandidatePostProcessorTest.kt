@@ -20,6 +20,8 @@ class TrendCandidatePostProcessorTest {
                     candidate("showcase", score = 700),
                     candidate("www.youtube.com", score = 600),
                     candidate("채널", score = 500),
+                    candidate("게임", score = 400),
+                    candidate("리뷰", score = 300),
                 ),
             )
 
@@ -90,6 +92,58 @@ class TrendCandidatePostProcessorTest {
     }
 
     @Test
+    fun `process keeps full Korean title and removes contextual fragments without independent evidence`() {
+        val titleEvidence =
+            evidenceVideo(
+                videoId = "made-in-korea",
+                title = "메이드 인 코리아 | 공식 예고편",
+                tags = listOf("메이드 인 코리아", "코리아"),
+            )
+        val processed =
+            postProcessor.process(
+                listOf(
+                    candidate("메이드 인 코리아", score = 100, evidenceVideos = listOf(titleEvidence)),
+                    candidate("코리아", score = 1_000, evidenceVideos = listOf(titleEvidence)),
+                    candidate(
+                        "summer",
+                        score = 900,
+                        evidenceVideos =
+                            listOf(
+                                evidenceVideo(
+                                    videoId = "showcase",
+                                    title = "2026 MapleStory SUMMER SHOWCASE - OVERDRIVE",
+                                ),
+                            ),
+                    ),
+                ),
+            )
+
+        assertEquals(listOf("메이드 인 코리아"), processed.map { it.word })
+    }
+
+    @Test
+    fun `process keeps contextual word when metadata identifies it as a standalone title`() {
+        val processed =
+            postProcessor.process(
+                listOf(
+                    candidate(
+                        "SUMMER",
+                        score = 100,
+                        evidenceVideos =
+                            listOf(
+                                evidenceVideo(
+                                    videoId = "summer-song",
+                                    title = "SUMMER MV",
+                                ),
+                            ),
+                    ),
+                ),
+            )
+
+        assertEquals(listOf("summer"), processed.map { it.word })
+    }
+
+    @Test
     fun `process canonicalizes and merges aliased candidates`() {
         val processed =
             postProcessor.process(
@@ -152,11 +206,13 @@ class TrendCandidatePostProcessorTest {
     private fun evidenceVideo(
         videoId: String,
         title: String,
+        tags: List<String> = emptyList(),
     ): TrendCandidateEvidenceVideo =
         TrendCandidateEvidenceVideo(
             videoId = videoId,
             title = title,
             channelName = "채널",
+            tags = tags,
         )
 
     companion object {

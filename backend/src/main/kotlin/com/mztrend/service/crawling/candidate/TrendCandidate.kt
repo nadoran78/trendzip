@@ -26,6 +26,7 @@ data class TrendCandidateEvidenceVideo(
     val videoId: String,
     val title: String,
     val channelName: String,
+    val tags: List<String> = emptyList(),
     val description: String? = null,
     val viewCount: Long? = null,
 ) {
