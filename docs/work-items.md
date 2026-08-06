@@ -41,6 +41,15 @@
 
 ## 최근 완료
 
+### BE-001 키워드 후보 및 관계 품질 강화
+
+- 상태: DONE
+- 브랜치: develop
+- 완료일: 2026-08-05
+- 결과: Gemini와 fallback 후보에서 범용 형식어와 근거 없는 후보를 제거하고, 전체 작품명과 제목에서 독립적으로 확인되는 문맥 의존 단어를 우선한다. 관련 키워드는 한 근거 영상 안에서 두 키워드가 함께 확인될 때만 생성한다.
+- 운영 메모: 기존 이력은 삭제하지 않는다. 배포 후 새 크롤링을 실행해 활성 키워드와 관계를 교체하고 실제 결과를 확인한다.
+- 검증: 백엔드 전체 테스트, ktlint와 `./dev/verify --quick`을 통과했다. `메이드 인 코리아`·`코리아`, `게임`·`리뷰`, 잘못 할당된 관계 근거에 대한 회귀 테스트를 추가했다.
+
 ### FE-010 PWA 설정 및 홈 화면 추가 검증
 
 - 상태: DONE
@@ -76,12 +85,3 @@
 - 결과: Git push와 Vercel production 배포를 분리하고 `main`에서 수동 실행하는 GitHub Actions workflow로 프론트 운영 배포를 수행한다. Vercel Git 연동의 자동 배포는 비활성화했다.
 - 운영 메모: 배포 Secret은 `production-frontend` GitHub Environment에 격리하고 Vercel CLI 버전과 workflow 외부 Action 커밋을 고정했다.
 - 검증: 수동 production build·deploy와 Vercel 기본·커스텀 도메인 smoke test가 성공했고, Access 적용 코드를 포함한 재배포 후 랜딩·피드·랭킹을 확인했다.
-
-### FE-008 Vercel 프론트엔드 배포
-
-- 상태: DONE
-- 브랜치: develop
-- 완료일: 2026-08-02
-- 결과: Next.js 프론트엔드를 Vercel Hobby에 배포하고 `trendzip.nadoran.com` 커스텀 도메인에서 운영 API 기반 핵심 사용자 흐름을 제공한다.
-- 운영 메모: API 주소는 서버 전용 `API_BASE_URL`로 관리하며 기본 10초 timeout과 Node.js 24 런타임을 적용했다. Cloudflare는 프론트 도메인의 DNS만 관리하고 트래픽은 Vercel로 직접 전달한다.
-- 검증: Vercel 기본·커스텀 도메인의 랜딩, TEEN/TWENTY 피드와 랭킹, 키워드 상세가 정상 응답했다. 데스크톱 실제 화면과 390x844 모바일 화면, 가로 넘침 및 브라우저 오류 부재를 확인했다.
