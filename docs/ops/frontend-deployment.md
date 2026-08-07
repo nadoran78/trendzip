@@ -136,6 +136,31 @@ Git 자동 배포를 끄기 전에 수동 workflow가 정상 동작하는지 먼
 
 Git 자동 배포를 복구해야 하면 `frontend/vercel.json`의 `git.deploymentEnabled`를 `true`로 변경하거나 해당 설정을 제거한다.
 
+## Vercel Web Analytics
+
+Trendzip은 운영 방문 규모와 경로별 페이지 조회를 확인하기 위해 Vercel Web Analytics를 사용한다. GA4·GTM 기반 사용자 행동 이벤트는 별도 작업으로 관리하며, 이번 연동에서는 기본 페이지 조회만 수집한다.
+
+### 최초 활성화
+
+1. Vercel에서 `nadoran-lab/trendzip` 프로젝트를 연다.
+2. `Analytics` 메뉴로 이동한다.
+3. Web Analytics가 비활성화되어 있으면 `Enable`을 선택한다.
+4. 프로젝트의 production domain에 `trendzip.nadoran.com`이 연결되어 있는지 확인한다.
+
+프론트엔드는 `@vercel/analytics/next`의 `Analytics` 컴포넌트를 루트 레이아웃에서 한 번만 렌더링한다. SDK가 실행 환경을 자동 판별하므로 production 모드를 강제로 지정하지 않는다. Web Analytics 연동에는 별도 환경변수나 GitHub Secret이 필요하지 않다.
+
+### 배포 후 확인
+
+1. 변경사항을 `main`에 반영하고 `Deploy Frontend` workflow를 수동 실행한다.
+2. `https://trendzip.nadoran.com`을 새 브라우저 창에서 연다.
+3. 브라우저 개발자 도구의 Network에서 `/_vercel/insights/` 요청이 성공하는지 확인한다.
+4. 랜딩에서 10대 피드로 이동하고 피드, 랭킹과 키워드 상세를 순서대로 방문한다.
+5. Vercel 프로젝트의 `Analytics`에서 방문자, 페이지 조회와 방문 경로가 수집되는지 확인한다.
+
+브라우저 추적 방지나 광고 차단 확장 프로그램이 Analytics 요청을 차단할 수 있으므로 수집 확인은 해당 기능을 끈 별도 브라우저 프로필에서도 수행한다. Serwist 서비스 워커가 `/_vercel/insights/` 요청을 캐시하거나 가로채지 않는지도 Network에서 함께 확인한다.
+
+Vercel Web Analytics와 이후 도입할 GA4는 집계 기준과 차단 조건이 달라 동일한 방문자·페이지 조회 수를 보장하지 않는다. Vercel은 빠른 운영 트래픽 확인에 사용하고, 세대 선택이나 영상 클릭 같은 제품 행동 분석은 GA4 작업에서 별도로 정의한다.
+
 ## 배포 후 확인
 
 workflow는 아래 네 URL에 HTTP 성공 응답이 오는지 검사한다.

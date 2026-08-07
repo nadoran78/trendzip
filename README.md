@@ -218,9 +218,11 @@ GitHub Actions는 pull request와 `develop` push에서 Gitleaks 검사를 먼저
 
 다음 우선순위는 다음과 같습니다.
 
-1. OpenAPI 기반 frontend 타입 계약 자동화
-2. 핵심 사용자 흐름 E2E 테스트
-3. Android Chrome PWA 설치 호환성 확인
+1. Vercel Web Analytics 기반 운영 트래픽 측정
+2. GA4/GTM 기반 사용자 행동 분석 실습
+3. 키워드와 설명 기반 숏폼 콘텐츠 생성·게시 자동화
+4. OpenAPI 기반 frontend 타입 계약 자동화
+5. 핵심 사용자 흐름 E2E 테스트
 
 세부 구현 현황과 알려진 제약은 [`docs/project-status.md`](docs/project-status.md)에서 관리합니다.
 
