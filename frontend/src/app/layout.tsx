@@ -1,4 +1,5 @@
 import { SerwistProvider } from "@serwist/turbopack/react";
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import "@fontsource/quicksand/600.css";
 import "@fontsource/quicksand/700.css";
@@ -80,6 +81,7 @@ export default function RootLayout({
         >
           {children}
         </SerwistProvider>
+        <Analytics />
       </body>
     </html>
   );
