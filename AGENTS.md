@@ -24,6 +24,8 @@
 │   └── README.md          # 서비스 경로와 디자인 원본 매핑
 ├── /backend              # Kotlin + Spring Boot
 │   └── AGENTS.md         # 백엔드 전용 명세
+├── /backend-fastapi      # Python + FastAPI 학습 실험
+│   └── AGENTS.md         # FastAPI 실험 전용 명세
 └── /frontend             # Next.js
     └── AGENTS.md         # 프론트엔드 전용 명세
 ```
@@ -35,7 +37,8 @@
 | 영역 | 기술 |
 |------|------|
 | 프론트엔드 | Next.js 16 (App Router), Tailwind CSS, Vercel |
-| 백엔드 | Kotlin, Spring Boot 3.x, Oracle Cloud Free Tier |
+| 정식 백엔드 | Kotlin, Spring Boot 3.x, Oracle Cloud Free Tier |
+| 실험 백엔드 | Python, FastAPI (학습 및 API 호환성 검증) |
 | DB | PostgreSQL (Supabase Free Tier) |
 | 캐시 | Redis (Upstash Free Tier) |
 | 디자인 | Claude Design → 시안 확정 후 Codex 구현 |
@@ -47,6 +50,16 @@
 | YouTube Data API v3 | 현재 인기 영상 조회, 후보 키워드 추출, 키워드별 영상 검색 |
 | 네이버 DataLab API | YouTube 후보 키워드의 연령대별 검색 트렌드 검증 |
 | Gemini API (무료 티어) | 키워드 "왜 뜨는지" 설명 자동 생성 |
+
+### 백엔드 구현 구분
+
+- `backend/`는 현재 운영 기준인 Kotlin/Spring Boot 구현이다.
+- `backend-fastapi/`는 Python/FastAPI 학습과 API 호환성 검증을 위한 실험 구현이다.
+- 공통 API 계약은 이 문서, 비즈니스 규칙은 `docs/business-flow.md`를 기준으로 한다.
+- 기술별 구현 방식은 각 백엔드 디렉터리의 `AGENTS.md`를 따른다.
+- 별도 결정 전까지 DB migration의 기준은 Kotlin 백엔드의 Flyway다.
+- FastAPI 실험을 운영 백엔드의 대체나 이전 완료로 간주하지 않는다.
+- FastAPI 실험 범위와 진행 상태는 `docs/experiments/fastapi-backend.md`에서 관리한다.
 
 ---
 

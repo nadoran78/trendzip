@@ -23,7 +23,75 @@
 
 ## ACTIVE
 
-- 없음
+### EXP-001 FastAPI 백엔드 학습 환경과 health API
+
+- 상태: IN_PROGRESS
+- 브랜치: codex/exp-001-fastapi-backend
+- 시작일: 2026-08-07
+- 마지막 갱신: 2026-08-08
+- 다음 행동: linked worktree의 Gitleaks staged·전체 이력 검사를 정상화한 뒤 FastAPI scaffold와 health API를 구현한다.
+
+#### 목적
+
+기존 Kotlin health API를 기준으로 FastAPI application, router, Pydantic 응답 모델과 pytest API 테스트를 작은 수직 흐름으로 학습한다.
+
+#### 범위
+
+- FastAPI 실험과 운영 Kotlin 백엔드의 책임을 문서로 분리한다.
+- `backend-fastapi/` 전용 작업·학습 규칙과 안내 문서를 추가한다.
+- FastAPI 애플리케이션 기본 구조를 설계한다.
+- `GET /api/health`와 공통 응답 wrapper를 구현한다.
+- pytest로 정상 응답 계약을 검증한다.
+- FastAPI Swagger에서 endpoint를 확인한다.
+
+#### 제외 범위
+
+- PostgreSQL과 SQLAlchemy 연결
+- Alembic migration
+- Redis와 cache
+- YouTube, 네이버 DataLab, Gemini 외부 API
+- 크롤링과 scheduler
+- 기존 Kotlin 백엔드 코드 수정
+- 운영 배포와 정식 백엔드 전환 결정
+
+#### 진행 상황
+
+- [x] 루트 문서에 정식 Kotlin·FastAPI 실험 구분 추가
+- [x] FastAPI 전용 `AGENTS.md`와 README 추가
+- [x] FastAPI 실험 로드맵과 Kotlin 대응표 추가
+- [ ] linked worktree에서 Gitleaks staged·전체 이력 검사 정상화
+- [ ] FastAPI 프로젝트 scaffold 구현
+- [ ] 공통 응답 모델과 health API 구현
+- [ ] pytest API 테스트와 Swagger 검증
+
+#### 완료 조건
+
+- `backend-fastapi/`가 독립적인 Python 프로젝트 구조를 가진다.
+- `GET /api/health`가 Kotlin API와 동일한 공통 wrapper를 반환한다.
+- pytest가 실제 외부 서비스 없이 통과한다.
+- FastAPI Swagger에서 health endpoint와 응답 model을 확인할 수 있다.
+- Kotlin 대응 코드와 새로 학습한 Python/FastAPI 개념이 실험 문서에 기록된다.
+- 기존 `backend/` 코드와 Flyway migration은 변경되지 않는다.
+
+#### 관련 코드
+
+- `AGENTS.md`
+- `backend-fastapi/AGENTS.md`
+- `backend-fastapi/README.md`
+- `docs/experiments/fastapi-backend.md`
+- `backend/src/main/kotlin/com/mztrend/controller/HealthController.kt`
+- `backend/src/main/kotlin/com/mztrend/common/ResponseWrapper.kt`
+
+#### 검증
+
+- 상태: PENDING
+- 문서 단계: `./dev/check-context`, `./dev/check-context --strict`, `./dev/verify --quick`
+- 구현 단계: Python formatter·type check·pytest와 FastAPI Swagger 수동 확인
+- 보안: `./dev/check-secrets --staged`
+
+#### 인계 메모
+
+이 작업은 전체 백엔드 재작성 작업이 아니다. 첫 학습 단위를 health API까지 완료한 뒤 feed 조회는 별도 EXP 작업으로 분리한다. 운영 및 migration 기준은 계속 Kotlin/Flyway다.
 
 ## READY
 
