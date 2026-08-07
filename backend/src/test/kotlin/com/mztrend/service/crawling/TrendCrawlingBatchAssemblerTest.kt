@@ -185,6 +185,64 @@ class TrendCrawlingBatchAssemblerTest {
     }
 
     @Test
+    fun `assemble does not connect a work title with unrelated generic keywords`() {
+        val assembler = assembler()
+
+        val batch =
+            assembler.assemble(
+                generation = Generation.TEEN,
+                scoredKeywords =
+                    listOf(
+                        scoredKeyword(
+                            "메이드 인 코리아",
+                            rank = 1,
+                            evidenceVideos =
+                                listOf(
+                                    evidenceVideo(
+                                        videoId = "made-in-korea-trailer",
+                                        title = "메이드 인 코리아 공식 예고편",
+                                    ),
+                                ),
+                        ),
+                        scoredKeyword("리뷰", rank = 2),
+                        scoredKeyword("summer", rank = 3),
+                        scoredKeyword("t1", rank = 4),
+                    ),
+            )
+
+        assertEquals(emptyList(), batch.keywordRelations)
+    }
+
+    @Test
+    fun `assemble rejects one sided mentions from incorrectly assigned evidence`() {
+        val assembler = assembler()
+
+        val batch =
+            assembler.assemble(
+                generation = Generation.TEEN,
+                scoredKeywords =
+                    listOf(
+                        scoredKeyword(
+                            "코리아",
+                            rank = 1,
+                            evidenceVideos =
+                                listOf(
+                                    evidenceVideo(
+                                        videoId = "invalid-korea-evidence",
+                                        title = "리뷰 summer t1 모음",
+                                    ),
+                                ),
+                        ),
+                        scoredKeyword("리뷰", rank = 2),
+                        scoredKeyword("summer", rank = 3),
+                        scoredKeyword("t1", rank = 4),
+                    ),
+            )
+
+        assertEquals(emptyList(), batch.keywordRelations)
+    }
+
+    @Test
     fun `assemble rejects scored keywords from another generation`() {
         val assembler = assembler()
 

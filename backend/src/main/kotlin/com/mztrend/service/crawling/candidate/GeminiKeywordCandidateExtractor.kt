@@ -77,7 +77,8 @@ class GeminiKeywordCandidateExtractor(
             "",
             "추출 기준:",
             "- 10대/20대가 검색하거나 피드에서 눌러볼 만한 고유명사, 콘텐츠명, 인물/그룹명, 밈, 게임명, 작품명, 챌린지명을 우선한다.",
-            "- by, to, on, it, you 같은 일반 영어 단어, 치지직/CHZZK 같은 플랫폼명, 조사, 광고/출처 문구, URL 조각은 제외한다.",
+            "- 작품명과 콘텐츠명은 공식 전체 명칭으로 작성하고 일부 단어만 떼어내지 않는다. 예: '메이드 인 코리아'는 허용하지만 '코리아'는 제외한다.",
+            "- 게임, 리뷰처럼 범위가 넓은 장르·콘텐츠 형식, by, to, on, it, you 같은 일반 영어 단어, 치지직/CHZZK 같은 플랫폼명, 조사, 광고/출처 문구, URL 조각은 제외한다.",
             "- 단순 장르명이나 너무 넓은 단어보다 영상 여러 개에서 반복되거나 제목/태그에서 강하게 드러난 표현을 우선한다.",
             "- 확인 가능한 메타데이터에 근거한 후보만 반환하고, 없는 사실을 추측하지 않는다.",
             "- keyword는 한국어 원문 또는 널리 쓰이는 표기 그대로 작성한다.",
@@ -115,12 +116,12 @@ class GeminiKeywordCandidateExtractor(
     private fun KeywordCandidateExtractionResult.filterCandidates(
         request: KeywordCandidateExtractionRequest,
     ): KeywordCandidateExtractionResult {
-        val videoIds = request.videos.map { it.videoId }.toSet()
+        val videosById = request.videos.associateBy { it.videoId }
         val minConfidence = properties.gemini.candidateExtractionMinConfidence
         val validCandidates =
             candidates
                 .asSequence()
-                .mapNotNull { candidate -> candidate.normalized(videoIds) }
+                .mapNotNull { candidate -> candidate.normalized(videosById) }
                 .filter { it.confidence >= minConfidence }
                 .distinctBy { it.keyword.lowercase() }
                 .toList()
@@ -138,14 +139,22 @@ class GeminiKeywordCandidateExtractor(
         )
     }
 
-    private fun ExtractedKeywordCandidate.normalized(videoIds: Set<String>): ExtractedKeywordCandidate? {
+    private fun ExtractedKeywordCandidate.normalized(
+        videosById: Map<String, KeywordCandidateExtractionVideo>,
+    ): ExtractedKeywordCandidate? {
         val normalizedKeyword =
             keyword
                 .trim()
                 .trim('#', '"', '\'', '`')
                 .takeIf { it.length in MIN_KEYWORD_LENGTH..MAX_KEYWORD_LENGTH }
                 ?: return null
-        val normalizedEvidenceVideoIds = evidenceVideoIds.filter { it in videoIds }.distinct()
+        val normalizedEvidenceVideoIds =
+            evidenceVideoIds
+                .distinct()
+                .filter { videoId ->
+                    videosById[videoId]?.let { video -> KeywordEvidenceMatcher.isMentionedIn(normalizedKeyword, video) } == true
+                }.takeIf { it.isNotEmpty() }
+                ?: return null
 
         return copy(
             keyword = normalizedKeyword,

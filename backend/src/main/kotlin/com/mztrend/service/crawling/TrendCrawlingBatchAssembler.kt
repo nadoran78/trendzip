@@ -1,6 +1,7 @@
 package com.mztrend.service.crawling
 
 import com.mztrend.domain.Generation
+import com.mztrend.service.crawling.candidate.KeywordEvidenceMatcher
 import com.mztrend.service.crawling.candidate.ScoredTrendKeyword
 import org.springframework.stereotype.Service
 import kotlin.math.abs
@@ -50,81 +51,41 @@ class TrendCrawlingBatchAssembler(
 
     private fun relatedKeywordComparator(keyword: ScoredTrendKeyword): Comparator<KeywordRelationCandidate> =
         compareByDescending<KeywordRelationCandidate> { candidate -> candidate.score }
-            .thenByDescending { candidate -> candidate.sharedEvidenceVideoCount }
-            .thenByDescending { candidate -> if (candidate.hasEvidenceTextMention) 1 else 0 }
+            .thenByDescending { candidate -> candidate.coOccurrenceEvidenceVideoCount }
             .thenBy { candidate -> abs(keyword.rank - candidate.relatedKeyword.rank) }
             .thenBy { candidate -> candidate.relatedKeyword.rank }
             .thenByDescending { candidate -> candidate.relatedKeyword.trendScore }
             .thenBy { candidate -> candidate.relatedKeyword.word }
 
     private fun ScoredTrendKeyword.toRelationCandidate(relatedKeyword: ScoredTrendKeyword): KeywordRelationCandidate {
-        val sharedEvidenceVideoCount = sharedEvidenceVideoCount(relatedKeyword)
-        val hasEvidenceTextMention = hasEvidenceTextMention(relatedKeyword)
-        val evidenceTextMentionScore = if (hasEvidenceTextMention) EVIDENCE_TEXT_MENTION_SCORE else 0
+        val coOccurrenceEvidenceVideoCount = coOccurrenceEvidenceVideoCount(relatedKeyword)
         val categoryScore = if (hasSameCategory(relatedKeyword)) CATEGORY_MATCH_SCORE else 0
-        val score =
-            sharedEvidenceVideoCount * SHARED_EVIDENCE_VIDEO_SCORE +
-                evidenceTextMentionScore +
-                categoryScore
+        val score = coOccurrenceEvidenceVideoCount * CO_OCCURRENCE_EVIDENCE_VIDEO_SCORE + categoryScore
 
         return KeywordRelationCandidate(
             relatedKeyword = relatedKeyword,
             score = score,
-            sharedEvidenceVideoCount = sharedEvidenceVideoCount,
-            hasEvidenceTextMention = hasEvidenceTextMention,
+            coOccurrenceEvidenceVideoCount = coOccurrenceEvidenceVideoCount,
         )
     }
 
-    private fun ScoredTrendKeyword.sharedEvidenceVideoCount(other: ScoredTrendKeyword): Int {
-        val evidenceVideoIds = evidenceVideos.map { it.videoId }.toSet()
-        if (evidenceVideoIds.isEmpty()) return 0
-
-        return other.evidenceVideos.count { evidenceVideo -> evidenceVideo.videoId in evidenceVideoIds }
-    }
-
-    private fun ScoredTrendKeyword.hasEvidenceTextMention(other: ScoredTrendKeyword): Boolean =
-        evidenceVideos.any { evidenceVideo -> other.word.isMentionedIn(evidenceVideo.searchableText()) } ||
-            other.evidenceVideos.any { evidenceVideo -> word.isMentionedIn(evidenceVideo.searchableText()) }
-
-    private fun String.isMentionedIn(text: String): Boolean {
-        val normalizedKeyword = normalizeForSearch()
-        if (normalizedKeyword.isBlank()) return false
-
-        val normalizedText = text.normalizeForSearch()
-        if (normalizedText.isBlank()) return false
-
-        val keywordTokens = normalizedKeyword.split(" ")
-        if (keywordTokens.size > 1) {
-            return normalizedText.contains(normalizedKeyword) ||
-                keywordTokens.all { keywordToken -> keywordToken in normalizedText.split(" ") }
-        }
-
-        if (normalizedKeyword.isShortAlphaNumeric()) {
-            return normalizedKeyword in normalizedText.split(" ")
-        }
-
-        return normalizedText.contains(normalizedKeyword)
-    }
-
-    private fun String.normalizeForSearch(): String =
-        lowercase()
-            .replace(SEARCH_DELIMITER_REGEX, " ")
-            .trim()
-            .replace(MULTIPLE_WHITESPACE_REGEX, " ")
-
-    private fun String.isShortAlphaNumeric(): Boolean =
-        length <= SHORT_ALPHA_NUMERIC_MAX_LENGTH && all { character -> character.isLetterOrDigit() && !character.isHangul() }
-
-    private fun Char.isHangul(): Boolean = this in '가'..'힣'
-
-    private fun com.mztrend.service.crawling.candidate.TrendCandidateEvidenceVideo.searchableText(): String =
-        listOf(title, channelName, description.orEmpty()).joinToString(" ")
+    private fun ScoredTrendKeyword.coOccurrenceEvidenceVideoCount(other: ScoredTrendKeyword): Int =
+        (evidenceVideos + other.evidenceVideos)
+            .groupBy { evidenceVideo -> evidenceVideo.videoId }
+            .count { (_, evidenceVideos) ->
+                evidenceVideos.any { evidenceVideo ->
+                    KeywordEvidenceMatcher.areBothMentionedIn(
+                        firstKeyword = word,
+                        secondKeyword = other.word,
+                        video = evidenceVideo,
+                    )
+                }
+            }
 
     private data class KeywordRelationCandidate(
         val relatedKeyword: ScoredTrendKeyword,
         val score: Int,
-        val sharedEvidenceVideoCount: Int,
-        val hasEvidenceTextMention: Boolean,
+        val coOccurrenceEvidenceVideoCount: Int,
     )
 
     private fun ScoredTrendKeyword.hasSameCategory(other: ScoredTrendKeyword): Boolean =
@@ -133,12 +94,8 @@ class TrendCrawlingBatchAssembler(
     private companion object {
         private const val RELATED_KEYWORD_LIMIT_PER_KEYWORD = 3
         private const val MIN_RELATION_SCORE = 1_000
-        private const val SHARED_EVIDENCE_VIDEO_SCORE = 3_000
-        private const val EVIDENCE_TEXT_MENTION_SCORE = 2_000
+        private const val CO_OCCURRENCE_EVIDENCE_VIDEO_SCORE = 5_000
         private const val CATEGORY_MATCH_SCORE = 300
-        private const val SHORT_ALPHA_NUMERIC_MAX_LENGTH = 3
         private const val KEYWORD_RELATION_SOURCE = "batch_assembler"
-        private val SEARCH_DELIMITER_REGEX = Regex("[^\\p{L}\\p{N}가-힣]+")
-        private val MULTIPLE_WHITESPACE_REGEX = Regex("\\s+")
     }
 }

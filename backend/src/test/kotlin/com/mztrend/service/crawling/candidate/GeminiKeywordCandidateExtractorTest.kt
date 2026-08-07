@@ -47,8 +47,8 @@ class GeminiKeywordCandidateExtractorTest {
                       "keyword": "뉴진스",
                       "category": "음악",
                       "confidence": 0.84,
-                      "evidenceVideoIds": ["unknown"],
-                      "reason": "근거 영상 ID 불일치"
+                      "evidenceVideoIds": ["video-1"],
+                      "reason": "근거 영상에 키워드 없음"
                     }
                   ]
                 }
@@ -70,6 +70,8 @@ class GeminiKeywordCandidateExtractorTest {
         assertContains(prompt, "반드시 JSON만 출력한다")
         assertContains(prompt, "by, to, on, it, you")
         assertContains(prompt, "치지직/CHZZK 같은 플랫폼명")
+        assertContains(prompt, "'메이드 인 코리아'는 허용하지만 '코리아'는 제외한다")
+        assertContains(prompt, "게임, 리뷰처럼 범위가 넓은 장르·콘텐츠 형식")
         assertContains(prompt, "videoId: video-1")
         assertContains(prompt, "title: 다비치 컴백 무대")
         assertContains(prompt, "description: 설명")
@@ -82,18 +84,15 @@ class GeminiKeywordCandidateExtractorTest {
                 ?.thinkingLevel,
         )
 
-        assertEquals(listOf("다비치", "아이브", "뉴진스"), result.candidates.map { it.keyword })
+        assertEquals(listOf("다비치"), result.candidates.map { it.keyword })
 
         val davichiCandidate = result.candidates.first()
         assertEquals("음악", davichiCandidate.category)
         assertEquals(0.91, davichiCandidate.confidence)
         assertEquals(listOf("video-1"), davichiCandidate.evidenceVideoIds)
 
-        val missingEvidenceCandidate = result.candidates.first { it.keyword == "아이브" }
-        assertTrue(missingEvidenceCandidate.evidenceVideoIds.isEmpty())
-
-        val unmatchedEvidenceCandidate = result.candidates.first { it.keyword == "뉴진스" }
-        assertTrue(unmatchedEvidenceCandidate.evidenceVideoIds.isEmpty())
+        assertTrue(result.candidates.none { it.keyword == "아이브" })
+        assertTrue(result.candidates.none { it.keyword == "뉴진스" })
     }
 
     @Test
@@ -122,7 +121,10 @@ class GeminiKeywordCandidateExtractorTest {
 
         assertTrue(failingExtractor.extract(request()).candidates.isEmpty())
 
-        val successClient = FakeGeminiContentClient("""{"candidates":[{"keyword":"다비치","confidence":0.9}]}""")
+        val successClient =
+            FakeGeminiContentClient(
+                """{"candidates":[{"keyword":"다비치","confidence":0.9,"evidenceVideoIds":["video-1"]}]}""",
+            )
         val waitingExtractor = extractor(successClient, rateLimiter)
 
         assertEquals(listOf("다비치"), waitingExtractor.extract(request()).candidates.map { it.keyword })

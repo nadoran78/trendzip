@@ -154,5 +154,6 @@ Week 5-6: 나머지 페이지 + 배포
   [ ] 다크모드 전체 적용 및 모바일 반응형 점검
   [x] Vercel production 및 수동 배포 workflow 설정
   [x] PWA manifest·서비스 워커·오프라인 fallback 검증
-  [ ] production 배포 후 Android/iOS 홈 화면 추가 확인
+  [x] production 배포 후 iOS 홈 화면 추가 확인
+  [ ] Android Chrome 홈 화면 설치 호환성 확인
 ```

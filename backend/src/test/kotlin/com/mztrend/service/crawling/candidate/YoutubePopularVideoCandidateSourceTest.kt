@@ -55,9 +55,15 @@ class YoutubePopularVideoCandidateSourceTest {
                     ),
                     youtubeVideo(
                         videoId = "video-3",
+                        title = "뉴진스 신곡",
+                        tags = listOf("뉴진스"),
+                        viewCount = 100_000L,
+                    ),
+                    youtubeVideo(
+                        videoId = "video-4",
                         title = "fallbackword 단독 영상",
                         tags = listOf("fallbackword"),
-                        viewCount = 100_000L,
+                        viewCount = 50_000L,
                     ),
                 ),
             )
@@ -67,7 +73,7 @@ class YoutubePopularVideoCandidateSourceTest {
                     listOf(
                         extractedCandidate("아이브", confidence = 0.95, evidenceVideoIds = listOf("video-2")),
                         extractedCandidate("다비치", confidence = 0.8, evidenceVideoIds = listOf("video-1")),
-                        extractedCandidate("뉴진스", confidence = 0.7, evidenceVideoIds = emptyList()),
+                        extractedCandidate("뉴진스", confidence = 0.7, evidenceVideoIds = listOf("video-3")),
                     ),
             )
 
@@ -93,7 +99,7 @@ class YoutubePopularVideoCandidateSourceTest {
     }
 
     @Test
-    fun `collectCandidates keeps Gemini candidates without evidence videos`() {
+    fun `collectCandidates drops Gemini candidates without evidence videos and uses fallback`() {
         Mockito
             .`when`(youtubeApiClient.getPopularVideos(10))
             .thenReturn(
@@ -115,10 +121,37 @@ class YoutubePopularVideoCandidateSourceTest {
 
         val candidates = source.collectCandidates()
 
-        assertEquals("아이브", candidates.first().word)
-        assertEquals(1, candidates.first().evidenceCount)
-        assertEquals(0L, candidates.first().totalViewCount)
-        assertTrue(candidates.first().evidenceVideos.isEmpty())
+        assertTrue(candidates.none { it.word == "아이브" })
+        assertTrue(candidates.any { it.word == "다비치" })
+        assertTrue(candidates.all { it.evidenceVideos.isNotEmpty() })
+    }
+
+    @Test
+    fun `collectCandidates drops Gemini candidates when evidence metadata does not mention keyword`() {
+        Mockito
+            .`when`(youtubeApiClient.getPopularVideos(10))
+            .thenReturn(
+                listOf(
+                    youtubeVideo(
+                        videoId = "video-1",
+                        title = "다비치 컴백 무대",
+                        tags = listOf("다비치"),
+                        viewCount = 2_000_000L,
+                    ),
+                ),
+            )
+        keywordCandidateExtractor.result =
+            KeywordCandidateExtractionResult(
+                candidates =
+                    listOf(
+                        extractedCandidate("뉴진스", confidence = 0.95, evidenceVideoIds = listOf("video-1")),
+                    ),
+            )
+
+        val candidates = source.collectCandidates()
+
+        assertTrue(candidates.none { it.word == "뉴진스" })
+        assertTrue(candidates.any { it.word == "다비치" })
     }
 
     @Test

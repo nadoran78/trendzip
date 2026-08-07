@@ -21,7 +21,7 @@ class YoutubeVideoCandidateExtractorTest {
                         youtubeVideo(
                             videoId = "video-1",
                             title = "아이브 Official MV #아이브",
-                            description = "아이브 컴백 무대 https://example.com",
+                            description = "아이브 컴백 무대 게임 리뷰 https://example.com",
                             tags = listOf("아이브", "IVE", "official"),
                             channelName = "아이브",
                             viewCount = 2_000_000,
@@ -46,6 +46,8 @@ class YoutubeVideoCandidateExtractorTest {
         assertFalse("mv" in words)
         assertFalse("shorts" in words)
         assertFalse("영상" in words)
+        assertFalse("게임" in words)
+        assertFalse("리뷰" in words)
 
         val ive = candidates.single { it.word == "아이브" }
         assertEquals(TrendCandidateSourceType.YOUTUBE_POPULAR, ive.source)
@@ -56,7 +58,7 @@ class YoutubeVideoCandidateExtractorTest {
         assertTrue(ive.score > 0)
         assertEquals("video-1", ive.evidenceVideos.single().videoId)
         assertEquals("아이브 Official MV #아이브", ive.evidenceVideos.single().title)
-        assertEquals("아이브 컴백 무대 https://example.com", ive.evidenceVideos.single().description)
+        assertEquals("아이브 컴백 무대 게임 리뷰 https://example.com", ive.evidenceVideos.single().description)
     }
 
     @Test
