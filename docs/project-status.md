@@ -1,12 +1,12 @@
 # 프로젝트 현재 상태
 
-- 마지막 갱신: 2026-08-06
+- 마지막 갱신: 2026-08-07
 - 현재 단계: 핵심 사용자 흐름 공개 배포 및 운영 보완
-- 현재 집중 영역: 운영 트래픽과 사용자 행동 분석 도입
+- 현재 집중 영역: GA4/GTM 기반 사용자 행동 분석 도입
 
 ## 한 줄 상태
 
-백엔드의 트렌드 수집·저장·조회 API와 확정 디자인을 반영한 랜딩·세대별 피드·랭킹·키워드 상세 화면이 구현됐으며, 운영 API를 Cloudflare Access로 보호한 상태에서 `trendzip.nadoran.com`의 핵심 탐색 흐름과 iOS 홈 화면 설치를 사용할 수 있다.
+백엔드의 트렌드 수집·저장·조회 API와 확정 디자인을 반영한 랜딩·세대별 피드·랭킹·키워드 상세 화면이 구현됐으며, 운영 API를 Cloudflare Access로 보호하고 Vercel Web Analytics로 기본 운영 트래픽을 확인할 수 있다.
 
 ## 구현 현황
 
@@ -35,7 +35,7 @@
 - 구현됨: 페이지별 SEO metadata와 canonical URL, Open Graph·Twitter 공유 이미지, robots와 동적 sitemap
 - 구현됨: Web App Manifest, 일반·maskable·Apple 아이콘, Serwist 서비스 워커와 오프라인 fallback
 - 검증됨: 운영 iOS Safari 홈 화면 추가
-- 일부 구현됨: Vercel Web Analytics SDK를 루트 레이아웃에 연결했으며 production 활성화와 데이터 수집 확인이 남음
+- 구현·검증됨: Vercel Web Analytics 기반 production 방문자·페이지 조회·방문 경로 수집
 - 미구현: GA4/GTM 기반 사용자 행동 분석
 - 미구현: Android Chrome 홈 화면 설치 확인과 프론트엔드 자동 테스트
 
@@ -81,11 +81,10 @@
 
 ## 주요 미완성 영역
 
-1. Vercel Web Analytics 기반 운영 트래픽 측정
-2. GA4/GTM 기반 사용자 행동 분석 실습
-3. 키워드와 설명 기반 숏폼 생성·검수·YouTube 게시 자동화
-4. 프론트 핵심 사용자 흐름 자동 테스트
-5. OpenAPI와 프론트 TypeScript 타입의 계약 자동화
+1. GA4/GTM 기반 사용자 행동 분석 실습
+2. 키워드와 설명 기반 숏폼 생성·검수·YouTube 게시 자동화
+3. 프론트 핵심 사용자 흐름 자동 테스트
+4. OpenAPI와 프론트 TypeScript 타입의 계약 자동화
 
 활성 작업, 작업 브랜치와 우선순위는 [작업 목록](work-items.md)을 기준으로 한다.
 
@@ -94,7 +93,7 @@
 - 백엔드 DB 통합 테스트는 기본적으로 로컬 PostgreSQL의 `mztrend_test` 데이터베이스에 의존한다.
 - API 계약이 Kotlin DTO, 루트 API 예시, 프론트 TypeScript 타입에 중복되어 있다.
 - 프론트엔드에는 사용자 흐름을 검증하는 자동 테스트가 없다.
-- 운영 방문자·페이지 조회·유입·핵심 탐색 행동을 지속적으로 비교할 분석 도구가 아직 연결되지 않았다.
+- Vercel Web Analytics는 기본 트래픽만 수집하며 유입 캠페인과 핵심 탐색 행동을 분석할 GA4/GTM은 아직 연결되지 않았다.
 - 키워드 데이터를 외부 홍보 콘텐츠로 재가공하고 검수·게시하는 파이프라인이 아직 없다.
 - 실제 크롤링 검증은 YouTube, 네이버 DataLab, Gemini API quota를 소비한다.
 - PWA 설치 메뉴와 홈 화면 아이콘 표현은 브라우저와 OS별로 달라 Android 실기기 동작은 아직 확인하지 못했다.
