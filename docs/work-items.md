@@ -29,7 +29,7 @@
 - 브랜치: codex/exp-001-fastapi-backend
 - 시작일: 2026-08-07
 - 마지막 갱신: 2026-08-08
-- 다음 행동: `backend-fastapi/` Python 프로젝트 scaffold를 구성하고 formatter·type check·pytest 실행 기반을 추가한다.
+- 다음 행동: Kotlin `ResponseWrapper`와 `HealthController`를 확인하고 FastAPI 공통 응답 model과 health router 구현 계획을 세운다.
 
 #### 목적
 
@@ -62,7 +62,10 @@
 - [x] linked worktree에서 Gitleaks staged·전체 이력 검사 정상화
   - [x] Git index snapshot 기반 staged 검사와 합성 비밀정보 회귀 테스트
   - [x] Git common directory helper와 linked worktree 전체 이력 검사
-- [ ] FastAPI 프로젝트 scaffold 구현
+- [x] FastAPI 프로젝트 scaffold 구현
+  - [x] Python 3.12·uv 프로젝트와 잠긴 의존성 구성
+  - [x] 최소 FastAPI application·OpenAPI smoke test·전용 검증 명령 구성
+  - [x] 사용자 애플리케이션 title·OpenAPI title assertion 실습
 - [ ] 공통 응답 모델과 health API 구현
 - [ ] pytest API 테스트와 Swagger 검증
 
@@ -90,7 +93,8 @@
 - 문서 단계: `./dev/check-context`, `./dev/check-context --strict`, `./dev/verify --quick` 통과
 - Gitleaks staged 단계: 현재 worktree와 임시 일반 저장소·linked worktree의 clean snapshot 통과, 합성 비밀정보 차단 확인
 - Gitleaks 전체 이력 단계: 현재 linked worktree와 임시 일반 저장소·linked worktree의 clean 이력 통과, 커밋된 합성 비밀정보 차단 확인
-- 구현 단계: Python formatter·type check·pytest와 FastAPI Swagger 수동 확인
+- FastAPI scaffold 단계: 사용자 실습 반영 후 `./dev/verify-fastapi`의 Ruff format·lint, strict mypy와 OpenAPI smoke test 1개 통과
+- 구현 단계: health API 구현 후 Python 검증 재실행과 FastAPI Swagger 수동 확인
 - 보안: `./dev/check-secrets --staged`
 
 #### 인계 메모

@@ -29,7 +29,7 @@ PostgreSQL, SQLAlchemy, Alembic, Redis, 외부 API와 크롤링은 현재 범위
 - FastAPI
 - Pydantic
 - pytest
-- FastAPI TestClient 또는 httpx
+- FastAPI TestClient (httpx2 기반)
 
 SQLAlchemy, 비동기 DB driver와 scheduler는 해당 학습 단계에서 비교 후 결정한다.
 

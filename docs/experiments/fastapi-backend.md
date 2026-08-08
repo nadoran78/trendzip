@@ -43,10 +43,10 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 
 | 역할 | Kotlin 기준 | FastAPI 예정 | 상태 |
 |---|---|---|---|
-| 애플리케이션 | `MzTrendApplication.kt` | `app/main.py` | 미구현 |
+| 애플리케이션 | `MzTrendApplication.kt` | `app/main.py` | scaffold와 title 완료 |
 | Health API | `HealthController.kt` | `app/api/health.py` | 미구현 |
 | 공통 응답 | `ResponseWrapper.kt` | `app/schemas/response.py` | 미구현 |
-| API 테스트 | Spring Boot controller test | `tests/test_health.py` | 미구현 |
+| API 테스트 | Spring Boot controller test | `tests/test_app.py`, `tests/test_health.py` | OpenAPI smoke test 완료 |
 
 ## API 호환성 기준
 
@@ -76,14 +76,27 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 - [x] linked worktree에서 Gitleaks staged·전체 이력 검사 정상화
   - [x] staged index snapshot 검사와 합성 비밀정보 탐지
   - [x] Git common directory와 전체 이력 검사
-- [ ] Python project scaffold
+- [x] Python project scaffold
+  - [x] Python 3.12·uv·uv.lock 기반 실행 환경
+  - [x] Ruff·mypy·pytest 통합 검증과 OpenAPI smoke test
+  - [x] 애플리케이션 title과 OpenAPI title assertion 실습
 - [ ] 공통 응답 model과 health API
 - [ ] pytest API 테스트
 - [ ] Swagger 확인과 학습 기록
 
 ## 학습 기록
 
-아직 구현 전이다. 각 EXP 작업 완료 시 새로 사용한 Python 문법, FastAPI 개념과 Kotlin 비교를 짧게 기록한다.
+### 프로젝트 scaffold
+
+- 시스템 Python 3.9와 실험 환경을 분리하고 `.python-version`으로 Python 3.12를 요청한다.
+- `pyproject.toml`은 프로젝트 metadata, 실행·개발 의존성과 도구 설정을 모은다.
+- `uv.lock`은 실제 설치할 transitive dependency 버전까지 고정한다.
+- `app.main`의 `FastAPI` 객체는 Spring Boot의 `MzTrendApplication`에 대응하는 ASGI application 진입점이다.
+- FastAPI `TestClient`로 서버 process 없이 `/openapi.json`을 요청해 application이 정상 조립되는지 확인한다.
+- `python -m pytest`로 실행하면 현재 프로젝트 디렉터리가 Python module 검색 경로에 포함된다.
+- `FastAPI(title=...)`로 Python keyword argument를 사용하고 그 값이 OpenAPI `info.title`로 직렬화되는지 확인했다.
+- HTTP response는 `response.json()`으로 JSON object를 얻은 뒤 `['info']['title']`처럼 dictionary key로 접근한다.
+- pytest의 일반 `assert`로 실제 OpenAPI 계약과 기대 문자열을 비교한다.
 
 ## 의도적인 차이
 
@@ -91,7 +104,6 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 
 ## 보류 결정
 
-- 지원할 Python 버전과 dependency 관리 도구
 - sync 또는 async SQLAlchemy
 - PostgreSQL driver
 - Alembic 도입 여부
