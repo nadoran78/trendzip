@@ -42,11 +42,24 @@ GitHub 저장소의 Ruleset 또는 Branch protection에서 `develop`에 다음 s
 ./dev/check-secrets --staged
 ```
 
+`--staged`는 Git index 전체를 임시 디렉터리에 checkout하고 Gitleaks `dir` 모드로 검사한다. 로컬 실행 파일과 Docker fallback 모두 snapshot에 포함된 `.gitleaks.toml`을 사용한다. working tree의 unstaged 변경과 Git 비추적 파일은 포함하지 않으며, 일반 저장소와 linked worktree에서 같은 방식으로 동작한다. 임시 snapshot은 검사 성공·실패와 관계없이 종료할 때 제거한다.
+
+`--all`은 Gitleaks `git` 모드로 전체 이력을 검사한다. Docker fallback에서는 linked worktree의 `.git` 파일이 가리키는 Git common directory도 읽을 수 있어야 한다. Git metadata 접근 오류나 `fatal: not a git repository`가 발생하면 비밀정보가 없다는 성공 결과로 처리하지 않는다.
+
 검사는 `.gitleaks.toml`과 Gitleaks `8.30.1`을 사용한다. 같은 버전의 로컬 실행 파일이 있으면 직접 사용하고, 없거나 버전이 다르면 digest까지 고정한 공식 Docker 이미지를 사용한다. Docker 방식을 처음 사용할 때는 이미지 다운로드가 필요하고 Docker Desktop이 실행 중이어야 한다.
 
 ```bash
 docker pull ghcr.io/gitleaks/gitleaks:v8.30.1
 ```
+
+비밀정보 검사 회귀 테스트는 실제 프로젝트 index를 수정하지 않고 임시 Git 저장소와 linked worktree에서 실행한다.
+
+```bash
+./dev/tests/check-secrets --staged-only
+./dev/tests/check-secrets --all
+```
+
+테스트용 Gitleaks 규칙과 합성 문자열을 사용해 clean snapshot은 통과하고 staged·committed 합성 비밀정보는 차단되는지 확인한다.
 
 ## Pre-commit 훅
 

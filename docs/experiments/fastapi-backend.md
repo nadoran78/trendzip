@@ -73,7 +73,9 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 - [x] FastAPI worktree와 `codex/exp-001-fastapi-backend` 브랜치 생성
 - [x] EXP-001 ACTIVE 작업 등록
 - [x] 루트와 FastAPI 전용 문서 책임 분리
-- [ ] linked worktree에서 Gitleaks staged·전체 이력 검사 정상화
+- [x] linked worktree에서 Gitleaks staged·전체 이력 검사 정상화
+  - [x] staged index snapshot 검사와 합성 비밀정보 탐지
+  - [x] Git common directory와 전체 이력 검사
 - [ ] Python project scaffold
 - [ ] 공통 응답 model과 health API
 - [ ] pytest API 테스트
