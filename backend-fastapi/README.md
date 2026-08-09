@@ -6,7 +6,7 @@
 
 ## 현재 단계
 
-`EXP-001`에서 FastAPI 기본 구조, 공통 응답 model, `GET /api/health`와 pytest API 테스트를 구현합니다. 현재 Python 3.12와 uv 기반 실행 환경, 최소 FastAPI application과 OpenAPI smoke test까지 구성했습니다.
+`EXP-001`에서 FastAPI 기본 구조, 공통 응답 model, `GET /api/health`와 pytest API 테스트를 구현했습니다. Kotlin과 호환되는 health API에 공통 성공 응답 classmethod를 적용했고 Swagger UI에서 응답 계약을 확인했습니다.
 
 현재 구조:
 
@@ -17,12 +17,19 @@ backend-fastapi/
 ├── uv.lock
 ├── app/
 │   ├── __init__.py
-│   └── main.py
+│   ├── main.py
+│   ├── api/
+│   │   └── health.py
+│   └── schemas/
+│       ├── health.py
+│       └── response.py
 └── tests/
-    └── test_app.py
+    ├── test_app.py
+    ├── test_health.py
+    └── test_response.py
 ```
 
-health router, 공통 응답 schema와 계층별 디렉터리는 해당 코드를 구현할 때 추가합니다.
+health API는 고정된 상태를 반환하므로 service와 repository 계층을 두지 않습니다.
 
 ## 개발 환경
 
@@ -52,6 +59,22 @@ cd backend-fastapi
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - OpenAPI JSON: `http://127.0.0.1:8000/openapi.json`
 
+health API를 확인합니다.
+
+```bash
+curl http://127.0.0.1:8000/api/health
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "UP"
+  },
+  "error": null
+}
+```
+
 개별 검증 명령은 다음과 같습니다.
 
 ```bash
@@ -65,11 +88,25 @@ uv run --locked python -m pytest
 
 ## 완료한 실습
 
+### Application 설정과 OpenAPI
+
 1. `app/main.py`의 `FastAPI()`에 `title="Trendzip FastAPI Experiment"`를 추가했습니다.
 2. `tests/test_app.py`에서 OpenAPI JSON의 `info.title`이 같은 문자열인지 검증했습니다.
 3. 저장소 루트에서 `./dev/verify-fastapi`를 실행해 검증했습니다.
 
 이 실습은 Python keyword argument, JSON dictionary 접근, pytest `assert`와 FastAPI 설정이 OpenAPI 문서로 이어지는 방식을 익히기 위한 것입니다.
+
+### 공통 성공 응답 factory
+
+공통 응답의 직접 생성을 factory method로 리팩터링했습니다.
+
+1. `app/schemas/response.py`의 `ResponseWrapper`에 `success_response` classmethod를 추가했습니다.
+2. 반환 타입은 `Self`, 입력 `data`의 타입은 generic type parameter인 `DataT`를 사용했습니다.
+3. `tests/test_response.py`와 `app/api/health.py`의 직접 생성을 새 factory method 호출로 변경했습니다.
+4. `ResponseWrapper[HealthResponse]`로 타입 인자를 명시해 정적 타입과 Pydantic 런타임 타입을 일치시켰습니다.
+5. `./dev/verify-fastapi`와 Swagger UI의 `Execute` 호출로 응답을 검증했습니다.
+
+`success`는 이미 응답 field 이름이므로 Kotlin factory와 같은 이름 대신 `success_response`를 사용합니다. 이 실습은 Python `@classmethod`, `cls`, `Self`, generic type과 동작을 바꾸지 않는 리팩터링을 익히기 위한 것입니다.
 
 ## 관련 문서
 

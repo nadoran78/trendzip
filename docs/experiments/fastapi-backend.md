@@ -29,7 +29,7 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 
 | 작업 | 범위 | 주요 학습 | 상태 |
 |---|---|---|---|
-| EXP-001 | 기본 구조와 health API | FastAPI, router, Pydantic, pytest | 진행 중 |
+| EXP-001 | 기본 구조와 health API | FastAPI, router, Pydantic, pytest | 완료, 검토 대기 |
 | EXP-002 | feed 조회 API | dependency, SQLAlchemy 조회, DTO projection | 대기 |
 | EXP-003 | keyword 목록 API | query parameter, enum, 정렬 | 대기 |
 | EXP-004 | keyword 상세 API | 중첩 model, join, 404 처리 | 대기 |
@@ -44,9 +44,9 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 | 역할 | Kotlin 기준 | FastAPI 예정 | 상태 |
 |---|---|---|---|
 | 애플리케이션 | `MzTrendApplication.kt` | `app/main.py` | scaffold와 title 완료 |
-| Health API | `HealthController.kt` | `app/api/health.py` | 미구현 |
-| 공통 응답 | `ResponseWrapper.kt` | `app/schemas/response.py` | 미구현 |
-| API 테스트 | Spring Boot controller test | `tests/test_app.py`, `tests/test_health.py` | OpenAPI smoke test 완료 |
+| Health API | `HealthController.kt` | `app/api/health.py` | factory 적용 완료 |
+| 공통 응답 | `ResponseWrapper.kt` | `app/schemas/response.py` | generic model과 factory 완료 |
+| API 테스트 | Spring Boot controller test | `tests/test_app.py`, `tests/test_health.py`, `tests/test_response.py` | 응답 계약과 OpenAPI 자동 검증 완료 |
 
 ## API 호환성 기준
 
@@ -80,9 +80,12 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
   - [x] Python 3.12·uv·uv.lock 기반 실행 환경
   - [x] Ruff·mypy·pytest 통합 검증과 OpenAPI smoke test
   - [x] 애플리케이션 title과 OpenAPI title assertion 실습
-- [ ] 공통 응답 model과 health API
-- [ ] pytest API 테스트
-- [ ] Swagger 확인과 학습 기록
+- [x] 공통 응답 model과 health API
+  - [x] Pydantic generic wrapper와 health response model
+  - [x] 직접 생성 방식의 health router와 Kotlin 호환 응답
+  - [x] `success_response` classmethod 리팩터링 실습
+- [x] pytest API 테스트
+- [x] Swagger 확인과 학습 기록
 
 ## 학습 기록
 
@@ -97,6 +100,25 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 - `FastAPI(title=...)`로 Python keyword argument를 사용하고 그 값이 OpenAPI `info.title`로 직렬화되는지 확인했다.
 - HTTP response는 `response.json()`으로 JSON object를 얻은 뒤 `['info']['title']`처럼 dictionary key로 접근한다.
 - pytest의 일반 `assert`로 실제 OpenAPI 계약과 기대 문자열을 비교한다.
+
+### Health API baseline
+
+- `BaseModel`의 type annotation으로 응답 field를 선언하면 Pydantic이 runtime validation, serialization과 JSON Schema 생성을 담당한다.
+- Python 3.12의 `class ResponseWrapper[DataT]` 문법은 Kotlin `ResponseWrapper<T>`처럼 data 타입을 endpoint별로 구체화한다.
+- `APIRouter(prefix="/api", tags=["Health"])`는 health path operation을 별도 module로 묶고 `app.include_router()`가 이를 application에 등록한다.
+- health는 DB나 외부 I/O가 없으므로 일반 `def`로 구현하고 service·repository 계층은 추가하지 않는다.
+- `response_model=ResponseWrapper[HealthResponse]`는 실제 반환값을 검증·직렬화하고 OpenAPI 응답 schema를 만든다.
+- `response_model_exclude_none`의 기본값을 유지해 Kotlin 계약처럼 `error`를 생략하지 않고 `null`로 반환한다.
+- TestClient로 HTTP 200, 전체 JSON 계약과 OpenAPI의 path·tag·summary를 서버 process 없이 검증한다.
+
+### 공통 성공 응답 factory
+
+- `@classmethod`는 class 자체를 `cls`로 받아 생성 책임을 `ResponseWrapper` 안에 둔다.
+- `Self`는 factory를 호출한 실제 class가 반환된다는 점을 type checker에 표현한다.
+- `success_response(data: DataT)`는 입력 data와 `ResponseWrapper`의 generic type을 연결한다.
+- `ResponseWrapper[HealthResponse]`로 타입 인자를 명시하면 mypy가 추론한 정적 타입뿐 아니라 Pydantic 런타임 model도 구체화된다.
+- 성공 응답의 `success=True`와 `error=None` 규칙을 factory 한곳에 모으고, API 테스트로 기존 JSON 계약이 유지되는지 확인했다.
+- Swagger UI에서 `GET /api/health`, `ResponseWrapper[HealthResponse]` schema와 실제 `200` 응답을 확인했다.
 
 ## 의도적인 차이
 

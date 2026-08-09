@@ -25,11 +25,11 @@
 
 ### EXP-001 FastAPI 백엔드 학습 환경과 health API
 
-- 상태: IN_PROGRESS
+- 상태: REVIEW
 - 브랜치: codex/exp-001-fastapi-backend
 - 시작일: 2026-08-07
-- 마지막 갱신: 2026-08-08
-- 다음 행동: Kotlin `ResponseWrapper`와 `HealthController`를 확인하고 FastAPI 공통 응답 model과 health router 구현 계획을 세운다.
+- 마지막 갱신: 2026-08-09
+- 다음 행동: 변경사항을 커밋하고 `develop` 병합 전에 EXP-001 결과를 최종 검토한다.
 
 #### 목적
 
@@ -66,8 +66,13 @@
   - [x] Python 3.12·uv 프로젝트와 잠긴 의존성 구성
   - [x] 최소 FastAPI application·OpenAPI smoke test·전용 검증 명령 구성
   - [x] 사용자 애플리케이션 title·OpenAPI title assertion 실습
-- [ ] 공통 응답 모델과 health API 구현
-- [ ] pytest API 테스트와 Swagger 검증
+- [x] 공통 응답 모델과 health API 구현
+  - [x] Pydantic generic wrapper와 health response model 구성
+  - [x] 직접 생성 방식의 health router와 Kotlin 호환 응답 구현
+  - [x] 사용자 `success_response` classmethod 리팩터링
+- [x] pytest API 테스트와 Swagger 검증
+  - [x] 공통 응답 직렬화·health API·OpenAPI 자동 검증
+  - [x] Swagger UI 수동 확인
 
 #### 완료 조건
 
@@ -84,18 +89,24 @@
 - `backend-fastapi/AGENTS.md`
 - `backend-fastapi/README.md`
 - `docs/experiments/fastapi-backend.md`
+- `backend-fastapi/app/api/health.py`
+- `backend-fastapi/app/schemas/response.py`
+- `backend-fastapi/app/schemas/health.py`
+- `backend-fastapi/tests/test_health.py`
+- `backend-fastapi/tests/test_response.py`
 - `backend/src/main/kotlin/com/mztrend/controller/HealthController.kt`
 - `backend/src/main/kotlin/com/mztrend/common/ResponseWrapper.kt`
 
 #### 검증
 
-- 상태: PARTIAL (Gitleaks 단계 PASS, FastAPI 구현 검증 대기)
+- 상태: PASS
 - 문서 단계: `./dev/check-context`, `./dev/check-context --strict`, `./dev/verify --quick` 통과
 - Gitleaks staged 단계: 현재 worktree와 임시 일반 저장소·linked worktree의 clean snapshot 통과, 합성 비밀정보 차단 확인
 - Gitleaks 전체 이력 단계: 현재 linked worktree와 임시 일반 저장소·linked worktree의 clean 이력 통과, 커밋된 합성 비밀정보 차단 확인
 - FastAPI scaffold 단계: 사용자 실습 반영 후 `./dev/verify-fastapi`의 Ruff format·lint, strict mypy와 OpenAPI smoke test 1개 통과
-- 구현 단계: health API 구현 후 Python 검증 재실행과 FastAPI Swagger 수동 확인
-- 보안: `./dev/check-secrets --staged`
+- FastAPI 최종 단계: 사용자 classmethod 리팩터링 반영 후 `./dev/verify-fastapi`의 Ruff format·lint, strict mypy와 pytest 4개 통과
+- Swagger UI: Health 그룹의 `GET /api/health`와 `ResponseWrapper[HealthResponse]` schema 확인, `Execute` 호출의 HTTP 200과 Kotlin 호환 JSON 응답 확인
+- 보안: EXP-001 변경 전체를 stage한 snapshot에서 `./dev/check-secrets --staged` 통과
 
 #### 인계 메모
 
