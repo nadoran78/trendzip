@@ -11,7 +11,7 @@
 ## 작업 선택 규칙
 
 1. 일반적인 단일 작업은 `develop`에서 직접 진행할 수 있다.
-2. 병렬·장기·실험 작업은 작업 ID별 `codex/*` 브랜치로 격리한다.
+2. 병렬 작업은 작업 ID별 `codex/*` 브랜치로 격리하고, 연속된 `EXP-*` 학습은 `experiment/*` 브랜치에서 이어갈 수 있다.
 3. 같은 작업을 다른 세션에서 이어갈 때는 기존 작업 위치를 사용한다.
 4. `develop`에서 진행하는 `ACTIVE` 작업은 한 번에 하나만 둔다.
 5. `ACTIVE`에는 `IN_PROGRESS`, `BLOCKED`, `REVIEW` 작업만 둔다.
@@ -26,10 +26,10 @@
 ### EXP-001 FastAPI 백엔드 학습 환경과 health API
 
 - 상태: REVIEW
-- 브랜치: codex/exp-001-fastapi-backend
+- 브랜치: experiment/fastapi-backend
 - 시작일: 2026-08-07
 - 마지막 갱신: 2026-08-09
-- 다음 행동: 변경사항을 커밋하고 `develop` 병합 전에 EXP-001 결과를 최종 검토한다.
+- 다음 행동: 같은 학습 브랜치에서 EXP-002를 정의하고, 전체 FastAPI 학습을 마친 뒤 `develop` 병합 여부를 판단한다.
 
 #### 목적
 

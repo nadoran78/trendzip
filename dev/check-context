@@ -198,15 +198,25 @@ check_active_work_items() {
                 ;;
         esac
 
-        if [[ "$branch" != develop ]]; then
-            lower_id="$(printf '%s' "$id" | tr '[:upper:]' '[:lower:]')"
-            expected_prefix="codex/${lower_id}-"
-            branch_suffix="${branch#"$expected_prefix"}"
-            if [[ "$branch" != "$expected_prefix"* ]] || [[ ! "$branch_suffix" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
-                fail "docs/work-items.md: $id branch must be develop or match ${expected_prefix}<description>"
-                valid=false
-            fi
-        fi
+        case "$branch" in
+            develop) ;;
+            experiment/*)
+                branch_suffix="${branch#experiment/}"
+                if [[ "$id" != EXP-* ]] || [[ ! "$branch_suffix" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+                    fail "docs/work-items.md: experiment branch must contain EXP-* work and match experiment/<topic>: $id $branch"
+                    valid=false
+                fi
+                ;;
+            *)
+                lower_id="$(printf '%s' "$id" | tr '[:upper:]' '[:lower:]')"
+                expected_prefix="codex/${lower_id}-"
+                branch_suffix="${branch#"$expected_prefix"}"
+                if [[ "$branch" != "$expected_prefix"* ]] || [[ ! "$branch_suffix" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+                    fail "docs/work-items.md: $id branch must be develop, experiment/<topic>, or match ${expected_prefix}<description>"
+                    valid=false
+                fi
+                ;;
+        esac
         if [[ ! "$started" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
             fail "docs/work-items.md: $id has invalid or missing start date"
             valid=false
@@ -321,12 +331,25 @@ check_active_work_items() {
     done < <(task_records ACTIVE)
 
     if [[ "$active_count" -gt 0 ]]; then
-        local duplicate_branches
+        local duplicate_branches duplicate_branch non_review_count
         duplicate_branches="$(task_records ACTIVE | cut -d '|' -f4 | sort | uniq -d)"
-        if [[ -n "$duplicate_branches" ]]; then
-            fail "docs/work-items.md: duplicate ACTIVE branch: $duplicate_branches"
-            valid=false
-        fi
+        while IFS= read -r duplicate_branch; do
+            [[ -n "$duplicate_branch" ]] || continue
+            if [[ "$duplicate_branch" != experiment/* ]]; then
+                fail "docs/work-items.md: duplicate ACTIVE branch: $duplicate_branch"
+                valid=false
+                continue
+            fi
+
+            non_review_count="$(task_records ACTIVE | awk -F '|' -v branch="$duplicate_branch" '
+                $4 == branch && $3 != "REVIEW" { count++ }
+                END { print count + 0 }
+            ')"
+            if [[ "$non_review_count" -gt 1 ]]; then
+                fail "docs/work-items.md: experiment branch can have at most one IN_PROGRESS or BLOCKED work item: $duplicate_branch"
+                valid=false
+            fi
+        done <<<"$duplicate_branches"
     fi
 
     if [[ "$valid" == true ]]; then
@@ -369,7 +392,7 @@ check_ready_work_items() {
 }
 
 check_current_branch_mapping() {
-    local current_branch matching_count
+    local current_branch matching_count non_review_count
 
     if [[ "$CHECK_CURRENT_BRANCH" != true ]]; then
         return 0
@@ -385,6 +408,17 @@ check_current_branch_mapping() {
                 pass "current branch maps to one ACTIVE work item"
             fi
             ;;
+        experiment/*)
+            matching_count="$(task_records ACTIVE | awk -F '|' -v branch="$current_branch" '$4 == branch { count++ } END { print count + 0 }')"
+            non_review_count="$(task_records ACTIVE | awk -F '|' -v branch="$current_branch" '$4 == branch && $3 != "REVIEW" { count++ } END { print count + 0 }')"
+            if [[ "$matching_count" -eq 0 ]]; then
+                fail "current experiment branch '$current_branch' must map to at least one ACTIVE EXP work item"
+            elif [[ "$non_review_count" -gt 1 ]]; then
+                fail "current experiment branch '$current_branch' can map to at most one IN_PROGRESS or BLOCKED work item"
+            else
+                pass "current experiment branch maps to ACTIVE EXP work"
+            fi
+            ;;
         develop|main)
             pass "current branch is integration branch '$current_branch'"
             ;;
@@ -392,7 +426,7 @@ check_current_branch_mapping() {
             fail 'detached HEAD is not supported for implementation work'
             ;;
         *)
-            fail "current implementation branch must use codex/* naming: $current_branch"
+            fail "current implementation branch must use codex/* or experiment/* naming: $current_branch"
             ;;
     esac
 }

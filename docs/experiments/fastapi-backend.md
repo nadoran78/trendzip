@@ -13,7 +13,7 @@
 - 공통 API 계약: 루트 `AGENTS.md`
 - 공통 비즈니스 규칙: `docs/business-flow.md`
 - DB schema와 migration 기준: Kotlin 백엔드의 Flyway migration
-- 작업 브랜치: `codex/exp-001-fastapi-backend`
+- 작업 브랜치: `experiment/fastapi-backend`
 
 FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별도 결정 전에는 운영 배포, traffic 전환과 Kotlin 코드 삭제를 수행하지 않는다.
 
@@ -29,7 +29,7 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 
 | 작업 | 범위 | 주요 학습 | 상태 |
 |---|---|---|---|
-| EXP-001 | 기본 구조와 health API | FastAPI, router, Pydantic, pytest | 완료, 검토 대기 |
+| EXP-001 | 기본 구조와 health API | FastAPI, router, Pydantic, pytest | 완료, 병합 판단 보류 |
 | EXP-002 | feed 조회 API | dependency, SQLAlchemy 조회, DTO projection | 대기 |
 | EXP-003 | keyword 목록 API | query parameter, enum, 정렬 | 대기 |
 | EXP-004 | keyword 상세 API | 중첩 model, join, 404 처리 | 대기 |
@@ -70,7 +70,7 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 
 ## 현재 진행 상황
 
-- [x] FastAPI worktree와 `codex/exp-001-fastapi-backend` 브랜치 생성
+- [x] FastAPI worktree와 `experiment/fastapi-backend` 장기 학습 브랜치 생성
 - [x] EXP-001 ACTIVE 작업 등록
 - [x] 루트와 FastAPI 전용 문서 책임 분리
 - [x] linked worktree에서 Gitleaks staged·전체 이력 검사 정상화

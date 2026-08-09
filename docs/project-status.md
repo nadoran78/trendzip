@@ -1,6 +1,6 @@
 # 프로젝트 현재 상태
 
-- 마지막 갱신: 2026-08-08
+- 마지막 갱신: 2026-08-09
 - 현재 단계: 핵심 사용자 흐름 공개 배포 및 운영 보완
 - 현재 집중 영역: GA4/GTM 기반 사용자 행동 분석 도입
 
@@ -24,7 +24,7 @@
 ### 실험
 
 - 진행 중: `EXP-001` FastAPI 백엔드 학습 환경과 health API
-- 작업 브랜치: `codex/exp-001-fastapi-backend`
+- 작업 브랜치: `experiment/fastapi-backend`
 - 운영 및 DB migration 기준은 계속 Kotlin/Spring Boot와 Flyway다.
 - 실험 범위와 단계별 진행은 [FastAPI 백엔드 실험](experiments/fastapi-backend.md)을 기준으로 한다.
 
