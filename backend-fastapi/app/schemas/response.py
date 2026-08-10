@@ -16,3 +16,11 @@ class ResponseWrapper[DataT](ApiModel):
     @classmethod
     def success_response(cls, data: DataT) -> Self:
         return cls(success=True, data=data, error=None)
+
+    @classmethod
+    def failure_response(cls, code: str, message: str) -> Self:
+        return cls(
+            success=False,
+            data=None,
+            error=ErrorResponse(code=code, message=message),
+        )

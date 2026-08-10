@@ -11,17 +11,19 @@
 
 ## 현재 학습 범위
 
-`EXP-001`에서는 다음 수직 흐름만 구현한다.
+`EXP-001`의 health API를 완료했고, `EXP-002`에서는 feed 조회를 두 단계로 학습한다.
 
 ```text
 FastAPI application
-→ health router
-→ Pydantic 공통 응답 model
-→ pytest API test
-→ Swagger 확인
+→ feed router와 query enum
+→ Pydantic 중첩 응답 model
+→ fixture FeedService와 dependency
+→ 요청 검증 오류 wrapper
+→ pytest와 Swagger 확인
+→ 후속 SQLAlchemy 읽기 repository
 ```
 
-PostgreSQL, SQLAlchemy, Alembic, Redis, 외부 API와 크롤링은 현재 범위가 아니다.
+fixture 기반 API 계약 구현과 검증을 완료했다. PostgreSQL과 SQLAlchemy는 후속 작업에서 연결하며 Alembic, Redis, 외부 API와 크롤링은 `EXP-002` 범위가 아니다.
 
 ## 예정 기술
 

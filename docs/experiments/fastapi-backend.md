@@ -30,7 +30,7 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 | 작업 | 범위 | 주요 학습 | 상태 |
 |---|---|---|---|
 | EXP-001 | 기본 구조와 health API | FastAPI, router, Pydantic, pytest | 완료, 병합 판단 보류 |
-| EXP-002 | feed 조회 API | dependency, SQLAlchemy 조회, DTO projection | 대기 |
+| EXP-002 | feed 조회 API | enum, 중첩 model, dependency, SQLAlchemy 조회 | 진행 중: fixture 완료, SQLAlchemy 준비 |
 | EXP-003 | keyword 목록 API | query parameter, enum, 정렬 | 대기 |
 | EXP-004 | keyword 상세 API | 중첩 model, join, 404 처리 | 대기 |
 | EXP-005 | 외부 API client | httpx, async, timeout, mock | 대기 |
@@ -64,6 +64,7 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 ## 데이터베이스 원칙
 
 - EXP-001은 DB에 연결하지 않는다.
+- EXP-002는 fixture로 API 계약을 먼저 고정한 뒤 별도 작업 단위에서 SQLAlchemy 읽기 repository를 연결한다.
 - 이후 조회 단계에서도 기존 Flyway schema를 기준으로 한다.
 - Alembic 도입과 schema 쓰기는 별도 의사결정 전까지 보류한다.
 - Kotlin과 FastAPI가 동일 DB에 동시에 migration을 적용하지 않는다.
@@ -86,6 +87,16 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
   - [x] `success_response` classmethod 리팩터링 실습
 - [x] pytest API 테스트
 - [x] Swagger 확인과 학습 기록
+- [ ] EXP-002 feed 조회 API
+  - [x] Kotlin controller·DTO·service 계약 확인
+  - [x] 공통 camelCase model과 enum 기반 구성
+  - [x] 사용자 `FeedVideoResponse` type hint 실습
+  - [x] TEEN fixture service·dependency와 feed router
+  - [x] 성공·빈 목록·OpenAPI baseline 테스트
+  - [x] 사용자 TWENTY fixture와 응답 테스트 실습
+  - [x] Kotlin 호환 요청 검증 오류 wrapper
+  - [x] fixture Swagger와 전체 검증
+  - [ ] SQLAlchemy 읽기 repository
 
 ## 학습 기록
 
@@ -120,9 +131,28 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 - 성공 응답의 `success=True`와 `error=None` 규칙을 factory 한곳에 모으고, API 테스트로 기존 JSON 계약이 유지되는지 확인했다.
 - Swagger UI에서 `GET /api/health`, `ResponseWrapper[HealthResponse]` schema와 실제 `200` 응답을 확인했다.
 
+### Feed API 계약 준비
+
+- Kotlin `Generation`과 `FeedSection`은 Python `StrEnum`으로 표현해 query와 JSON에서 같은 문자열을 사용한다.
+- Python field는 snake_case를 사용하고 Pydantic alias generator가 Kotlin JSON 계약의 camelCase로 직렬화한다.
+- Kotlin `Long`, nullable type, `LocalDateTime`과 중첩 목록을 Python type hint로 옮기는 실습을 먼저 수행한다.
+- 첫 구현은 DB 없이 fixture를 사용하며, SQLAlchemy 연결 전에도 router와 응답 계약을 독립적으로 검증할 수 있게 한다.
+- `Annotated[FeedService, Depends(get_feed_service)]`는 router가 service 생성 방법을 직접 알지 않게 하고 FastAPI가 요청마다 dependency를 공급하게 한다.
+- 테스트는 `app.dependency_overrides`로 같은 endpoint에 빈 service를 주입해 DB나 전역 mutable state 없이 빈 목록 계약을 확인한다.
+- fixture tuple의 순서는 Kotlin repository가 반환할 표시 순서를 나타낼 뿐, fixture service가 정렬 규칙을 다시 구현하지 않는다.
+
+### 요청 검증 오류
+
+- FastAPI는 enum 변환 실패와 필수 query 누락을 `RequestValidationError`로 처리하고 기본적으로 HTTP 422와 자체 `detail` JSON을 반환한다.
+- 전역 handler는 요청 검증 오류만 HTTP 400으로 바꾸고 `ResponseWrapper[None].failure_response()`로 Kotlin의 `INVALID_REQUEST` 계약을 반환한다.
+- 응답 model 검증 실패는 다른 예외이므로 이 handler가 가리지 않으며 내부 응답 오류를 잘못된 사용자 요청으로 처리하지 않는다.
+- FastAPI가 자동 생성한 OpenAPI에는 runtime handler와 별개로 기본 422 응답 문서가 남는다. 현재는 400 wrapper를 추가로 명시하고, 자동 422 문서 제거는 OpenAPI customization 필요성을 판단할 때 결정한다.
+- Swagger UI에서 TEEN과 TWENTY가 각각 세대별 fixture 두 건을 HTTP 200 wrapper로 반환하고, 잘못된 generation은 runtime에서 HTTP 400으로 처리되는 것을 확인했다.
+- `Generation`, `FeedResponse`, `FeedVideoResponse`, 성공 wrapper와 오류 wrapper schema가 OpenAPI에 함께 노출되는 것을 확인했다.
+
 ## 의도적인 차이
 
-현재 없음.
+- feed API의 실제 validation 응답은 Kotlin과 같은 HTTP 400 wrapper지만 FastAPI 자동 OpenAPI에는 기본 422 schema도 함께 표시된다. 이를 제거하기 위한 전역 OpenAPI customization은 아직 도입하지 않는다.
 
 ## 보류 결정
 

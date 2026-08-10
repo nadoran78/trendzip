@@ -108,6 +108,36 @@ def test_feed_dependency_can_be_overridden_with_empty_service() -> None:
     }
 
 
+def test_feed_returns_kotlin_error_contract_for_invalid_generation() -> None:
+    with TestClient(app) as client:
+        response = client.get("/api/feed", params={"generation": "INVALID"})
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "success": False,
+        "data": None,
+        "error": {
+            "code": "INVALID_REQUEST",
+            "message": "Invalid request.",
+        },
+    }
+
+
+def test_feed_returns_kotlin_error_contract_for_missing_generation() -> None:
+    with TestClient(app) as client:
+        response = client.get("/api/feed")
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "success": False,
+        "data": None,
+        "error": {
+            "code": "INVALID_REQUEST",
+            "message": "Invalid request.",
+        },
+    }
+
+
 def test_feed_is_documented_in_openapi() -> None:
     with TestClient(app) as client:
         response = client.get("/openapi.json")
@@ -121,4 +151,5 @@ def test_feed_is_documented_in_openapi() -> None:
     assert feed_operation["summary"] == "세대별 피드 조회"
     assert generation_parameter["name"] == "generation"
     assert generation_parameter["required"] is True
+    assert "400" in feed_operation["responses"]
     assert openapi["components"]["schemas"]["Generation"]["enum"] == ["TEEN", "TWENTY"]

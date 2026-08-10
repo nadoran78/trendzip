@@ -13,6 +13,12 @@ router = APIRouter(prefix="/api/feed", tags=["Feed"])
 @router.get(
     "",
     response_model=ResponseWrapper[FeedResponse],
+    responses={
+        400: {
+            "model": ResponseWrapper[None],
+            "description": "잘못되거나 누락된 요청 parameter",
+        }
+    },
     summary="세대별 피드 조회",
     description="선택한 세대의 트렌드 키워드와 연결된 대표 유튜브 영상을 조회합니다.",
 )

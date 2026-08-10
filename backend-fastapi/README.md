@@ -6,7 +6,7 @@
 
 ## 현재 단계
 
-`EXP-001`에서 FastAPI 기본 구조, 공통 응답 model, `GET /api/health`와 pytest API 테스트를 구현했습니다. Kotlin과 호환되는 health API에 공통 성공 응답 classmethod를 적용했고 Swagger UI에서 응답 계약을 확인했습니다.
+`EXP-001`에서 FastAPI 기본 구조와 health API를 완료했습니다. 현재 `EXP-002`에서 Kotlin feed 응답을 Python enum과 Pydantic 중첩 model로 옮기고 있으며, 첫 단계는 DB 없이 fixture로 API 계약을 학습합니다.
 
 현재 구조:
 
@@ -17,14 +17,24 @@ backend-fastapi/
 ├── uv.lock
 ├── app/
 │   ├── __init__.py
+│   ├── exception_handlers.py
 │   ├── main.py
 │   ├── api/
+│   │   ├── feed.py
 │   │   └── health.py
-│   └── schemas/
-│       ├── health.py
-│       └── response.py
+│   ├── domain/
+│   │   └── enums.py
+│   ├── schemas/
+│   │   ├── base.py
+│   │   ├── feed.py
+│   │   ├── health.py
+│   │   └── response.py
+│   └── services/
+│       └── feed.py
 └── tests/
     ├── test_app.py
+    ├── test_feed.py
+    ├── test_feed_schema.py
     ├── test_health.py
     └── test_response.py
 ```
@@ -107,6 +117,10 @@ uv run --locked python -m pytest
 5. `./dev/verify-fastapi`와 Swagger UI의 `Execute` 호출로 응답을 검증했습니다.
 
 `success`는 이미 응답 field 이름이므로 Kotlin factory와 같은 이름 대신 `success_response`를 사용합니다. 이 실습은 Python `@classmethod`, `cls`, `Self`, generic type과 동작을 바꾸지 않는 리팩터링을 익히기 위한 것입니다.
+
+## 현재 실습
+
+fixture 기반 feed endpoint와 Kotlin 호환 요청 오류 처리를 구현하고 Swagger와 자동 검사로 계약을 검증했습니다. 잘못되거나 누락된 `generation`은 FastAPI 기본 runtime 422 응답 대신 HTTP 400 `INVALID_REQUEST` wrapper를 반환합니다. 다음 단계에서는 SQLAlchemy 읽기 repository의 동기·비동기 방식을 비교합니다.
 
 ## 관련 문서
 

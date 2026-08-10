@@ -29,7 +29,7 @@
 - 브랜치: experiment/fastapi-backend
 - 시작일: 2026-08-07
 - 마지막 갱신: 2026-08-09
-- 다음 행동: 같은 학습 브랜치에서 EXP-002를 정의하고, 전체 FastAPI 학습을 마친 뒤 `develop` 병합 여부를 판단한다.
+- 다음 행동: EXP-002 이후 학습을 같은 브랜치에서 이어가고, 전체 FastAPI 학습을 마친 뒤 `develop` 병합 여부를 판단한다.
 
 #### 목적
 
@@ -111,6 +111,87 @@
 #### 인계 메모
 
 이 작업은 전체 백엔드 재작성 작업이 아니다. 첫 학습 단위를 health API까지 완료한 뒤 feed 조회는 별도 EXP 작업으로 분리한다. 운영 및 migration 기준은 계속 Kotlin/Flyway다.
+
+### EXP-002 fixture 기반 feed API와 SQLAlchemy 조회
+
+- 상태: IN_PROGRESS
+- 브랜치: experiment/fastapi-backend
+- 시작일: 2026-08-09
+- 마지막 갱신: 2026-08-10
+- 다음 행동: 기존 Flyway schema를 기준으로 SQLAlchemy 읽기 repository 작업계획을 세운다.
+
+#### 목적
+
+Kotlin feed API 계약을 FastAPI의 query enum, 중첩 Pydantic model과 dependency로 재구현하고, fixture로 HTTP 계약을 고정한 뒤 SQLAlchemy 읽기 repository로 교체하는 과정을 학습한다.
+
+#### 범위
+
+- `Generation`, `FeedSection` enum과 camelCase JSON 직렬화를 구현한다.
+- Kotlin `FeedResponse`, `FeedVideoResponse`와 호환되는 Pydantic model을 구현한다.
+- fixture 기반 `FeedService`를 FastAPI dependency로 주입한다.
+- `GET /api/feed?generation=TEEN|TWENTY`와 OpenAPI 계약을 구현한다.
+- 잘못되거나 누락된 query를 Kotlin 호환 HTTP 400 오류 wrapper로 변환한다.
+- fixture 계약 검증 후 기존 Flyway schema를 읽는 SQLAlchemy repository를 별도 작업 단위로 연결한다.
+
+#### 제외 범위
+
+- Alembic migration과 기존 Flyway schema 변경
+- DB 쓰기와 transaction 처리
+- Redis cache
+- 외부 API와 크롤링
+- 기존 Kotlin 백엔드 코드 수정
+- 운영 배포와 정식 백엔드 전환 결정
+
+#### 진행 상황
+
+- [x] Kotlin `FeedController`, DTO, service와 오류 계약 확인
+- [x] Python enum과 공통 camelCase Pydantic model 기반 구성
+- [x] 사용자 `FeedVideoResponse` type hint 실습
+- [x] TEEN fixture service와 FastAPI dependency 구현
+- [x] feed router와 성공·빈 목록·OpenAPI baseline 테스트
+- [x] 사용자 TWENTY fixture와 세대 분리 응답 테스트
+- [x] Kotlin 호환 요청 검증 오류 처리
+- [x] fixture Swagger와 전체 검증
+- [ ] SQLAlchemy 읽기 repository 연결
+
+#### 완료 조건
+
+- `GET /api/feed`가 Kotlin과 동일한 성공 응답 wrapper와 camelCase 필드를 반환한다.
+- TEEN, TWENTY와 빈 영상 목록을 fixture 및 dependency override로 검증한다.
+- nullable field와 `publishedAt`이 Kotlin JSON 계약과 호환된다.
+- 잘못되거나 누락된 generation이 HTTP 400 `INVALID_REQUEST` wrapper를 반환한다.
+- fixture 단계가 외부 서비스 없이 통과한 뒤 기존 Flyway schema의 feed 조회를 SQLAlchemy로 재현한다.
+- Kotlin 구현과 Python/FastAPI 차이 및 학습 결과가 실험 문서에 기록된다.
+
+#### 관련 코드
+
+- `backend-fastapi/AGENTS.md`
+- `backend-fastapi/app/domain/enums.py`
+- `backend-fastapi/app/api/feed.py`
+- `backend-fastapi/app/exception_handlers.py`
+- `backend-fastapi/app/schemas/base.py`
+- `backend-fastapi/app/schemas/feed.py`
+- `backend-fastapi/app/services/feed.py`
+- `backend-fastapi/tests/test_feed.py`
+- `backend-fastapi/tests/test_feed_schema.py`
+- `docs/experiments/fastapi-backend.md`
+- `backend/src/main/kotlin/com/mztrend/controller/FeedController.kt`
+- `backend/src/main/kotlin/com/mztrend/controller/dto/FeedResponse.kt`
+- `backend/src/main/kotlin/com/mztrend/service/FeedService.kt`
+- `backend/src/main/kotlin/com/mztrend/exception/GlobalExceptionHandler.kt`
+
+#### 검증
+
+- 상태: PARTIAL (fixture 단계 PASS, SQLAlchemy 대기)
+- 문서: `./dev/check-context --strict` 통과
+- Python: `./dev/verify-fastapi`의 Ruff format·lint, strict mypy와 pytest 14개 통과
+- 통합: `./dev/verify --quick` 통과
+- 보안: 커밋 단위별 `./dev/check-secrets --staged` 통과
+- 수동: FastAPI Swagger에서 query enum, 성공·오류 응답 model, TEEN·TWENTY 200 응답과 INVALID 400 처리를 확인
+
+#### 인계 메모
+
+fixture 단계에서는 Kotlin repository의 정렬 결과를 고정 데이터 순서로 표현하고 정렬 규칙 자체는 재구현하지 않는다. SQLAlchemy 단계에서도 schema migration 기준은 계속 Kotlin Flyway이며 FastAPI는 읽기만 수행한다.
 
 ## READY
 

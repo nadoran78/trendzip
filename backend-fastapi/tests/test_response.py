@@ -10,3 +10,19 @@ def test_success_response_wrapper_serializes_kotlin_contract() -> None:
         "data": {"status": "UP"},
         "error": None,
     }
+
+
+def test_failure_response_wrapper_serializes_kotlin_contract() -> None:
+    response = ResponseWrapper[None].failure_response(
+        code="INVALID_REQUEST",
+        message="Invalid request.",
+    )
+
+    assert response.model_dump() == {
+        "success": False,
+        "data": None,
+        "error": {
+            "code": "INVALID_REQUEST",
+            "message": "Invalid request.",
+        },
+    }
