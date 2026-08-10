@@ -1,14 +1,14 @@
 from typing import Self
 
-from pydantic import BaseModel
+from app.schemas.base import ApiModel
 
 
-class ErrorResponse(BaseModel):
+class ErrorResponse(ApiModel):
     code: str
     message: str
 
 
-class ResponseWrapper[DataT](BaseModel):
+class ResponseWrapper[DataT](ApiModel):
     success: bool
     data: DataT | None = None
     error: ErrorResponse | None = None
