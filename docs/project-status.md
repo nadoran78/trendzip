@@ -1,6 +1,6 @@
 # 프로젝트 현재 상태
 
-- 마지막 갱신: 2026-08-10
+- 마지막 갱신: 2026-08-11
 - 현재 단계: 핵심 사용자 흐름 공개 배포 및 운영 보완
 - 현재 집중 영역: GA4/GTM 기반 사용자 행동 분석 도입
 
@@ -68,6 +68,7 @@
 - 구현됨: 외부 API를 실제 호출하지 않는 mock 기반 client 테스트
 - 구현됨: DB 없는 빠른 검사와 PostgreSQL·Flyway·jOOQ·전체 build를 포함하는 저장소 통합 검증 명령
 - 구현됨: 전체 Git 이력과 staged 변경을 검사하는 Gitleaks 명령과 pre-commit 훅
+- 구현됨: 변경 파일을 의존 순서로 정렬하고 완료 보고 입력을 제공하는 리뷰 인계 명령
 - 구현됨: pull request와 `develop` push용 GitHub Actions CI
 - 미구현: OpenAPI와 프론트엔드 타입의 자동 계약 검증
 

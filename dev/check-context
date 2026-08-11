@@ -7,6 +7,8 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PROJECT_STATUS="$PROJECT_ROOT/docs/project-status.md"
 BUSINESS_FLOW="$PROJECT_ROOT/docs/business-flow.md"
 WORK_ITEMS="$PROJECT_ROOT/docs/work-items.md"
+ROOT_AGENTS="$PROJECT_ROOT/AGENTS.md"
+REVIEW_SCRIPT="$PROJECT_ROOT/dev/review"
 QUIET=false
 STRICT=false
 CHECK_CURRENT_BRANCH=true
@@ -111,7 +113,7 @@ check_required_files() {
     local missing=false
     local file
 
-    for file in "$PROJECT_STATUS" "$BUSINESS_FLOW" "$WORK_ITEMS"; do
+    for file in "$PROJECT_STATUS" "$BUSINESS_FLOW" "$WORK_ITEMS" "$ROOT_AGENTS"; do
         if [[ -f "$file" ]]; then
             pass "${file#"$PROJECT_ROOT"/}"
         else
@@ -121,6 +123,31 @@ check_required_files() {
     done
 
     [[ "$missing" == false ]]
+}
+
+check_review_handoff_harness() {
+    local valid=true
+
+    if [[ ! -x "$REVIEW_SCRIPT" ]]; then
+        fail 'dev/review: file not found or not executable'
+        valid=false
+    fi
+    if ! grep -Fqx -- '### 작업 완료 보고' "$ROOT_AGENTS"; then
+        fail "AGENTS.md: missing heading '### 작업 완료 보고'"
+        valid=false
+    fi
+    if ! grep -Fq -- './dev/review' "$ROOT_AGENTS"; then
+        fail 'AGENTS.md: completion rules must reference ./dev/review'
+        valid=false
+    fi
+    if ! grep -Fq -- '리뷰 인계: ./dev/review' "$SCRIPT_DIR/context"; then
+        fail 'dev/context: quick start must reference ./dev/review'
+        valid=false
+    fi
+
+    if [[ "$valid" == true ]]; then
+        pass 'review handoff harness'
+    fi
 }
 
 check_project_status() {
@@ -462,6 +489,7 @@ done
 
 check_project_status
 check_business_flow
+check_review_handoff_harness
 check_active_work_items
 check_ready_work_items
 check_current_branch_mapping

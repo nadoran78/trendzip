@@ -168,10 +168,12 @@ if git -C "$PROJECT_ROOT" show-ref --verify --quiet "refs/heads/$BASE_BRANCH"; t
 else
     printf '  기준 대비: 계산 불가 (로컬 기준 브랜치 없음)\n'
 fi
-if [[ -z "$(git -C "$PROJECT_ROOT" status --short)" ]]; then
+WORKTREE_STATUS="$(git -C "$PROJECT_ROOT" status --short --untracked-files=all)"
+if [[ -z "$WORKTREE_STATUS" ]]; then
     printf '  작업 트리: clean\n'
 else
     printf '  작업 트리: dirty\n'
+    printf '  리뷰 대상: %s개 (./dev/review)\n' "$(awk 'END { print NR }' <<<"$WORKTREE_STATUS")"
 fi
 printf '  최근 커밋: %s\n\n' "$(git -C "$PROJECT_ROOT" log -1 --format='%h %s')"
 
@@ -196,3 +198,4 @@ printf '  현재 작업: docs/work-items.md\n'
 printf '  현재 상태: docs/project-status.md\n'
 printf '  비즈니스 흐름: docs/business-flow.md\n'
 printf '  문서 검사: ./dev/check-context\n'
+printf '  리뷰 인계: ./dev/review\n'

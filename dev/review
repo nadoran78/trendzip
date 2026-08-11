@@ -1,0 +1,218 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+MODE=working
+REVISION=''
+
+usage() {
+    cat <<'EOF'
+Usage: ./dev/review [--staged|--commit <revision>|--help]
+
+Prints changed files in a dependency-oriented review order.
+
+Modes:
+  default             Review staged, unstaged and untracked changes.
+  --staged            Review only staged changes.
+  --commit <revision> Review files contained in one commit.
+  --help              Show this help.
+EOF
+}
+
+priority_for_path() {
+    local path="$1"
+
+    case "$path" in
+        */uv.lock|*/package-lock.json|*/pnpm-lock.yaml|*/yarn.lock|*/gradle.lockfile)
+            printf '100\n'
+            ;;
+        */pyproject.toml|*/package.json|*/build.gradle.kts|*/settings.gradle.kts|*/requirements*.txt)
+            printf '10\n'
+            ;;
+        */database/config.*|*/config/*|*/config.*|*.env.example|*.env.*.example)
+            printf '20\n'
+            ;;
+        */database/connection.*|*/main.*|*/application.*)
+            printf '30\n'
+            ;;
+        */database/__init__.py|*/database/tables.*|*/domain/*|*/schemas/*|*/model/*|*/dto/*)
+            printf '40\n'
+            ;;
+        */repositories/*|*/repository/*)
+            printf '50\n'
+            ;;
+        */services/*|*/service/*)
+            printf '60\n'
+            ;;
+        */api/*|*/controller/*|frontend/*)
+            printf '70\n'
+            ;;
+        */tests/*|*/test/*|*Test.*|*Test.kt|*test_*.py)
+            printf '80\n'
+            ;;
+        dev/review)
+            printf '82\n'
+            ;;
+        dev/context)
+            printf '83\n'
+            ;;
+        dev/check-context)
+            printf '84\n'
+            ;;
+        dev/*|.github/*|docker/*|docker-compose*.yml)
+            printf '85\n'
+            ;;
+        AGENTS.md|*/AGENTS.md|README.md|*/README.md|docs/*|design/*)
+            printf '90\n'
+            ;;
+        *lock*|*/generated/*|*/generated-src/*)
+            printf '100\n'
+            ;;
+        *)
+            printf '75\n'
+            ;;
+    esac
+}
+
+reason_for_path() {
+    local path="$1"
+
+    case "$(priority_for_path "$path")" in
+        10) printf '의존성과 빌드 설정\n' ;;
+        20) printf '환경과 실행 설정\n' ;;
+        30) printf '애플리케이션 수명주기와 연결\n' ;;
+        40) printf '데이터·도메인 계약\n' ;;
+        50) printf '데이터 조회와 저장 경계\n' ;;
+        60) printf '비즈니스 흐름\n' ;;
+        70) printf '외부 진입점과 사용자 동작\n' ;;
+        75) printf '기타 구현\n' ;;
+        80) printf '자동 검증과 회귀 테스트\n' ;;
+        82) printf '리뷰 대상 수집과 정렬\n' ;;
+        83) printf '프로젝트 복귀 안내 연결\n' ;;
+        84) printf '리뷰 harness 설치 검증\n' ;;
+        85) printf '개발·CI 자동화\n' ;;
+        90) printf '작업 규칙과 맥락 문서\n' ;;
+        100) printf '자동 생성 또는 잠금 결과\n' ;;
+    esac
+}
+
+emit_working_changes() {
+    local line status path
+
+    while IFS= read -r line; do
+        [[ -n "$line" ]] || continue
+        status="${line:0:2}"
+        path="${line:3}"
+        if [[ "$path" == *' -> '* ]]; then
+            path="${path##* -> }"
+        fi
+        status="${status// /}"
+        if [[ "$status" == '??' ]]; then
+            status='A'
+        fi
+        printf '%s|%s\n' "$status" "$path"
+    done < <(git -C "$PROJECT_ROOT" status --short --untracked-files=all)
+}
+
+emit_name_status_changes() {
+    local status first_path second_path path
+
+    while IFS=$'\t' read -r status first_path second_path; do
+        [[ -n "$status" ]] || continue
+        path="${second_path:-$first_path}"
+        printf '%s|%s\n' "$status" "$path"
+    done
+}
+
+emit_changes() {
+    case "$MODE" in
+        working)
+            emit_working_changes
+            ;;
+        staged)
+            git -C "$PROJECT_ROOT" diff --cached --name-status | emit_name_status_changes
+            ;;
+        commit)
+            git -C "$PROJECT_ROOT" diff-tree --root --no-commit-id --name-status -r "$REVISION" |
+                emit_name_status_changes
+            ;;
+    esac
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --staged)
+            [[ "$MODE" == working ]] || {
+                usage >&2
+                exit 2
+            }
+            MODE=staged
+            ;;
+        --commit)
+            [[ "$MODE" == working && $# -ge 2 ]] || {
+                usage >&2
+                exit 2
+            }
+            MODE=commit
+            REVISION="$2"
+            shift
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            usage >&2
+            exit 2
+            ;;
+    esac
+    shift
+done
+
+if [[ "$MODE" == commit ]] && ! git -C "$PROJECT_ROOT" rev-parse --verify --quiet "$REVISION^{commit}" >/dev/null; then
+    printf 'ERROR: commit not found: %s\n' "$REVISION" >&2
+    exit 1
+fi
+
+CHANGES="$(emit_changes)"
+CURRENT_BRANCH="$(git -C "$PROJECT_ROOT" branch --show-current)"
+
+printf 'Review handoff\n'
+printf '==============\n'
+printf 'Branch: %s\n' "${CURRENT_BRANCH:-(detached HEAD)}"
+case "$MODE" in
+    working) printf 'Source: working tree\n' ;;
+    staged) printf 'Source: staged changes\n' ;;
+    commit) printf 'Source: commit %s\n' "$REVISION" ;;
+esac
+
+if [[ -z "$CHANGES" ]]; then
+    printf '\nNo review targets found.\n'
+    exit 0
+fi
+
+ORDERED_CHANGES="$(
+    while IFS='|' read -r status path; do
+        printf '%s|%s|%s|%s\n' \
+            "$(priority_for_path "$path")" \
+            "$status" \
+            "$path" \
+            "$(reason_for_path "$path")"
+    done <<<"$CHANGES" | sort -t '|' -k1,1n -k3,3
+)"
+
+printf '\nReview order\n'
+index=1
+while IFS='|' read -r _priority status path reason; do
+    printf '  %d. [%s] %s\n' "$index" "$status" "$path"
+    printf '     %s\n' "$reason"
+    index=$((index + 1))
+done <<<"$ORDERED_CHANGES"
+
+printf '\nHandoff checklist\n'
+printf '  - Explain what changed in each file and what to inspect.\n'
+printf '  - Report user practice items, or state that there are none.\n'
+printf '  - Report passed, failed and unexecuted verification separately.\n'
+printf '  - State whether changes were committed and identify the next action.\n'
