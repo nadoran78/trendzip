@@ -6,7 +6,7 @@
 
 ## 현재 단계
 
-`EXP-001`에서 FastAPI 기본 구조와 health API를 완료했습니다. 현재 `EXP-002`에서 Kotlin feed 응답을 Python enum과 Pydantic 중첩 model로 옮기고 있으며, 첫 단계는 DB 없이 fixture로 API 계약을 학습합니다.
+`EXP-001`에서 FastAPI 기본 구조와 health API를 완료했습니다. `EXP-002`에서는 Kotlin feed 응답을 Python enum과 Pydantic 중첩 model로 옮기고, fixture로 고정한 API 계약을 sync SQLAlchemy 읽기 repository와 PostgreSQL에 연결했습니다.
 
 현재 구조:
 
@@ -22,8 +22,14 @@ backend-fastapi/
 │   ├── api/
 │   │   ├── feed.py
 │   │   └── health.py
+│   ├── database/
+│   │   ├── config.py
+│   │   ├── connection.py
+│   │   └── tables.py
 │   ├── domain/
 │   │   └── enums.py
+│   ├── repositories/
+│   │   └── feed.py
 │   ├── schemas/
 │   │   ├── base.py
 │   │   ├── feed.py
@@ -32,8 +38,13 @@ backend-fastapi/
 │   └── services/
 │       └── feed.py
 └── tests/
+    ├── integration/
+    │   └── test_feed_postgres.py
     ├── test_app.py
+    ├── test_database_config.py
+    ├── test_database_tables.py
     ├── test_feed.py
+    ├── test_feed_repository.py
     ├── test_feed_schema.py
     ├── test_health.py
     └── test_response.py
@@ -49,6 +60,7 @@ health API는 고정된 상태를 반환하므로 service와 repository 계층�
 - Ruff formatter·linter
 - mypy type checker
 - pytest와 FastAPI TestClient
+- SQLAlchemy 2.x Core와 psycopg 3
 
 uv가 없다면 [공식 설치 안내](https://docs.astral.sh/uv/getting-started/installation/)에 따라 먼저 설치합니다. 프로젝트의 `.python-version`과 `uv.lock`을 기준으로 Python과 의존성이 재현됩니다.
 
@@ -58,10 +70,26 @@ uv가 없다면 [공식 설치 안내](https://docs.astral.sh/uv/getting-started
 ./dev/verify-fastapi
 ```
 
-서버는 검증 명령으로 `.venv`를 준비한 뒤 실행할 수 있습니다.
+기본 명령은 PostgreSQL이 필요 없는 검사를 실행합니다. Kotlin Flyway schema를 적용한 `mztrend_test`에서 SQLAlchemy 조회까지 검증하려면 다음 명령을 실행합니다.
 
 ```bash
-cd backend-fastapi
+./dev/verify-fastapi --db
+```
+
+`--db`는 루트 Docker Compose의 PostgreSQL을 시작하고, Kotlin Flyway migration을 테스트 DB에 적용한 뒤 PostgreSQL marker가 지정된 통합 테스트를 실행합니다. 테스트 데이터는 각 테스트의 transaction에서 rollback됩니다.
+
+서버는 검증 명령으로 `.venv`를 준비한 뒤 실행할 수 있습니다.
+
+feed API를 호출하려면 먼저 로컬 PostgreSQL과 Flyway schema를 준비합니다.
+
+```bash
+docker compose -p trendzip up -d --wait postgres
+cd backend
+./gradlew flywayMigrate
+cd ../backend-fastapi
+```
+
+```bash
 .venv/bin/uvicorn app.main:app --reload
 ```
 
@@ -96,6 +124,8 @@ uv run --locked mypy app tests
 uv run --locked python -m pytest
 ```
 
+PostgreSQL 접속은 기본적으로 `localhost:5432/mztrend`와 로컬 계정 `mztrend`를 사용합니다. 다른 환경에서는 `POSTGRES_URL`, `POSTGRES_USERNAME`, `POSTGRES_PASSWORD`를 설정합니다. 테스트 전용 값은 같은 이름 앞에 `TEST_`를 붙이며 `mztrend_test`가 아닌 DB에서는 통합 테스트가 중단됩니다.
+
 ## 완료한 실습
 
 ### Application 설정과 OpenAPI
@@ -118,9 +148,13 @@ uv run --locked python -m pytest
 
 `success`는 이미 응답 field 이름이므로 Kotlin factory와 같은 이름 대신 `success_response`를 사용합니다. 이 실습은 Python `@classmethod`, `cls`, `Self`, generic type과 동작을 바꾸지 않는 리팩터링을 익히기 위한 것입니다.
 
-## 현재 실습
+## EXP-002 feed 조회
 
-fixture 기반 feed endpoint와 Kotlin 호환 요청 오류 처리를 구현하고 Swagger와 자동 검사로 계약을 검증했습니다. 잘못되거나 누락된 `generation`은 FastAPI 기본 runtime 422 응답 대신 HTTP 400 `INVALID_REQUEST` wrapper를 반환합니다. 다음 단계에서는 SQLAlchemy 읽기 repository의 동기·비동기 방식을 비교합니다.
+fixture 기반 feed endpoint와 Kotlin 호환 요청 오류 처리를 먼저 구현해 Swagger와 자동 검사로 계약을 고정했습니다. 잘못되거나 누락된 `generation`은 FastAPI 기본 runtime 422 응답 대신 HTTP 400 `INVALID_REQUEST` wrapper를 반환합니다.
+
+후속 단계에서는 fixture를 `FeedRepository` protocol 뒤로 옮기고 운영 dependency에는 `SqlAlchemyFeedRepository`를 연결했습니다. application lifespan이 SQLAlchemy Engine을 관리하고 요청마다 읽기 Connection을 공급합니다. SQLAlchemy Core query는 세대와 활성 상태를 필터링하고 Kotlin jOOQ query와 같은 섹션·표시 순서로 결과를 반환합니다.
+
+DB 없는 테스트는 in-memory repository로 HTTP 계약을 계속 빠르게 검증합니다. PostgreSQL 통합 테스트는 Repository 쿼리와 기본 FastAPI dependency 흐름을 기존 Flyway schema에서 검증합니다. FastAPI는 schema를 읽기만 하며 Alembic과 DB 쓰기는 도입하지 않았습니다.
 
 ## 관련 문서
 

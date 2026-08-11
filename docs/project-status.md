@@ -24,7 +24,7 @@
 ### 실험
 
 - 완료·병합 보류: `EXP-001` FastAPI 백엔드 학습 환경과 health API
-- 진행 중: `EXP-002` fixture 기반 feed API 계약 검증 완료와 후속 SQLAlchemy 조회 준비
+- 완료·병합 보류: `EXP-002` fixture 기반 feed API 계약과 sync SQLAlchemy·PostgreSQL 조회
 - 작업 브랜치: `experiment/fastapi-backend`
 - 운영 및 DB migration 기준은 계속 Kotlin/Spring Boot와 Flyway다.
 - 실험 범위와 단계별 진행은 [FastAPI 백엔드 실험](experiments/fastapi-backend.md)을 기준으로 한다.

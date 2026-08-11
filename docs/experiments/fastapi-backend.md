@@ -30,7 +30,7 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 | 작업 | 범위 | 주요 학습 | 상태 |
 |---|---|---|---|
 | EXP-001 | 기본 구조와 health API | FastAPI, router, Pydantic, pytest | 완료, 병합 판단 보류 |
-| EXP-002 | feed 조회 API | enum, 중첩 model, dependency, SQLAlchemy 조회 | 진행 중: fixture 완료, SQLAlchemy 준비 |
+| EXP-002 | feed 조회 API | enum, 중첩 model, dependency, SQLAlchemy 조회 | 완료, 병합 판단 보류 |
 | EXP-003 | keyword 목록 API | query parameter, enum, 정렬 | 대기 |
 | EXP-004 | keyword 상세 API | 중첩 model, join, 404 처리 | 대기 |
 | EXP-005 | 외부 API client | httpx, async, timeout, mock | 대기 |
@@ -46,7 +46,10 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 | 애플리케이션 | `MzTrendApplication.kt` | `app/main.py` | scaffold와 title 완료 |
 | Health API | `HealthController.kt` | `app/api/health.py` | factory 적용 완료 |
 | 공통 응답 | `ResponseWrapper.kt` | `app/schemas/response.py` | generic model과 factory 완료 |
-| API 테스트 | Spring Boot controller test | `tests/test_app.py`, `tests/test_health.py`, `tests/test_response.py` | 응답 계약과 OpenAPI 자동 검증 완료 |
+| Feed API | `FeedController.kt`, `FeedService.kt` | `app/api/feed.py`, `app/services/feed.py` | fixture 계약과 SQLAlchemy dependency 연결 완료 |
+| Feed 조회 | `FeedQueryRepository.kt` | `app/repositories/feed.py` | sync SQLAlchemy Core 조회 완료 |
+| API 테스트 | Spring Boot controller test | `tests/test_app.py`, `tests/test_health.py`, `tests/test_feed.py` | 응답 계약과 OpenAPI 자동 검증 완료 |
+| DB 통합 테스트 | Spring Boot repository test | `tests/integration/test_feed_postgres.py` | Flyway test schema 조회 검증 완료 |
 
 ## API 호환성 기준
 
@@ -87,7 +90,7 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
   - [x] `success_response` classmethod 리팩터링 실습
 - [x] pytest API 테스트
 - [x] Swagger 확인과 학습 기록
-- [ ] EXP-002 feed 조회 API
+- [x] EXP-002 feed 조회 API
   - [x] Kotlin controller·DTO·service 계약 확인
   - [x] 공통 camelCase model과 enum 기반 구성
   - [x] 사용자 `FeedVideoResponse` type hint 실습
@@ -96,7 +99,11 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
   - [x] 사용자 TWENTY fixture와 응답 테스트 실습
   - [x] Kotlin 호환 요청 검증 오류 wrapper
   - [x] fixture Swagger와 전체 검증
-  - [ ] SQLAlchemy 읽기 repository
+  - [x] sync SQLAlchemy와 psycopg 읽기 연결
+  - [x] Flyway table의 SQLAlchemy Core metadata 정의
+  - [x] 세대·활성 상태 필터와 Kotlin 표시 순서 query 실습
+  - [x] DB 없는 repository query test와 PostgreSQL 통합 테스트
+  - [x] FastAPI dependency부터 PostgreSQL까지 HTTP 통합 검증
 
 ## 학습 기록
 
@@ -150,14 +157,24 @@ FastAPI 구현의 차이는 이 문서에 이유와 영향을 기록한다. 별�
 - Swagger UI에서 TEEN과 TWENTY가 각각 세대별 fixture 두 건을 HTTP 200 wrapper로 반환하고, 잘못된 generation은 runtime에서 HTTP 400으로 처리되는 것을 확인했다.
 - `Generation`, `FeedResponse`, `FeedVideoResponse`, 성공 wrapper와 오류 wrapper schema가 OpenAPI에 함께 노출되는 것을 확인했다.
 
+### SQLAlchemy 읽기 repository
+
+- 기존 feed endpoint와 Kotlin query가 동기 흐름이므로 첫 DB 학습 단계는 sync SQLAlchemy와 psycopg 3를 선택했다. 비동기 전환은 실제 동시성 요구와 외부 I/O 단계에서 다시 판단한다.
+- `DatabaseSettings`는 Kotlin JDBC 형식의 환경변수에서 `jdbc:` 접두사를 제거하고 SQLAlchemy용 `postgresql+psycopg` URL을 만든다. 비밀번호는 dataclass 표현에서 제외한다.
+- FastAPI lifespan이 application당 하나의 Engine을 만들고 종료 시 dispose한다. 요청 dependency는 Engine에서 읽기 Connection을 열고 응답 후 닫는다.
+- SQLAlchemy Core `Table`은 Flyway가 만든 `keywords`, `trend_videos`, `trend_feed_items` 중 feed 조회에 필요한 column만 표현한다. `metadata.create_all()`과 Alembic은 사용하지 않는다.
+- `FeedRepository` protocol로 service와 저장 기술의 경계를 만들고, API 단위 테스트는 in-memory 구현을 주입한다. 운영 dependency는 같은 protocol의 `SqlAlchemyFeedRepository`를 제공한다.
+- Core select는 feed, video와 primary keyword를 join하고 feed·keyword 세대, 활성 상태를 함께 검사한다. section, display order, score, view count와 id 순서로 Kotlin jOOQ 조회를 재현한다.
+- PostgreSQL 테스트는 `mztrend_test`만 허용하고 테스트별 transaction을 rollback한다. Repository 직접 조회와 기본 FastAPI dependency를 거치는 HTTP 요청을 모두 검증한다.
+- `./dev/verify-fastapi`는 DB 없는 빠른 검사를, `./dev/verify-fastapi --db`는 Kotlin Flyway migration과 PostgreSQL marker 테스트를 실행한다. 루트 `./dev/verify --full`에도 DB 검증을 연결했다.
+
 ## 의도적인 차이
 
 - feed API의 실제 validation 응답은 Kotlin과 같은 HTTP 400 wrapper지만 FastAPI 자동 OpenAPI에는 기본 422 schema도 함께 표시된다. 이를 제거하기 위한 전역 OpenAPI customization은 아직 도입하지 않는다.
 
 ## 보류 결정
 
-- sync 또는 async SQLAlchemy
-- PostgreSQL driver
+- async SQLAlchemy 전환 필요성
 - Alembic 도입 여부
 - Redis client와 cache 방식
 - scheduler 도구

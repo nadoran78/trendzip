@@ -114,11 +114,11 @@
 
 ### EXP-002 fixture 기반 feed API와 SQLAlchemy 조회
 
-- 상태: IN_PROGRESS
+- 상태: REVIEW
 - 브랜치: experiment/fastapi-backend
 - 시작일: 2026-08-09
-- 마지막 갱신: 2026-08-10
-- 다음 행동: 기존 Flyway schema를 기준으로 SQLAlchemy 읽기 repository 작업계획을 세운다.
+- 마지막 갱신: 2026-08-11
+- 다음 행동: EXP-003 학습 시작 여부는 사용자가 별도로 결정한다.
 
 #### 목적
 
@@ -152,7 +152,16 @@ Kotlin feed API 계약을 FastAPI의 query enum, 중첩 Pydantic model과 depend
 - [x] 사용자 TWENTY fixture와 세대 분리 응답 테스트
 - [x] Kotlin 호환 요청 검증 오류 처리
 - [x] fixture Swagger와 전체 검증
-- [ ] SQLAlchemy 읽기 repository 연결
+- [x] SQLAlchemy 읽기 repository 연결
+  - [x] sync SQLAlchemy·psycopg와 환경설정 구성
+  - [x] 기존 Flyway table의 읽기 전용 Core metadata 정의
+  - [x] 사용자 `build_feed_statement` 정렬·필터 query 실습
+  - [x] Repository protocol과 FastAPI dependency 연결
+  - [x] DB 없는 query test와 PostgreSQL repository 통합 테스트
+  - [x] 사용자 세대가 다른 keyword 제외 fixture 실습
+  - [x] HTTP 요청부터 PostgreSQL까지 기본 dependency 흐름 검증
+  - [x] DB 없는 빠른 검증과 PostgreSQL 전체 검증 명령 분리
+  - [x] GitHub Actions에 Python·uv 실행환경 연결
 
 #### 완료 조건
 
@@ -171,9 +180,21 @@ Kotlin feed API 계약을 FastAPI의 query enum, 중첩 Pydantic model과 depend
 - `backend-fastapi/app/exception_handlers.py`
 - `backend-fastapi/app/schemas/base.py`
 - `backend-fastapi/app/schemas/feed.py`
+- `backend-fastapi/app/database/config.py`
+- `backend-fastapi/app/database/connection.py`
+- `backend-fastapi/app/database/tables.py`
+- `backend-fastapi/app/repositories/feed.py`
 - `backend-fastapi/app/services/feed.py`
+- `backend-fastapi/tests/integration/test_feed_postgres.py`
+- `backend-fastapi/tests/test_database_config.py`
+- `backend-fastapi/tests/test_database_tables.py`
 - `backend-fastapi/tests/test_feed.py`
+- `backend-fastapi/tests/test_feed_repository.py`
 - `backend-fastapi/tests/test_feed_schema.py`
+- `dev/verify-fastapi`
+- `dev/verify`
+- `.github/workflows/ci.yml`
+- `docs/ci-and-secret-management.md`
 - `docs/experiments/fastapi-backend.md`
 - `backend/src/main/kotlin/com/mztrend/controller/FeedController.kt`
 - `backend/src/main/kotlin/com/mztrend/controller/dto/FeedResponse.kt`
@@ -182,16 +203,17 @@ Kotlin feed API 계약을 FastAPI의 query enum, 중첩 Pydantic model과 depend
 
 #### 검증
 
-- 상태: PARTIAL (fixture 단계 PASS, SQLAlchemy 대기)
-- 문서: `./dev/check-context --strict` 통과
-- Python: `./dev/verify-fastapi`의 Ruff format·lint, strict mypy와 pytest 14개 통과
-- 통합: `./dev/verify --quick` 통과
-- 보안: 커밋 단위별 `./dev/check-secrets --staged` 통과
-- 수동: FastAPI Swagger에서 query enum, 성공·오류 응답 model, TEEN·TWENTY 200 응답과 INVALID 400 처리를 확인
+- 상태: PASS
+- 문서: `./dev/check-context`, `./dev/check-context --strict` 통과
+- Python 빠른 검사: Ruff format·lint, strict mypy와 DB 없는 pytest 20개 통과
+- PostgreSQL: Kotlin Flyway migration 적용 후 repository·HTTP dependency 통합 테스트 3개 통과
+- 통합: `./dev/verify --full` 통과
+- 보안: EXP-002 전체 staged snapshot에서 `./dev/check-secrets --staged` 통과
+- 수동: fixture 단계에서 FastAPI Swagger의 query enum, 성공·오류 응답 model, TEEN·TWENTY 200 응답과 INVALID 400 처리를 확인
 
 #### 인계 메모
 
-fixture 단계에서는 Kotlin repository의 정렬 결과를 고정 데이터 순서로 표현하고 정렬 규칙 자체는 재구현하지 않는다. SQLAlchemy 단계에서도 schema migration 기준은 계속 Kotlin Flyway이며 FastAPI는 읽기만 수행한다.
+fixture 단계에서는 Kotlin repository의 정렬 결과를 고정 데이터 순서로 표현하고 정렬 규칙 자체는 재구현하지 않는다. SQLAlchemy 단계는 sync Core query와 psycopg를 선택했고 schema migration 기준은 계속 Kotlin Flyway다. FastAPI는 읽기만 수행하며 Alembic, DB 쓰기와 async 전환은 후속 결정으로 남긴다. 전체 FastAPI 학습을 마친 뒤 사용자가 `develop` 병합 여부를 직접 판단한다.
 
 ## READY
 

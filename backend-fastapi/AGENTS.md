@@ -11,7 +11,7 @@
 
 ## 현재 학습 범위
 
-`EXP-001`의 health API를 완료했고, `EXP-002`에서는 feed 조회를 두 단계로 학습한다.
+`EXP-001`의 health API와 `EXP-002`의 feed 조회를 완료했다. `EXP-002`는 다음 두 단계로 학습했다.
 
 ```text
 FastAPI application
@@ -20,20 +20,23 @@ FastAPI application
 → fixture FeedService와 dependency
 → 요청 검증 오류 wrapper
 → pytest와 Swagger 확인
-→ 후속 SQLAlchemy 읽기 repository
+→ fixture를 SQLAlchemy 읽기 repository로 교체
+→ PostgreSQL 통합 검증
 ```
 
-fixture 기반 API 계약 구현과 검증을 완료했다. PostgreSQL과 SQLAlchemy는 후속 작업에서 연결하며 Alembic, Redis, 외부 API와 크롤링은 `EXP-002` 범위가 아니다.
+fixture 기반 API 계약을 먼저 고정한 뒤 sync SQLAlchemy와 psycopg로 기존 Flyway schema를 읽도록 연결했다. Alembic, DB 쓰기, Redis, 외부 API와 크롤링은 `EXP-002` 범위가 아니다.
 
-## 예정 기술
+## 현재 기술
 
 - Python 3.x
 - FastAPI
 - Pydantic
 - pytest
 - FastAPI TestClient (httpx2 기반)
+- SQLAlchemy 2.x Core
+- psycopg 3
 
-SQLAlchemy, 비동기 DB driver와 scheduler는 해당 학습 단계에서 비교 후 결정한다.
+현재 feed 조회는 sync SQLAlchemy를 사용한다. 비동기 전환 필요성과 scheduler는 해당 I/O·수집 학습 단계에서 다시 판단한다.
 
 ## 구현 및 학습 규칙
 
@@ -58,6 +61,8 @@ SQLAlchemy, 비동기 DB driver와 scheduler는 해당 학습 단계에서 비�
 - 별도 결정 전까지 `backend/src/main/resources/db/migration`의 Flyway migration이 schema 기준이다.
 - FastAPI 실험에서 Alembic migration을 생성하거나 운영 schema를 변경하지 않는다.
 - Kotlin과 FastAPI가 동일 DB에 동시에 migration을 수행하게 만들지 않는다.
+- FastAPI application lifespan에서 Engine을 관리하고 요청 dependency가 읽기 Connection을 제공한다.
+- DB 없는 API 단위 테스트는 repository dependency를 fixture 구현으로 교체한다.
 - DB 쓰기와 transaction 경계는 별도 EXP 작업에서 결정한다.
 
 ## 비밀정보와 검증
