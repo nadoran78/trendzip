@@ -1,84 +1,55 @@
-from collections.abc import Mapping, Sequence
-from datetime import datetime
+from typing import Annotated
 
-from app.domain.enums import FeedSection, Generation
+from fastapi import Depends
+from sqlalchemy import Connection
+
+from app.database.connection import get_connection
+from app.domain.enums import Generation
+from app.repositories.feed import (
+    FeedRepository,
+    FeedVideoRecord,
+    SqlAlchemyFeedRepository,
+)
 from app.schemas.feed import FeedResponse, FeedVideoResponse
 
 
 class FeedService:
-    def __init__(
-        self,
-        videos_by_generation: Mapping[Generation, Sequence[FeedVideoResponse]],
-    ) -> None:
-        self._videos_by_generation = {
-            generation: tuple(videos) for generation, videos in videos_by_generation.items()
-        }
+    def __init__(self, repository: FeedRepository) -> None:
+        self._repository = repository
 
     def get_feed(self, generation: Generation) -> FeedResponse:
         return FeedResponse(
             generation=generation,
-            videos=list(self._videos_by_generation.get(generation, ())),
+            videos=[
+                _to_feed_video_response(record)
+                for record in self._repository.find_by_generation(generation)
+            ],
         )
 
 
-def get_feed_service() -> FeedService:
-    return FeedService(
-        videos_by_generation={
-            Generation.TEEN: (
-                FeedVideoResponse(
-                    video_id="teen-today-1",
-                    keyword_id=1,
-                    title="10대 오늘의 영상",
-                    channel_name="트렌드 채널",
-                    thumbnail_url="https://example.com/teen-today-1.jpg",
-                    view_count=1_200_000,
-                    keyword="teen-first",
-                    feed_section=FeedSection.TODAY_PICK,
-                    badge="HOT",
-                    published_at=datetime(2026, 6, 15, 15, 5, 34),
-                    duration_seconds=180,
-                ),
-                FeedVideoResponse(
-                    video_id="teen-rising-1",
-                    keyword_id=2,
-                    title="10대 급상승 영상",
-                    channel_name="라이징 채널",
-                    thumbnail_url=None,
-                    view_count=None,
-                    keyword="teen-second",
-                    feed_section=FeedSection.RISING,
-                    badge=None,
-                    published_at=None,
-                    duration_seconds=None,
-                ),
-            ),
-            Generation.TWENTY: (
-                FeedVideoResponse(
-                    video_id="twenty-today-1",
-                    keyword_id=3,
-                    title="20대 오늘의 영상",
-                    channel_name="트렌드 채널",
-                    thumbnail_url="https://example.com/twenty-today-1.jpg",
-                    view_count=2_500_000,
-                    keyword="twenty-first",
-                    feed_section=FeedSection.TODAY_PICK,
-                    badge="HOT",
-                    published_at=datetime(2026, 6, 15, 15, 5, 34),
-                    duration_seconds=240,
-                ),
-                FeedVideoResponse(
-                    video_id="twenty-related-1",
-                    keyword_id=4,
-                    title="20대 관련 영상",
-                    channel_name="관련 채널",
-                    thumbnail_url=None,
-                    view_count=None,
-                    keyword="twenty-second",
-                    feed_section=FeedSection.RELATED,
-                    badge=None,
-                    published_at=None,
-                    duration_seconds=None,
-                ),
-            ),
-        },
+def get_feed_repository(
+    connection: Annotated[Connection, Depends(get_connection)],
+) -> FeedRepository:
+    return SqlAlchemyFeedRepository(connection)
+
+
+def get_feed_service(
+    repository: Annotated[FeedRepository, Depends(get_feed_repository)],
+) -> FeedService:
+    return FeedService(repository)
+
+
+def _to_feed_video_response(record: FeedVideoRecord) -> FeedVideoResponse:
+    return FeedVideoResponse(
+        video_id=record.video_id,
+        keyword_id=record.keyword_id,
+        title=record.title,
+        channel_name=record.channel_name,
+        thumbnail_url=record.thumbnail_url,
+        view_count=record.view_count,
+        keyword=record.keyword,
+        feed_section=record.feed_section,
+        badge=record.badge,
+        published_at=record.published_at,
+        duration_seconds=record.duration_seconds,
     )
