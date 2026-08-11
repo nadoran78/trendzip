@@ -7,6 +7,8 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="$PROJECT_ROOT/backend"
 FRONTEND_DIR="$PROJECT_ROOT/frontend"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
+FASTAPI_VERIFY="$PROJECT_ROOT/dev/verify-fastapi"
+TRENDZIP_COMPOSE_PROJECT="${TRENDZIP_COMPOSE_PROJECT:-trendzip}"
 MODE=quick
 
 usage() {
@@ -16,10 +18,10 @@ Usage: ./dev/verify [--quick|--full|--help]
 Runs repository-wide verification from any working directory.
 
 Modes:
-  --quick  Context, whitespace, backend ktlint, frontend lint and typecheck.
-           This is the default mode and does not require Docker.
-  --full   Starts local PostgreSQL, then runs backend prepareJooq/build and
-           frontend lint/typecheck/production build.
+  --quick  Context, whitespace, backend ktlint, DB-free FastAPI checks,
+           frontend lint and typecheck. This is the default mode.
+  --full   Starts local PostgreSQL, then runs backend prepareJooq/build,
+           FastAPI PostgreSQL checks and frontend production build.
   --help   Show this help.
 EOF
 }
@@ -85,6 +87,9 @@ run_quick_verification() {
         ./gradlew ktlintCheck --no-daemon
     )
 
+    step "Running FastAPI verification"
+    "$FASTAPI_VERIFY"
+
     run_frontend_fast_checks
 }
 
@@ -92,21 +97,21 @@ ensure_test_database() {
     local database_exists
 
     database_exists="$(
-        docker compose -f "$COMPOSE_FILE" exec -T postgres \
+        docker compose -p "$TRENDZIP_COMPOSE_PROJECT" -f "$COMPOSE_FILE" exec -T postgres \
             psql -U mztrend -d postgres -tAc \
             "SELECT 1 FROM pg_database WHERE datname = 'mztrend_test'"
     )"
 
     if [[ "$database_exists" != "1" ]]; then
         step "Creating local PostgreSQL test database"
-        docker compose -f "$COMPOSE_FILE" exec -T postgres \
+        docker compose -p "$TRENDZIP_COMPOSE_PROJECT" -f "$COMPOSE_FILE" exec -T postgres \
             createdb -U mztrend mztrend_test
     fi
 }
 
 run_full_verification() {
     step "Starting local PostgreSQL"
-    docker compose -f "$COMPOSE_FILE" up -d --wait postgres
+    docker compose -p "$TRENDZIP_COMPOSE_PROJECT" -f "$COMPOSE_FILE" up -d --wait postgres
     ensure_test_database
 
     step "Running backend Flyway, jOOQ, tests and build"
@@ -114,6 +119,9 @@ run_full_verification() {
         cd "$BACKEND_DIR"
         ./gradlew prepareJooq build --no-daemon
     )
+
+    step "Running FastAPI PostgreSQL verification"
+    "$FASTAPI_VERIFY" --db
 
     run_frontend_fast_checks
 
@@ -152,6 +160,7 @@ fi
 require_command git
 require_command npm
 [[ -x "$BACKEND_DIR/gradlew" ]] || fail "Backend Gradle wrapper is not executable."
+[[ -x "$FASTAPI_VERIFY" ]] || fail "FastAPI verification script is not executable."
 check_frontend_dependencies
 
 if [[ "$MODE" == full ]]; then

@@ -5,7 +5,24 @@ set -euo pipefail
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 FASTAPI_DIR="$PROJECT_ROOT/backend-fastapi"
+BACKEND_DIR="$PROJECT_ROOT/backend"
+COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
+TRENDZIP_COMPOSE_PROJECT="${TRENDZIP_COMPOSE_PROJECT:-trendzip}"
 USER_LOCAL_UV="${HOME:-}/.local/bin/uv"
+MODE=unit
+
+usage() {
+    cat <<'EOF'
+Usage: ./dev/verify-fastapi [--db|--help]
+
+Runs FastAPI formatting, lint, typecheck and DB-free tests.
+
+Options:
+  --db    Also starts local PostgreSQL, applies Flyway migrations to
+          mztrend_test and runs PostgreSQL integration tests.
+  --help  Show this help.
+EOF
+}
 
 fail() {
     printf 'ERROR: %s\n' "$1" >&2
@@ -14,6 +31,10 @@ fail() {
 
 step() {
     printf '\n==> %s\n' "$1"
+}
+
+require_command() {
+    command -v "$1" >/dev/null 2>&1 || fail "Required command '$1' was not found."
 }
 
 resolve_uv() {
@@ -28,11 +49,15 @@ resolve_uv() {
 
 case "${1:-}" in
     '') ;;
+    --db)
+        MODE=db
+        ;;
     --help|-h)
-        printf 'Usage: ./dev/verify-fastapi\n'
+        usage
         exit 0
         ;;
     *)
+        usage >&2
         fail "Unknown option '$1'." 2
         ;;
 esac
@@ -47,6 +72,50 @@ UV_BIN="$(resolve_uv)" ||
     fail "FastAPI project configuration was not found: $FASTAPI_DIR/pyproject.toml"
 [[ -f "$FASTAPI_DIR/uv.lock" ]] ||
     fail "FastAPI lockfile was not found: $FASTAPI_DIR/uv.lock"
+
+ensure_test_database() {
+    local database_exists
+
+    database_exists="$(
+        docker compose -p "$TRENDZIP_COMPOSE_PROJECT" -f "$COMPOSE_FILE" exec -T postgres \
+            psql -U mztrend -d postgres -tAc \
+            "SELECT 1 FROM pg_database WHERE datname = 'mztrend_test'"
+    )"
+
+    if [[ "$database_exists" != "1" ]]; then
+        step "Creating local PostgreSQL test database"
+        docker compose -p "$TRENDZIP_COMPOSE_PROJECT" -f "$COMPOSE_FILE" exec -T postgres \
+            createdb -U mztrend mztrend_test
+    fi
+}
+
+run_postgres_tests() {
+    require_command docker
+    docker compose version >/dev/null 2>&1 ||
+        fail "Docker Compose v2 is required for PostgreSQL tests."
+
+    step "Starting local PostgreSQL"
+    docker compose -p "$TRENDZIP_COMPOSE_PROJECT" -f "$COMPOSE_FILE" up -d --wait postgres
+    ensure_test_database
+
+    step "Applying Kotlin Flyway migrations to mztrend_test"
+    (
+        cd "$BACKEND_DIR"
+        POSTGRES_URL="jdbc:postgresql://localhost:5432/mztrend_test" \
+        POSTGRES_USERNAME="mztrend" \
+        POSTGRES_PASSWORD="mztrend" \
+            ./gradlew flywayMigrate --no-daemon
+    )
+
+    step "Running FastAPI PostgreSQL integration tests"
+    (
+        cd "$FASTAPI_DIR"
+        TEST_POSTGRES_URL="jdbc:postgresql://localhost:5432/mztrend_test" \
+        TEST_POSTGRES_USERNAME="mztrend" \
+        TEST_POSTGRES_PASSWORD="mztrend" \
+            "$UV_BIN" run --locked python -m pytest -o addopts= -m postgres
+    )
+}
 
 cd "$FASTAPI_DIR"
 
@@ -64,5 +133,9 @@ step "Running FastAPI typecheck"
 
 step "Running FastAPI tests"
 "$UV_BIN" run --locked python -m pytest
+
+if [[ "$MODE" == db ]]; then
+    run_postgres_tests
+fi
 
 printf '\nFastAPI verification completed successfully.\n'

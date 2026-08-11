@@ -15,7 +15,7 @@ workflow는 `.github/workflows/ci.yml`에 있다.
 - 중복 실행: 같은 브랜치에 새 변경이 올라오면 이전 실행 취소
 - 외부 액션: major 태그가 아닌 검증한 전체 커밋 SHA로 고정
 
-전체 검증은 Java 17과 Node.js 24를 사용하고, frontend dependency 설치 후 로컬 Docker Compose의 PostgreSQL을 시작한다. 실제 YouTube, 네이버 DataLab, Gemini API는 호출하지 않는다.
+전체 검증은 Java 17, Node.js 24, Python 3.12와 uv 0.12.3을 사용하고, frontend dependency 설치 후 로컬 Docker Compose의 PostgreSQL을 시작한다. Kotlin Flyway·jOOQ·build, FastAPI의 DB 없는 검사와 PostgreSQL 통합 테스트, frontend production build를 실행하며 실제 YouTube, 네이버 DataLab, Gemini API는 호출하지 않는다.
 
 GitHub 저장소의 Ruleset 또는 Branch protection에서 `develop`에 다음 status check를 필수로 설정한다.
 
