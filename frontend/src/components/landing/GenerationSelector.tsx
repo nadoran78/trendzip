@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import { trackAnalyticsEvent } from "@/lib/analytics/events";
+import { getGenerationBySlug } from "@/lib/generation";
 import type { GenerationSlug } from "@/types/api";
 
 type GenerationCard = {
@@ -59,6 +61,16 @@ export function GenerationSelector() {
     event: MouseEvent<HTMLAnchorElement>,
     generation: GenerationSlug,
   ) {
+    if (selectedGeneration) {
+      event.preventDefault();
+      return;
+    }
+
+    trackAnalyticsEvent("select_generation", {
+      generation: getGenerationBySlug(generation)!.apiValue,
+      entry_point: "landing",
+    });
+
     if (
       event.metaKey ||
       event.ctrlKey ||
@@ -70,10 +82,6 @@ export function GenerationSelector() {
     }
 
     event.preventDefault();
-
-    if (selectedGeneration) {
-      return;
-    }
 
     setSelectedGeneration(generation);
     const navigationDelay = window.matchMedia(

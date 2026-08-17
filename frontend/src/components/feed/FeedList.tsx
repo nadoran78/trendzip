@@ -1,6 +1,7 @@
 import { Inbox } from "lucide-react";
 import Link from "next/link";
 
+import { SiteFooter } from "@/components/common/SiteFooter";
 import { FeedCard } from "@/components/feed/FeedCard";
 import type { FeedVideo, GenerationSlug } from "@/types/api";
 
@@ -78,13 +79,7 @@ export function FeedList({ videos, generation }: FeedListProps) {
         className="pt-4"
       />
 
-      <footer className="tz-round px-4 pb-9 pt-7 text-center text-[13px] font-bold text-white/20">
-        trend<span className="text-[#00e5ff]/40">zip</span>
-        <span className="text-[#ff2d9b]/40">♡</span>
-        <p className="mt-1 font-sans text-[10px] font-medium text-white/15">
-          매일 오전 3시 업데이트 · 한국 유튜브 트렌드
-        </p>
-      </footer>
+      <SiteFooter subtitle="매일 오전 3시 업데이트 · 한국 유튜브 트렌드" />
     </>
   );
 }

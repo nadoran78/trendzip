@@ -1,7 +1,11 @@
+"use client";
+
 import { Eye, ImageOff, Play } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
+import { trackAnalyticsEvent } from "@/lib/analytics/events";
+import { getGenerationBySlug } from "@/lib/generation";
 import type { FeedVideo, GenerationSlug } from "@/types/api";
 
 type FeedCardProps = {
@@ -24,7 +28,21 @@ export function FeedCard({
     (video.badge && BADGE_STYLES[video.badge]) ??
     "border-white/15 bg-black/70 text-white";
   const generationEmoji = generation === "teen" ? "🎀" : "🍑";
+  const analyticsGeneration = getGenerationBySlug(generation)!.apiValue;
   const videoUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(video.videoId)}`;
+
+  function trackYouTubeClick(
+    source: "feed_thumbnail" | "feed_title",
+  ) {
+    trackAnalyticsEvent("youtube_video_click", {
+      generation: analyticsGeneration,
+      video_id: video.videoId,
+      keyword_id: video.keywordId,
+      keyword: video.keyword,
+      feed_section: video.feedSection ?? "UNKNOWN",
+      click_area: source,
+    });
+  }
 
   return (
     <article className="overflow-hidden rounded-2xl border border-white/[0.04] bg-[#1a1a1a]">
@@ -33,6 +51,7 @@ export function FeedCard({
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`${video.title} 유튜브에서 보기`}
+        onClick={() => trackYouTubeClick("feed_thumbnail")}
         className="group block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#00e5ff]"
       >
         <div className="relative aspect-video w-full overflow-hidden bg-[#111]">
@@ -93,6 +112,7 @@ export function FeedCard({
             href={videoUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackYouTubeClick("feed_title")}
             className="transition-colors hover:text-[#9af5ff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00e5ff]"
           >
             {video.title}

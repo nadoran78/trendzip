@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 
+import { trackAnalyticsEvent } from "@/lib/analytics/events";
 import { GENERATION_OPTIONS } from "@/lib/generation";
 import type { GenerationSlug } from "@/types/api";
 
@@ -28,6 +31,16 @@ export function GenerationTab({
             key={option.slug}
             href={`/${activeView}/${option.slug}`}
             aria-current={isActive ? "page" : undefined}
+            onClick={() => {
+              if (!isActive) {
+                trackAnalyticsEvent("generation_change", {
+                  from_generation:
+                    activeGeneration === "teen" ? "TEEN" : "TWENTY",
+                  to_generation: option.apiValue,
+                  content_view: activeView,
+                });
+              }
+            }}
             className={[
               "flex h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-[13px] font-extrabold transition-all duration-200",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00e5ff]",
