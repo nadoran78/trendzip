@@ -33,6 +33,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 API_BASE_URL=http://localhost:8080
 CLOUDFLARE_ACCESS_CLIENT_ID=
 CLOUDFLARE_ACCESS_CLIENT_SECRET=
+NEXT_PUBLIC_GTM_ID=
 ```
 
 Production API:
@@ -41,6 +42,9 @@ Production API:
 API_BASE_URL=https://api-trendzip.nadoran.com
 CLOUDFLARE_ACCESS_CLIENT_ID=<Cloudflare Access service token client ID>
 CLOUDFLARE_ACCESS_CLIENT_SECRET=<Cloudflare Access service token client secret>
+NEXT_PUBLIC_GTM_ID=<GTM container ID>
 ```
 
-세 환경변수는 Next.js 서버에서만 사용하며 브라우저 공개 환경변수로 노출하지 않습니다. 로컬 API가 Cloudflare Access로 보호되지 않는 경우 두 Access 환경변수는 비워둘 수 있습니다. Client ID와 Client Secret은 반드시 함께 설정하며 `NEXT_PUBLIC_` 접두사를 사용하지 않습니다.
+API와 Cloudflare Access 환경변수는 Next.js 서버에서만 사용하며 브라우저에 노출하지 않습니다. 로컬 API가 Cloudflare Access로 보호되지 않는 경우 두 Access 환경변수는 비워둘 수 있습니다. Client ID와 Client Secret은 반드시 함께 설정하며 `NEXT_PUBLIC_` 접두사를 사용하지 않습니다.
+
+`NEXT_PUBLIC_GTM_ID`는 공개 가능한 `GTM-XXXXXXX` 형식의 컨테이너 ID입니다. 값이 없으면 GTM만 비활성화되며 프론트는 정상 동작합니다. GA4 이벤트, Consent Mode와 운영 설정은 [분석 운영 가이드](../docs/analytics.md)를 따릅니다.

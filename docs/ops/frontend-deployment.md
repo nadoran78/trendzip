@@ -83,8 +83,9 @@ Vercel 프로젝트의 Production 환경변수에 다음 값을 등록한다.
 | `API_BASE_URL` | `https://api-trendzip.nadoran.com` 운영 API 주소 |
 | `CLOUDFLARE_ACCESS_CLIENT_ID` | Vercel production 전용 Access Service Token Client ID |
 | `CLOUDFLARE_ACCESS_CLIENT_SECRET` | Vercel production 전용 Access Service Token Client Secret |
+| `NEXT_PUBLIC_GTM_ID` | 공개 가능한 Google Tag Manager Web 컨테이너 ID |
 
-두 Access 환경변수는 서버 전용이며 `NEXT_PUBLIC_` 접두사를 사용하지 않는다. 실제 값은 GitHub Secret, 저장소 파일, 문서와 로그에 중복 기록하지 않고 Vercel Production 환경에서 관리한다. `vercel pull --environment=production`이 build에 필요한 운영 설정을 가져오므로 배포 workflow Secret에 별도로 추가할 필요가 없다.
+두 Access 환경변수는 서버 전용이며 `NEXT_PUBLIC_` 접두사를 사용하지 않는다. 실제 값은 GitHub Secret, 저장소 파일, 문서와 로그에 중복 기록하지 않고 Vercel Production 환경에서 관리한다. `NEXT_PUBLIC_GTM_ID`는 브라우저에 공개되는 식별자이며 비밀정보가 아니다. `vercel pull --environment=production`이 build에 필요한 운영 설정을 가져오므로 배포 workflow Secret에 별도로 추가할 필요가 없다.
 
 Access를 처음 적용할 때는 다음 순서를 지켜 API 차단 시간을 만들지 않는다.
 
@@ -159,7 +160,7 @@ Trendzip은 운영 방문 규모와 경로별 페이지 조회를 확인하기 �
 
 브라우저 추적 방지나 광고 차단 확장 프로그램이 Analytics 요청을 차단할 수 있으므로 수집 확인은 해당 기능을 끈 별도 브라우저 프로필에서도 수행한다. Serwist 서비스 워커가 `/_vercel/insights/` 요청을 캐시하거나 가로채지 않는지도 Network에서 함께 확인한다.
 
-Vercel Web Analytics와 이후 도입할 GA4는 집계 기준과 차단 조건이 달라 동일한 방문자·페이지 조회 수를 보장하지 않는다. Vercel은 빠른 운영 트래픽 확인에 사용하고, 세대 선택이나 영상 클릭 같은 제품 행동 분석은 GA4 작업에서 별도로 정의한다.
+Vercel Web Analytics와 GA4는 집계 기준과 차단 조건이 달라 동일한 방문자·페이지 조회 수를 보장하지 않는다. Vercel은 빠른 운영 트래픽 확인에 사용하고, 세대 선택이나 영상 클릭 같은 제품 행동 분석은 GA4에서 확인한다.
 
 ## 배포 후 확인
 

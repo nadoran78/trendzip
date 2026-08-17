@@ -205,6 +205,9 @@ POSTGRES_PASSWORD=
 # Redis
 REDIS_URL=
 REDIS_TOKEN=
+
+# Frontend analytics
+NEXT_PUBLIC_GTM_ID=
 ```
 
 ---
