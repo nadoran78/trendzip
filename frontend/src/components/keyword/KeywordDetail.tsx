@@ -4,13 +4,15 @@ import {
   Tags,
   Video,
 } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { TrackAnalyticsEvent } from "@/components/analytics/TrackAnalyticsEvent";
+import { SiteFooter } from "@/components/common/SiteFooter";
+import { RelatedKeywordLink } from "@/components/keyword/RelatedKeywordLink";
 import { RelatedVideoCarousel } from "@/components/keyword/RelatedVideoCarousel";
 import { TrendGraph } from "@/components/keyword/TrendGraph";
 import { getGenerationByApiValue } from "@/lib/generation";
-import type { KeywordExplainResponse, KeywordSummary } from "@/types/api";
+import type { KeywordExplainResponse } from "@/types/api";
 
 type KeywordDetailProps = {
   detail: KeywordExplainResponse;
@@ -21,6 +23,16 @@ export function KeywordDetail({ detail }: KeywordDetailProps) {
 
   return (
     <>
+      <TrackAnalyticsEvent
+        event="view_keyword_detail"
+        parameters={{
+          generation: detail.generation,
+          keyword_id: detail.keywordId,
+          keyword: detail.keyword,
+          rank: detail.rank ?? undefined,
+          keyword_category: detail.category ?? undefined,
+        }}
+      />
       <div className="px-4 pt-5">
         <section className="overflow-hidden rounded-2xl border border-[#222] bg-[#1a1a1a] px-[18px] pb-[22px] pt-5">
           <p className="text-[11px] font-bold tracking-[0.08em] text-[#00e5ff]">
@@ -87,7 +99,10 @@ export function KeywordDetail({ detail }: KeywordDetailProps) {
         fullBleed
       >
         {detail.relatedVideos.length > 0 ? (
-          <RelatedVideoCarousel videos={detail.relatedVideos} />
+          <RelatedVideoCarousel
+            videos={detail.relatedVideos}
+            generation={detail.generation}
+          />
         ) : (
           <div className="px-4">
             <EmptySection message="아직 연결된 관련 영상이 없습니다." />
@@ -103,7 +118,12 @@ export function KeywordDetail({ detail }: KeywordDetailProps) {
         {detail.relatedKeywords.length > 0 ? (
           <div className="flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {detail.relatedKeywords.map((keyword) => (
-              <RelatedKeywordLink key={keyword.id} keyword={keyword} />
+              <RelatedKeywordLink
+                key={keyword.id}
+                generation={detail.generation}
+                sourceKeywordId={detail.keywordId}
+                keyword={keyword}
+              />
             ))}
           </div>
         ) : (
@@ -113,13 +133,7 @@ export function KeywordDetail({ detail }: KeywordDetailProps) {
         )}
       </DetailSection>
 
-      <footer className="tz-round px-4 pb-9 pt-8 text-center text-[13px] font-bold text-white/20">
-        trend<span className="text-[#00e5ff]/40">zip</span>
-        <span className="text-[#ff2d9b]/40">♡</span>
-        <p className="mt-1 font-sans text-[10px] font-medium text-white/15">
-          매일 업데이트 · 한국 유튜브 트렌드
-        </p>
-      </footer>
+      <SiteFooter subtitle="매일 업데이트 · 한국 유튜브 트렌드" />
     </>
   );
 }
@@ -153,16 +167,5 @@ function EmptySection({ message }: { message: string }) {
     <div className="flex min-h-28 items-center justify-center rounded-2xl border border-dashed border-[#2a2a2a] bg-[#1a1a1a] px-6 text-center text-[13px] font-medium text-[#888]">
       {message}
     </div>
-  );
-}
-
-function RelatedKeywordLink({ keyword }: { keyword: KeywordSummary }) {
-  return (
-    <Link
-      href={`/keyword/${keyword.id}`}
-      className="shrink-0 rounded-full border border-[#00e5ff] bg-[#00e5ff]/[0.06] px-3.5 py-2 text-[12px] font-bold text-white transition-colors hover:bg-[#00e5ff]/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00e5ff]"
-    >
-      #{keyword.word}
-    </Link>
   );
 }

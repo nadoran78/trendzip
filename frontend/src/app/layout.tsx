@@ -1,10 +1,15 @@
 import { SerwistProvider } from "@serwist/turbopack/react";
+import { GoogleTagManager } from "@next/third-parties/google";
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "@fontsource/quicksand/600.css";
 import "@fontsource/quicksand/700.css";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 
+import { AnalyticsConsentProvider } from "@/components/analytics/AnalyticsConsentProvider";
+import { getGoogleTagManagerId } from "@/lib/analytics/analytics-env";
+import { createConsentBootstrapScript } from "@/lib/analytics/consent";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
@@ -71,17 +76,33 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const googleTagManagerId = getGoogleTagManagerId();
+
   return (
     <html lang="ko">
+      <head>
+        <Script
+          id="google-consent-default"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: createConsentBootstrapScript(),
+          }}
+        />
+      </head>
       <body>
-        <SerwistProvider
-          swUrl="/serwist/sw.js"
-          disable={process.env.NODE_ENV !== "production"}
-          cacheOnNavigation={false}
-        >
-          {children}
-        </SerwistProvider>
+        <AnalyticsConsentProvider>
+          <SerwistProvider
+            swUrl="/serwist/sw.js"
+            disable={process.env.NODE_ENV !== "production"}
+            cacheOnNavigation={false}
+          >
+            {children}
+          </SerwistProvider>
+        </AnalyticsConsentProvider>
         <Analytics />
+        {googleTagManagerId ? (
+          <GoogleTagManager gtmId={googleTagManagerId} />
+        ) : null}
       </body>
     </html>
   );

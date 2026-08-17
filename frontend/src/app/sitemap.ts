@@ -13,6 +13,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 1,
     },
+    {
+      url: toAbsoluteUrl("/privacy"),
+      changeFrequency: "monthly",
+      priority: 0.2,
+    },
     ...GENERATION_OPTIONS.flatMap((generation) => [
       {
         url: toAbsoluteUrl(`/feed/${generation.slug}`),

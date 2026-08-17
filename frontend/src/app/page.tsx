@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 
 import { GenerationSelector } from "@/components/landing/GenerationSelector";
 import {
@@ -34,7 +35,7 @@ export default function Home() {
           </Suspense>
         </header>
 
-        <section className="relative z-10 flex min-h-[calc(100dvh-90px-env(safe-area-inset-top))] flex-1 flex-col items-center justify-center px-[22px] py-8">
+        <section className="tz-landing-content relative z-10 flex min-h-[calc(100dvh-90px-env(safe-area-inset-top))] flex-1 flex-col items-center justify-center px-[22px] py-8">
           <div className="tz-round inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-3.5 py-2 text-[11px] font-semibold text-white/85 backdrop-blur-lg">
             <span className="relative size-[7px]" aria-hidden="true">
               <span className="tz-live-pulse absolute inset-0 rounded-full bg-[#ff3b3b]" />
@@ -70,6 +71,13 @@ export default function Home() {
           </p>
 
           <GenerationSelector />
+
+          <Link
+            href="/privacy"
+            className="mt-5 text-[10px] font-semibold text-white/35 underline decoration-white/15 underline-offset-4 transition-colors hover:text-white/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00e5ff]"
+          >
+            개인정보 및 분석 설정
+          </Link>
         </section>
       </div>
     </main>

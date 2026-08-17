@@ -23,95 +23,60 @@
 
 ## ACTIVE
 
-### OBS-001 Vercel Web Analytics 운영 트래픽 측정
+### ANALYTICS-001 GA4·GTM 사용자 행동 분석 실습
 
 - 상태: IN_PROGRESS
 - 브랜치: develop
-- 시작일: 2026-08-06
-- 마지막 갱신: 2026-08-06
-- 다음 행동: Vercel 프로젝트에서 Web Analytics 활성화 여부를 확인하고 변경사항을 production에 배포한 뒤 실제 페이지 조회 수집을 검증한다.
+- 시작일: 2026-08-15
+- 마지막 갱신: 2026-08-17
+- 다음 행동: 변경사항을 `main`에 반영해 프론트를 수동 배포하고, 운영 주소에서 GA4 Realtime·DebugView와 동의 상태를 검증한다.
 
 #### 목적
 
-최소한의 코드와 운영 비용으로 방문자, 페이지 조회, 유입 경로, 국가와 기기 등 서비스의 기본 트래픽을 확인한다.
+- GA4 Standard와 Google Tag Manager를 직접 구성해 MAU, 유입과 핵심 탐색 행동을 분석하고 향후 AdSense 도입 판단과 외부 사이트 분석 구축 학습에 활용한다.
 
 #### 범위
 
-- Vercel 프로젝트의 Web Analytics 활성화와 production domain 확인
-- `@vercel/analytics` 설치와 Next.js 루트 레이아웃 연동
-- SDK 자동 환경 감지를 이용한 production 페이지 조회와 App Router 이동 측정
-- 활성화, 배포와 기본 지표 확인 절차 문서화
-
-#### 제외 범위
-
-- GA4, GTM과 사용자 행동 커스텀 이벤트
-- Vercel Speed Insights와 백엔드 애플리케이션 메트릭
-- 개인 식별 정보와 로그인 사용자 추적
-
-#### 진행 상황
-
-- `@vercel/analytics`를 설치하고 Next.js 루트 레이아웃에 Web Analytics 컴포넌트를 연결했다.
-- 배포 문서에 최초 활성화, 별도 환경변수가 필요 없는 연동 방식과 운영 확인 절차를 추가했다.
-- 프론트 production build, 저장소 빠른 검증, npm audit와 전체 Git 이력 Gitleaks 검사를 통과했다.
-- Vercel Web Analytics 활성화와 배포 후 production 데이터 수집 확인은 운영 검증으로 남아 있다.
-
-#### 완료 조건
-
-- `trendzip.nadoran.com`의 첫 진입과 클라이언트 라우팅이 Vercel Analytics에 수집된다.
-- Vercel 대시보드에서 방문자, 페이지 조회와 주요 페이지를 확인할 수 있다.
-- 분석 요청에 개인 식별 정보나 비밀정보가 포함되지 않는다.
-
-#### 관련 코드
-
-- `frontend/package.json`
-- `frontend/src/app/layout.tsx`
-- `docs/ops/frontend-deployment.md`
-
-#### 검증
-
-- 상태: PASS (운영 검증 제외)
-- `npm run lint` 통과
-- `npm run typecheck` 통과
-- `npm run build` 통과 및 Analytics 스크립트 로더 포함 확인
-- `npm audit` 취약점 0건 확인
-- `./dev/verify --quick` 통과
-- `./dev/check-secrets --all` 통과
-- 운영 검증 대기: production 브라우저 네트워크 요청과 Vercel Analytics 대시보드의 페이지 조회 확인
-
-#### 인계 메모
-
-- SDK에는 production 모드를 강제하지 않고 실행 환경 자동 감지를 사용한다.
-- Web Analytics 연동에는 별도 환경변수나 GitHub Secret이 필요하지 않다.
-- 대시보드 활성화와 실제 수집 확인 전에는 작업을 DONE으로 전환하지 않는다.
-
-## READY
-
-### ANALYTICS-001 GA4·GTM 사용자 행동 분석 실습
-
-- 상태: READY
-- 브랜치: 미정
-- 다음 행동: `OBS-001` 완료 후 GA4 속성과 GTM Web 컨테이너를 준비하고 `develop` 직접 작업 여부를 결정한다.
-- 목적: GA4 Standard와 Google Tag Manager를 직접 구성해 MAU, 유입과 핵심 탐색 행동을 분석하고 향후 AdSense 도입 판단과 외부 사이트 분석 구축 학습에 활용한다.
-- 운영자 설정 범위:
+- 운영자 설정:
   - GA4 속성과 운영 Web Data Stream을 한국 시간대·원화 기준으로 생성한다.
   - Google Tag Manager Web 컨테이너를 생성하고 GA4 Google tag를 GTM 한 경로로만 구성한다.
   - 공개 가능한 GTM 컨테이너 ID를 Vercel Production 환경변수로 등록한다.
-- 코드 구현 범위:
+- 코드 구현:
   - GTM을 Next.js 루트에 연결하고 App Router 이동에서 `page_view`가 누락되거나 중복되지 않게 한다.
   - `select_generation`, `youtube_video_click`, `view_keyword_detail`, `related_keyword_click`, `generation_change` 이벤트와 세대, 키워드 ID, 피드 섹션 등 비식별 매개변수의 측정 계획을 문서화하고 구현한다.
   - Consent Mode v2의 분석·광고 저장 기본값을 `denied`로 시작하고, 사용자의 수락·거부 선택을 저장하며 언제든 변경할 수 있게 한다.
   - 개인정보처리방침에 GA4 행태정보 수집 목적, 항목, 보유 기간, 국외 처리와 거부 방법을 실제 설정 기준으로 반영한다.
   - GA4·GTM 설정과 운영 확인 절차, Vercel Analytics와 집계 기준이 다른 이유를 문서화한다.
-- 제외 범위:
-  - Google Analytics 360, Google Ads와 AdSense 광고 코드
-  - BigQuery Export와 별도 분석 데이터 웨어하우스
-  - 유료 CMP, Looker Studio 대시보드와 자체 관리자 통계 화면
-  - 로그인 사용자 식별 및 개인 식별 정보 전송
-- 완료 조건:
-  - GA4 Realtime·DebugView와 Tag Assistant에서 첫 진입 및 클라이언트 라우팅의 `page_view`가 각각 한 번만 확인된다.
-  - 정의한 사용자 행동 이벤트와 매개변수가 중복 없이 수집되고 개인 식별 정보를 포함하지 않는다.
-  - 동의 전에는 분석·광고 저장이 거부되고, 수락·거부·철회 후 GTM과 Google tag가 각 상태에 맞게 동작한다.
-  - Vercel Analytics와 GA4 수치의 집계 기준 차이가 운영 문서에 정리된다.
+
+#### 제외 범위
+
+- Google Analytics 360, Google Ads와 AdSense 광고 코드
+- BigQuery Export와 별도 분석 데이터 웨어하우스
+- 유료 CMP, Looker Studio 대시보드와 자체 관리자 통계 화면
+- 로그인 사용자 식별 및 개인 식별 정보 전송
+
+#### 진행 상황
+
+- 완료: GA4 속성·Web Stream, GTM Web 컨테이너와 Vercel Production의 `NEXT_PUBLIC_GTM_ID`를 준비했다.
+- 완료: Consent Mode v2 기본값, GTM 루트 로더, 동의 저장·철회 UI와 다섯 행동 이벤트를 구현했다.
+- 완료: `/privacy` 안내, 전역 설정 재진입 경로와 분석 운영 문서를 추가했다.
+- 완료: GTM에서 Google tag, Data Layer Variable과 다섯 Custom Event를 구성하고 Preview 검증 후 운영 버전을 게시했다.
+- 대기: 프론트 운영 배포 후 Realtime·DebugView, `page_view` 중복과 동의 변경을 최종 검증한다.
+
+#### 완료 조건
+
+- GA4 Realtime·DebugView와 Tag Assistant에서 첫 진입 및 클라이언트 라우팅의 `page_view`가 각각 한 번만 확인된다.
+- 정의한 사용자 행동 이벤트와 매개변수가 중복 없이 수집되고 개인 식별 정보를 포함하지 않는다.
+- 동의 전에는 분석·광고 저장이 거부되고, 수락·거부·철회 후 GTM과 Google tag가 각 상태에 맞게 동작한다.
+- Vercel Analytics와 GA4 수치의 집계 기준 차이가 운영 문서에 정리된다.
+
+#### 관련 코드
+
+- `frontend/src/lib/analytics`
+- `frontend/src/components/analytics`
+- `frontend/src/app/privacy`
+- `frontend/src/app/layout.tsx`
+- `docs/analytics.md`
 
 #### 디자인 기준
 
@@ -122,10 +87,20 @@
 #### 검증
 
 - 코드: `npm run lint`, `npm run typecheck`, `npm run build`, `./dev/verify --quick`
-- 로컬: 개발·production 모드에서 분석 태그 활성 조건과 동의 상태별 네트워크 요청 확인
+- 로컬: production build 성공, 390px에서 가로 오버플로와 세대 카드·동의 배너 겹침 없음, `denied` 기본값·거부 저장·`select_generation` Data Layer 이벤트 확인
+- 최종 검증(2026-08-17): `./dev/verify --quick`, 운영 API 기준 `npm run build`, `npm audit`, `./dev/check-secrets --all` 통과
+- 디자인 검증: PASS - 기존 랜딩 디자인을 유지하면서 동의 배너가 열릴 때만 안전영역을 포함한 하단 여백을 확보한다.
 - 도구: Google Tag Assistant, GA4 DebugView와 Realtime에서 페이지 조회와 행동 이벤트 확인
 - 운영: `trendzip.nadoran.com`에서 페이지 조회, 핵심 이벤트와 동의 변경 smoke test
 - 보안: `./dev/check-secrets --staged`, 측정 ID·컨테이너 ID 외 비밀정보 및 개인 식별 매개변수 미포함 확인
+
+#### 인계 메모
+
+- `page_view`는 GA4 향상된 측정의 브라우저 방문 기록 변경 한 경로만 사용한다. 앱 코드나 GTM History Change 태그에서 별도 `page_view`를 전송하지 않는다.
+- 동의 UI는 디자인 원본에 없는 운영 필수 화면이다. 기존 다크 팔레트와 버튼 규칙을 따르고 390px에서 세대 선택 카드의 핵심 라벨을 가리지 않는 하단 배너로 구현했다.
+- GTM 운영 설정과 Preview 실습은 완료했다. 다음 검증은 `docs/analytics.md`의 운영 검증 체크리스트를 운영 주소에 적용한다.
+
+## READY
 
 ### MEDIA-001 키워드 기반 숏폼 콘텐츠 자동화
 
@@ -174,6 +149,15 @@
 
 ## 최근 완료
 
+### OBS-001 Vercel Web Analytics 운영 트래픽 측정
+
+- 상태: DONE
+- 브랜치: develop
+- 완료일: 2026-08-07
+- 결과: `@vercel/analytics`를 Next.js 루트 레이아웃에 연결하고 Vercel Web Analytics에서 운영 방문자와 페이지 조회를 수집한다.
+- 운영 메모: SDK의 자동 환경 감지를 사용하며 별도 환경변수나 GitHub Secret은 필요하지 않다. 제품 행동 이벤트는 후속 GA4·GTM 작업에서 다룬다.
+- 검증: 프론트 lint·타입 검사·production build·npm audit·저장소 빠른 검증과 Gitleaks를 통과했다. 운영 배포 후 Analytics 네트워크 요청과 Vercel 대시보드의 방문자·페이지 조회·경로 수집을 확인했다.
+
 ### BE-001 키워드 후보 및 관계 품질 강화
 
 - 상태: DONE
@@ -209,12 +193,3 @@
 - 결과: Vercel Next.js 서버가 전용 Service Token으로 운영 API를 호출하고 Cloudflare Access가 `api-trendzip.nadoran.com` 전체 경로의 직접 접근을 차단한다.
 - 보안 메모: Client ID와 Client Secret은 Vercel Production 서버 환경에서만 관리하며 브라우저 공개 변수와 저장소에는 포함하지 않는다. Access 정책은 특정 Service Token만 허용하는 `Service Auth`로 구성했다.
 - 검증: 인증 없는 헬스체크, Swagger UI와 OpenAPI 요청은 `401`, 동적 피드와 랭킹 페이지는 실제 데이터를 포함해 `200`으로 응답했다. 프론트 응답에서 Access 자격 증명 표식이 노출되지 않는 것도 확인했다.
-
-### CHORE-004 프론트엔드 수동 배포 Workflow
-
-- 상태: DONE
-- 브랜치: develop
-- 완료일: 2026-08-04
-- 결과: Git push와 Vercel production 배포를 분리하고 `main`에서 수동 실행하는 GitHub Actions workflow로 프론트 운영 배포를 수행한다. Vercel Git 연동의 자동 배포는 비활성화했다.
-- 운영 메모: 배포 Secret은 `production-frontend` GitHub Environment에 격리하고 Vercel CLI 버전과 workflow 외부 Action 커밋을 고정했다.
-- 검증: 수동 production build·deploy와 Vercel 기본·커스텀 도메인 smoke test가 성공했고, Access 적용 코드를 포함한 재배포 후 랜딩·피드·랭킹을 확인했다.

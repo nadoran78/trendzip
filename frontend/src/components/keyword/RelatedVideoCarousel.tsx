@@ -4,10 +4,12 @@ import { ChevronLeft, ChevronRight, ImageOff, Play } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { FeedVideo } from "@/types/api";
+import { trackAnalyticsEvent } from "@/lib/analytics/events";
+import type { FeedVideo, Generation } from "@/types/api";
 
 type RelatedVideoCarouselProps = {
   videos: FeedVideo[];
+  generation: Generation;
 };
 
 type ScrollState = {
@@ -26,6 +28,7 @@ const SCROLL_EDGE_TOLERANCE = 2;
 
 export function RelatedVideoCarousel({
   videos,
+  generation,
 }: RelatedVideoCarouselProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollState, setScrollState] = useState(INITIAL_SCROLL_STATE);
@@ -92,7 +95,11 @@ export function RelatedVideoCarousel({
         className="flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto scroll-smooth px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {videos.map((video) => (
-          <RelatedVideoCard key={video.videoId} video={video} />
+          <RelatedVideoCard
+            key={video.videoId}
+            video={video}
+            generation={generation}
+          />
         ))}
       </div>
 
@@ -143,7 +150,13 @@ function CarouselButton({
   );
 }
 
-function RelatedVideoCard({ video }: { video: FeedVideo }) {
+function RelatedVideoCard({
+  video,
+  generation,
+}: {
+  video: FeedVideo;
+  generation: Generation;
+}) {
   const videoUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(video.videoId)}`;
 
   return (
@@ -152,6 +165,16 @@ function RelatedVideoCard({ video }: { video: FeedVideo }) {
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`${video.title} 유튜브에서 보기`}
+      onClick={() =>
+        trackAnalyticsEvent("youtube_video_click", {
+          generation,
+          video_id: video.videoId,
+          keyword_id: video.keywordId,
+          keyword: video.keyword,
+          feed_section: video.feedSection ?? "UNKNOWN",
+          click_area: "keyword_related_video",
+        })
+      }
       className="group w-[188px] shrink-0 snap-start overflow-hidden rounded-2xl border border-[#222] bg-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00e5ff]"
     >
       <div className="relative aspect-video overflow-hidden bg-[#111]">
