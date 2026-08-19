@@ -1,12 +1,12 @@
 # 프로젝트 현재 상태
 
-- 마지막 갱신: 2026-08-17
+- 마지막 갱신: 2026-08-19
 - 현재 단계: 핵심 사용자 흐름 공개 배포 및 운영 보완
-- 현재 집중 영역: GA4/GTM 기반 사용자 행동 분석 도입
+- 현재 집중 영역: 숏폼 기술 스파이크 완료 및 후속 TTS·사람 승인 모델 설계
 
 ## 한 줄 상태
 
-백엔드의 트렌드 수집·저장·조회 API와 확정 디자인을 반영한 주요 화면이 공개됐으며, Vercel Web Analytics와 GTM·Consent Mode v2 기반 GA4 행동 이벤트를 구현하고 GTM 운영 태그 게시까지 완료했다.
+백엔드의 트렌드 수집·저장·조회 API와 주요 화면이 공개됐고 Vercel Analytics와 GA4/GTM 운영 검증을 완료했다. Remotion 기반 9:16 숏폼 샘플, 입력 검증과 출력 규격 검사를 구현하고 사용자 실습 및 최종 MP4 검수를 마쳤다.
 
 ## 구현 현황
 
@@ -38,13 +38,14 @@
 - 구현·검증됨: Vercel Web Analytics 기반 production 방문자·페이지 조회·방문 경로 수집
 - 구현됨: GTM 루트 연결, Consent Mode v2 기본 거부·선택 저장·철회 UI와 개인정보 및 분석 안내
 - 구현됨: 세대 선택·변경, YouTube 이동, 키워드 상세 조회와 관련 키워드 이동의 타입 안전 Data Layer 이벤트
-- 구현·설정됨: GA4/GTM 코드와 운영 문서, Google tag·행동 이벤트 태그를 준비하고 GTM 운영 버전을 게시함
-- 검증 대기: 프론트 운영 배포 후 GA4 DebugView·Realtime, `page_view` 중복과 동의 변경 확인
+- 구현·검증됨: GA4/GTM 운영 태그와 Consent Mode v2를 게시하고 Realtime·DebugView·Tag Assistant에서 페이지 조회, 주요 행동 이벤트와 동의 변경을 확인함
 - 미구현: Android Chrome 홈 화면 설치 확인과 프론트엔드 자동 테스트
 
 ### 콘텐츠 유통
 
-- 미구현: 키워드와 설명을 활용한 세로형 숏폼 콘텐츠 생성·검수 파이프라인
+- 구현·검증됨: 운영 데이터와 분리한 고정 fixture, Remotion 기반 9:16 무음 샘플과 ffprobe 출력 규격 검사
+- 구현·검증됨: 실제 Node 날짜 검증과 React 근거 카드 사용자 실습, 대표 장면과 최종 MP4 전체 재생 검수
+- 미구현: 운영 키워드와 설명을 활용한 대본·TTS·사람 승인 기반 세로형 숏폼 생성 파이프라인
 - 미구현: 사람 승인 후 YouTube 비공개 업로드와 GA4 캠페인 유입 추적
 
 ### 인프라 및 배포
@@ -64,6 +65,7 @@
 - 구현됨: DB 없는 빠른 검사와 PostgreSQL·Flyway·jOOQ·전체 build를 포함하는 저장소 통합 검증 명령
 - 구현됨: 전체 Git 이력과 staged 변경을 검사하는 Gitleaks 명령과 pre-commit 훅
 - 구현됨: pull request와 `develop` push용 GitHub Actions CI
+- 구현됨: 미디어 모듈 타입 검사와 fixture 테스트를 로컬 통합 검증 및 GitHub Actions CI에 포함
 - 미구현: OpenAPI와 프론트엔드 타입의 자동 계약 검증
 
 ### 문서화
@@ -84,10 +86,9 @@
 
 ## 주요 미완성 영역
 
-1. 프론트 운영 배포와 GA4 DebugView·Realtime 사용자 행동 분석 최종 검증
-2. 키워드와 설명 기반 숏폼 생성·검수·YouTube 게시 자동화
-3. 프론트 핵심 사용자 흐름 자동 테스트
-4. OpenAPI와 프론트 TypeScript 타입의 계약 자동화
+1. 운영 키워드 기반 숏폼의 TTS 비교와 사람 승인 모델 설계
+2. 프론트 핵심 사용자 흐름 자동 테스트
+3. OpenAPI와 프론트 TypeScript 타입의 계약 자동화
 
 활성 작업, 작업 브랜치와 우선순위는 [작업 목록](work-items.md)을 기준으로 한다.
 
@@ -96,8 +97,8 @@
 - 백엔드 DB 통합 테스트는 기본적으로 로컬 PostgreSQL의 `mztrend_test` 데이터베이스에 의존한다.
 - API 계약이 Kotlin DTO, 루트 API 예시, 프론트 TypeScript 타입에 중복되어 있다.
 - 프론트엔드에는 사용자 흐름을 검증하는 자동 테스트가 없다.
-- GA4/GTM 애플리케이션 코드와 GTM 운영 태그는 준비됐지만 프론트 운영 배포와 Realtime·DebugView 최종 검증은 아직 남아 있다.
-- 키워드 데이터를 외부 홍보 콘텐츠로 재가공하고 검수·게시하는 파이프라인이 아직 없다.
+- `related_keyword_click`은 운영 검증 당시 관련 키워드가 표시된 표본이 없어 런타임 재확인이 남아 있다.
+- 숏폼 샘플은 무음 텍스트 중심이며 운영 데이터 연동, TTS, 사람 승인과 게시 파이프라인은 아직 없다.
 - 실제 크롤링 검증은 YouTube, 네이버 DataLab, Gemini API quota를 소비한다.
 - PWA 설치 메뉴와 홈 화면 아이콘 표현은 브라우저와 OS별로 달라 Android 실기기 동작은 아직 확인하지 못했다.
 
@@ -150,5 +151,6 @@ npm run dev
 - [현재 작업과 다음 작업](work-items.md)
 - [CI와 비밀정보 관리](ci-and-secret-management.md)
 - [GA4·GTM 사용자 행동 분석](analytics.md)
+- [키워드 기반 숏폼 기술 스파이크](media-shortform-spike.md)
 - [Vercel 프론트엔드 수동 배포](ops/frontend-deployment.md)
 - [프로젝트 작업 규칙](../AGENTS.md)

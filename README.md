@@ -105,6 +105,7 @@ trendzip/
 ├── .github/workflows/       # CI workflow
 ├── backend/                 # Kotlin + Spring Boot API and scheduler
 ├── frontend/                # Next.js App Router web application
+├── media/                   # Remotion short-form rendering spike
 ├── docker/                  # Local PostgreSQL initialization
 ├── infra/                   # Shared Mac mini reverse proxy configuration
 ├── design/                  # Confirmed screen designs
@@ -191,13 +192,13 @@ API_BASE_URL=
 
 ## Verification
 
-DB 없이 문서, diff, backend ktlint와 frontend lint·타입을 빠르게 검사합니다.
+DB 없이 문서, diff, backend ktlint, frontend lint·타입과 media 타입을 빠르게 검사합니다.
 
 ```bash
 ./dev/verify
 ```
 
-PostgreSQL, Flyway, jOOQ, backend test·build와 frontend production build를 모두 검사합니다.
+PostgreSQL, Flyway, jOOQ, backend test·build, frontend production build와 media 타입을 모두 검사합니다.
 
 ```bash
 ./dev/verify --full
@@ -218,7 +219,7 @@ GitHub Actions는 pull request와 `develop` push에서 Gitleaks 검사를 먼저
 
 다음 우선순위는 다음과 같습니다.
 
-1. GA4/GTM 기반 사용자 행동 분석 실습
+1. 운영 키워드 기반 숏폼의 TTS 비교와 사람 승인 모델 설계
 2. 키워드와 설명 기반 숏폼 콘텐츠 생성·게시 자동화
 3. OpenAPI 기반 frontend 타입 계약 자동화
 4. 핵심 사용자 흐름 E2E 테스트
@@ -232,5 +233,6 @@ GitHub Actions는 pull request와 `develop` push에서 Gitleaks 검사를 먼저
 - [현재 작업과 우선순위](docs/work-items.md)
 - [백엔드 구현 컨벤션](docs/backend-convention.md)
 - [CI와 비밀정보 관리](docs/ci-and-secret-management.md)
+- [키워드 기반 숏폼 기술 스파이크](docs/media-shortform-spike.md)
 - [Mac mini 배포 절차](docs/ops/macmini-deployment.md)
 - [CI/CD 확장 선택지](docs/ops/macmini-ci-cd-options.md)
