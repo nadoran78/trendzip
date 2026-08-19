@@ -117,6 +117,19 @@ location.reload()
 6. 이벤트에 개인 식별 정보와 자유 입력값이 없는지 확인한다.
 7. GTM 컨테이너를 게시한 뒤 GA4 Realtime에서 운영 트래픽을 확인한다.
 
+## 운영 검증 결과
+
+2026-08-18 기준 `trendzip.nadoran.com` 운영 환경에서 다음을 확인했다.
+
+- Tag Assistant에서 GTM 컨테이너와 GA4 Google tag가 정상 탐지됐다.
+- 분석 동의 허용 후 GA4 수집 요청이 HTTP `204`로 완료됐다.
+- GA4 Realtime에서 운영 접속이 활성 사용자로 집계됐다.
+- DebugView에서 `page_view`, `scroll`, `select_generation` 이벤트를 확인했다.
+- GTM Preview에서 `select_generation`, `generation_change`, `view_keyword_detail`, `youtube_video_click`이 각 사용자 행동에 한 번씩 실행됐다.
+- 동의 기본값은 거부 상태이며, 개인정보처리방침의 설정 UI를 통한 허용과 변경을 확인했다.
+
+`related_keyword_click`은 검증 당시 상세 화면에 관련 키워드가 표시된 운영 표본이 없어 런타임 실행을 재확인하지 못했다. 코드와 GTM 태그는 구성되어 있으므로 관련 키워드가 생성된 표본이 나타날 때 Preview와 DebugView에서 한 번 더 확인한다. 일반 보고서의 집계는 처리 지연이 있을 수 있어 데이터 누적 후 별도 운영 점검으로 확인한다.
+
 ## 공식 참고 자료
 
 - [Next.js Third Party Libraries](https://nextjs.org/docs/app/guides/third-party-libraries)
