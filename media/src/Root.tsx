@@ -21,7 +21,8 @@ export function RemotionRoot() {
       durationInFrames={DEFAULT_PROPS.durationSeconds * VIDEO_FPS}
       defaultProps={DEFAULT_PROPS}
       calculateMetadata={({ props }) => ({
-        durationInFrames: Math.round(props.durationSeconds * VIDEO_FPS),
+        durationInFrames:
+          props.timeline?.durationInFrames ?? Math.round(props.durationSeconds * VIDEO_FPS),
       })}
     />
   );

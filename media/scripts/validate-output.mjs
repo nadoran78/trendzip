@@ -1,14 +1,19 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import ffprobeStatic from "ffprobe-static";
 
 import { loadFixture } from "./fixture.mjs";
+import { validateOutputMetadata } from "./output-metadata.mjs";
 
 const outputPath = resolve(process.argv[2] ?? "out/made-in-korea.mp4");
 const fixturePath = resolve(process.argv[3] ?? "fixtures/made-in-korea.sample.json");
+const renderPropsPath = process.argv[4] ? resolve(process.argv[4]) : null;
 const fixture = loadFixture(fixturePath);
+const renderProps = renderPropsPath
+  ? JSON.parse(readFileSync(renderPropsPath, "utf8"))
+  : null;
 
 if (!existsSync(outputPath) || statSync(outputPath).size < 10_000) {
   throw new Error(`Rendered output is missing or unexpectedly small: ${outputPath}`);
@@ -29,31 +34,13 @@ if (probe.status !== 0) {
 }
 
 const metadata = JSON.parse(probe.stdout);
-const videoStreams = metadata.streams.filter((stream) => stream.codec_type === "video");
-const audioStreams = metadata.streams.filter((stream) => stream.codec_type === "audio");
+const expectedDurationSeconds = renderProps?.timeline?.durationSeconds ?? fixture.durationSeconds;
+const messages = validateOutputMetadata(metadata, {
+  expectedDurationSeconds,
+  expectAudio: Boolean(renderProps?.narrationAudio),
+});
 
-if (videoStreams.length !== 1) {
-  throw new Error(`Expected exactly one video stream, got ${videoStreams.length}.`);
-}
-
-const video = videoStreams[0];
-const [fpsNumerator, fpsDenominator] = video.avg_frame_rate.split("/").map(Number);
-const fps = fpsNumerator / fpsDenominator;
-const duration = Number(metadata.format.duration);
-
-const checks = [
-  [video.width === 1080 && video.height === 1920, `resolution ${video.width}x${video.height}`],
-  [Math.abs(fps - 30) < 0.01, `frame rate ${fps}`],
-  [Math.abs(duration - fixture.durationSeconds) < 0.2, `duration ${duration}s`],
-  [video.codec_name === "h264", `codec ${video.codec_name}`],
-  [video.pix_fmt === "yuv420p", `pixel format ${video.pix_fmt}`],
-  [audioStreams.length === 0, `audio streams ${audioStreams.length}`],
-];
-
-for (const [passed, message] of checks) {
-  if (!passed) {
-    throw new Error(`Output validation failed: ${message}`);
-  }
+for (const message of messages) {
   process.stdout.write(`PASS ${message}\n`);
 }
 

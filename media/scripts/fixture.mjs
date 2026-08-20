@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 
+import { NARRATION_SCENE_IDS } from "./scenes.mjs";
+
 const REQUIRED_UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign"];
 const GENERATION_LABELS = new Map([
   ["TEEN", "10대"],
@@ -35,6 +37,22 @@ export function validateRecordedAt(recordedAt) {
   const date = new Date(recordedAt);
   if (isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== recordedAt) {
     throw new Error("recordedAt must be a valid calendar date.");
+  }
+}
+
+export function validateNarration(narration) {
+  if (typeof narration !== "object" || narration === null || Array.isArray(narration)) {
+    throw new Error("narration must be an object keyed by scene ID.");
+  }
+
+  const keys = Object.keys(narration).sort();
+  const expectedKeys = [...NARRATION_SCENE_IDS].sort();
+  if (keys.length !== expectedKeys.length || keys.some((key, index) => key !== expectedKeys[index])) {
+    throw new Error(`narration must contain exactly: ${NARRATION_SCENE_IDS.join(", ")}.`);
+  }
+
+  for (const sceneId of NARRATION_SCENE_IDS) {
+    requireString(narration[sceneId], `narration.${sceneId}`, 320);
   }
 }
 
@@ -75,6 +93,7 @@ export function loadFixture(path) {
     throw new Error("reasons must contain exactly two items for the spike template.");
   }
   fixture.reasons.forEach((reason, index) => requireString(reason, `reasons[${index}]`, 100));
+  validateNarration(fixture.narration);
 
   if (!Array.isArray(fixture.evidence) || fixture.evidence.length < 1 || fixture.evidence.length > 3) {
     throw new Error("evidence must contain between one and three sources.");

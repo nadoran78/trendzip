@@ -1,14 +1,23 @@
 import type { CSSProperties, ReactNode } from "react";
 import {
   AbsoluteFill,
+  Html5Audio,
   interpolate,
   Sequence,
   spring,
+  staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
 
-import type { Evidence, KeywordShortformProps } from "./types";
+import type {
+  Evidence,
+  KeywordShortformProps,
+  NarrationAudio,
+  NarrationSceneId,
+  NarrationSceneTimeline,
+  NarrationTimeline,
+} from "./types";
 
 const COLORS = {
   background: "#0a0a0a",
@@ -25,13 +34,17 @@ const FONT_FAMILY = '"Noto Sans KR Variable", sans-serif';
 const SAFE_X = 84;
 const FADE_FRAMES = 12;
 
-const sceneFrames = {
-  hook: 150,
-  overview: 210,
-  reasons: 360,
-  evidence: 240,
-  cta: 120,
-} as const;
+const DEFAULT_TIMELINE: NarrationTimeline = {
+  scenes: [
+    { id: "hook", from: 0, audioFrom: 6, durationInFrames: 150 },
+    { id: "overview", from: 150, audioFrom: 156, durationInFrames: 210 },
+    { id: "reasons", from: 360, audioFrom: 366, durationInFrames: 360 },
+    { id: "evidence", from: 720, audioFrom: 726, durationInFrames: 240 },
+    { id: "cta", from: 960, audioFrom: 966, durationInFrames: 120 },
+  ],
+  durationInFrames: 1080,
+  durationSeconds: 36,
+};
 
 function animatedEntrance(frame: number, fps: number): CSSProperties {
   const progress = spring({
@@ -46,7 +59,39 @@ function animatedEntrance(frame: number, fps: number): CSSProperties {
   };
 }
 
-function Scene({ children, duration }: { children: ReactNode; duration: number }) {
+function NarrationCaption({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: SAFE_X,
+        right: SAFE_X,
+        bottom: 150,
+        padding: "24px 30px",
+        border: `2px solid ${COLORS.border}`,
+        backgroundColor: "rgba(10, 10, 10, 0.92)",
+        color: COLORS.text,
+        fontSize: 31,
+        fontWeight: 650,
+        lineHeight: 1.5,
+        wordBreak: "keep-all",
+        zIndex: 9,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Scene({
+  children,
+  duration,
+  caption,
+}: {
+  children: ReactNode;
+  duration: number;
+  caption?: string;
+}) {
   const frame = useCurrentFrame();
   const opacity = interpolate(
     frame,
@@ -65,8 +110,35 @@ function Scene({ children, duration }: { children: ReactNode; duration: number }
       }}
     >
       {children}
+      {caption ? <NarrationCaption>{caption}</NarrationCaption> : null}
     </AbsoluteFill>
   );
+}
+
+function findScene(
+  timeline: NarrationTimeline,
+  sceneId: NarrationSceneId,
+): NarrationSceneTimeline {
+  const scene = timeline.scenes.find((item) => item.id === sceneId);
+  if (!scene) {
+    throw new Error(`Missing ${sceneId} scene in narration timeline.`);
+  }
+
+  return scene;
+}
+
+function NarrationAudioTracks({
+  timeline,
+  audio,
+}: {
+  timeline: NarrationTimeline;
+  audio: NarrationAudio;
+}) {
+  return timeline.scenes.map((scene) => (
+    <Sequence key={scene.id} from={scene.audioFrom} name={`Narration: ${scene.id}`}>
+      <Html5Audio src={staticFile(audio[scene.id])} />
+    </Sequence>
+  ));
 }
 
 function Background({ progress }: { progress: number }) {
@@ -178,12 +250,21 @@ function Eyebrow({ children, color = COLORS.cyan }: { children: ReactNode; color
   );
 }
 
-function HookScene({ props }: { props: KeywordShortformProps }) {
+function HookScene({
+  props,
+  duration,
+}: {
+  props: KeywordShortformProps;
+  duration: number;
+}) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   return (
-    <Scene duration={sceneFrames.hook}>
+    <Scene
+      duration={duration}
+      caption={props.narrationAudio ? props.narration.hook : undefined}
+    >
       <div style={{ ...animatedEntrance(frame, fps), marginTop: 160 }}>
         <Eyebrow>오늘의 키워드 해석</Eyebrow>
         <div
@@ -215,12 +296,21 @@ function HookScene({ props }: { props: KeywordShortformProps }) {
   );
 }
 
-function OverviewScene({ props }: { props: KeywordShortformProps }) {
+function OverviewScene({
+  props,
+  duration,
+}: {
+  props: KeywordShortformProps;
+  duration: number;
+}) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   return (
-    <Scene duration={sceneFrames.overview}>
+    <Scene
+      duration={duration}
+      caption={props.narrationAudio ? props.narration.overview : undefined}
+    >
       <div style={animatedEntrance(frame, fps)}>
         <Eyebrow color={COLORS.pink}>키워드 한눈에 보기</Eyebrow>
         <div
@@ -243,7 +333,7 @@ function OverviewScene({ props }: { props: KeywordShortformProps }) {
             }}
           >
             <div style={{ fontSize: 28, fontWeight: 800 }}>{props.generationLabel} SAMPLE</div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 12}}>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
               <div style={{ fontSize: 136, lineHeight: 1, fontWeight: 900 }}>{props.rank}</div>
               <div style={{ fontSize: 30, fontWeight: 800 }}>위</div>
             </div>
@@ -284,12 +374,21 @@ function OverviewScene({ props }: { props: KeywordShortformProps }) {
   );
 }
 
-function ReasonsScene({ props }: { props: KeywordShortformProps }) {
+function ReasonsScene({
+  props,
+  duration,
+}: {
+  props: KeywordShortformProps;
+  duration: number;
+}) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   return (
-    <Scene duration={sceneFrames.reasons}>
+    <Scene
+      duration={duration}
+      caption={props.narrationAudio ? props.narration.reasons : undefined}
+    >
       <div style={animatedEntrance(frame, fps)}>
         <Eyebrow>왜 지금 뜨고 있을까?</Eyebrow>
         <div style={{ marginTop: 70, display: "flex", flexDirection: "column", gap: 34 }}>
@@ -369,12 +468,21 @@ function EvidenceCard({ item, index }: EvidenceCardProps) {
   );
 }
 
-function EvidenceScene({ props }: { props: KeywordShortformProps }) {
+function EvidenceScene({
+  props,
+  duration,
+}: {
+  props: KeywordShortformProps;
+  duration: number;
+}) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   return (
-    <Scene duration={sceneFrames.evidence}>
+    <Scene
+      duration={duration}
+      caption={props.narrationAudio ? props.narration.evidence : undefined}
+    >
       <div style={animatedEntrance(frame, fps)}>
         <Eyebrow color={COLORS.pink}>근거를 같이 확인했어요</Eyebrow>
         <div style={{ marginTop: 66, display: "flex", flexDirection: "column", gap: 26 }}>
@@ -399,12 +507,21 @@ function EvidenceScene({ props }: { props: KeywordShortformProps }) {
   );
 }
 
-function CtaScene({ props }: { props: KeywordShortformProps }) {
+function CtaScene({
+  props,
+  duration,
+}: {
+  props: KeywordShortformProps;
+  duration: number;
+}) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   return (
-    <Scene duration={sceneFrames.cta}>
+    <Scene
+      duration={duration}
+      caption={props.narrationAudio ? props.narration.cta : undefined}
+    >
       <div
         style={{
           ...animatedEntrance(frame, fps),
@@ -442,34 +559,50 @@ function CtaScene({ props }: { props: KeywordShortformProps }) {
 export function TrendKeywordShort(props: KeywordShortformProps) {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
+  const timeline = props.timeline ?? DEFAULT_TIMELINE;
+  if (props.narrationAudio && !props.timeline) {
+    throw new Error("Narration audio requires a calculated timeline.");
+  }
+
+  const hook = findScene(timeline, "hook");
+  const overview = findScene(timeline, "overview");
+  const reasons = findScene(timeline, "reasons");
+  const evidence = findScene(timeline, "evidence");
+  const cta = findScene(timeline, "cta");
   const progress = interpolate(frame, [0, durationInFrames], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  const overviewStart = sceneFrames.hook;
-  const reasonsStart = overviewStart + sceneFrames.overview;
-  const evidenceStart = reasonsStart + sceneFrames.reasons;
-  const ctaStart = evidenceStart + sceneFrames.evidence;
-
   return (
     <AbsoluteFill>
       <Background progress={progress} />
-      <Sequence from={0} durationInFrames={sceneFrames.hook} premountFor={30}>
-        <HookScene props={props} />
+      <Sequence from={hook.from} durationInFrames={hook.durationInFrames} premountFor={30}>
+        <HookScene props={props} duration={hook.durationInFrames} />
       </Sequence>
-      <Sequence from={overviewStart} durationInFrames={sceneFrames.overview} premountFor={30}>
-        <OverviewScene props={props} />
+      <Sequence
+        from={overview.from}
+        durationInFrames={overview.durationInFrames}
+        premountFor={30}
+      >
+        <OverviewScene props={props} duration={overview.durationInFrames} />
       </Sequence>
-      <Sequence from={reasonsStart} durationInFrames={sceneFrames.reasons} premountFor={30}>
-        <ReasonsScene props={props} />
+      <Sequence from={reasons.from} durationInFrames={reasons.durationInFrames} premountFor={30}>
+        <ReasonsScene props={props} duration={reasons.durationInFrames} />
       </Sequence>
-      <Sequence from={evidenceStart} durationInFrames={sceneFrames.evidence} premountFor={30}>
-        <EvidenceScene props={props} />
+      <Sequence
+        from={evidence.from}
+        durationInFrames={evidence.durationInFrames}
+        premountFor={30}
+      >
+        <EvidenceScene props={props} duration={evidence.durationInFrames} />
       </Sequence>
-      <Sequence from={ctaStart} durationInFrames={sceneFrames.cta} premountFor={30}>
-        <CtaScene props={props} />
+      <Sequence from={cta.from} durationInFrames={cta.durationInFrames} premountFor={30}>
+        <CtaScene props={props} duration={cta.durationInFrames} />
       </Sequence>
+      {props.narrationAudio ? (
+        <NarrationAudioTracks timeline={timeline} audio={props.narrationAudio} />
+      ) : null}
       <PersistentChrome props={props} />
     </AbsoluteFill>
   );

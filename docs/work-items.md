@@ -23,7 +23,93 @@
 
 ## ACTIVE
 
-현재 활성 작업 없음.
+### MEDIA-002 TTS 및 오디오 동기화 기술 스파이크
+
+- 상태: REVIEW
+- 브랜치: codex/media-002-tts-sync-spike
+- 시작일: 2026-08-19
+- 마지막 갱신: 2026-08-20
+- 다음 행동: 변경사항을 검토하고 `develop`에 병합한 뒤 작업을 `DONE`으로 전환한다.
+
+#### 목적
+
+- 고정된 한국어 대본을 TTS 음성으로 생성하고 실제 음성 길이에 맞춰 Remotion 장면과 자막을 동기화할 수 있는지 검증한다.
+- 기존 Gemini 결제 계정을 재사용하면서 공급자 교체 가능성과 Preview 모델의 변경 위험을 격리한다.
+
+#### 범위
+
+- 공식 문서 기준 TTS 후보의 한국어 지원, 출력 형식, 비용과 운영 제약을 비교한다.
+- 고정 fixture에 장면별 내레이션을 추가하고 입력을 검증한다.
+- Gemini TTS로 장면별 WAV와 대본 hash를 포함한 audio manifest를 생성한다.
+- 음성 길이, 장면 여백과 최소 길이로 Remotion timeline을 계산한다.
+- 사용자 실습 후 장면별 음성과 자막을 합성하고 오디오 출력 규격을 검사한다.
+- 대표 장면과 최종 MP4의 발음, 음량, 자막 동기화를 사람이 검수한다.
+
+#### 제외 범위
+
+- 운영 DB·크롤링 결과와 LLM 대본 자동 생성
+- 승인 상태 저장, 관리자 화면과 게시 가능 판정
+- YouTube·TikTok·Instagram 업로드
+- 실제 인물 음성 복제와 무검수 공개 게시
+- CI에서 외부 TTS API 호출
+
+#### 진행 상황
+
+- 완료: 공식 문서 기준 Gemini·Google Cloud·Azure 후보의 한국어 지원, 출력 형식과 비용 경계를 비교했다.
+- 완료: 기존 결제 계정과 API 키를 재사용하는 `gemini-3.1-flash-tts-preview`와 `Kore` 음성을 스파이크 기본값으로 선택했다.
+- 완료: 장면별 내레이션 입력 검증, Gemini 요청·응답 경계, PCM WAV 인코딩과 대본 hash 기반 audio manifest를 구현했다.
+- 완료: 사용자가 음성 밀리초, 장면 여백과 최소 길이를 연속 프레임으로 변환하는 timeline 계산을 구현했다.
+- 완료: 계산된 timeline을 Remotion 장면, 하단 자막과 WAV 재생 시점에 연결하고 동적 Composition 길이를 적용했다.
+- 완료: narrated 렌더 전 대본 hash·WAV 파일 검증과 렌더 후 H.264·AAC 출력 규격 검사를 구현했다.
+- 완료: 외부 API 없이 합성 톤으로 27초 narrated MP4와 다섯 대표 장면을 생성하고 기존 36초 무음 렌더의 회귀가 없음을 확인했다.
+- 완료: Interactions REST 응답의 `steps[].content[]`에서 오디오를 추출하도록 수정하고 실제 Gemini TTS로 장면별 WAV와 48.384초 narrated MP4, 대표 장면 다섯 장을 생성했다.
+- 완료: 사용자가 실제 음성의 한국어 발음, 음량, 장면 전환과 자막 동기화를 확인하고 기술 검증용 결과물로 승인했다.
+
+#### 사용자 실습
+
+- `media/scripts/timeline.mjs`의 `calculateSceneTimeline()`을 실제 운영 코드에서 구현한다.
+- Codex는 타입, 호출부, 정상·경계·실패 테스트를 준비한다.
+- 사용자는 음성 밀리초를 프레임으로 올림하고 앞뒤 여백, 최소 장면 길이, 연속된 시작 프레임과 전체 길이를 계산한다.
+- 사용자 실습을 완료하고 timeline 정상·경계·실패 테스트를 모두 통과했다.
+
+#### 완료 조건
+
+- 한 명령으로 장면별 한국어 TTS와 검증 가능한 audio manifest를 생성한다.
+- 실제 음성 길이에 따라 장면과 전체 영상 길이가 결정된다.
+- narrated MP4에 정상적인 오디오 스트림이 포함되고 자막과 음성이 동기화된다.
+- 대본과 audio manifest의 hash가 다르면 렌더링 전에 실패한다.
+- API 키와 생성 음성이 Git에 포함되지 않는다.
+- 사용자 실습과 최종 수동 품질 검수를 완료한다.
+
+#### 관련 코드
+
+- `media/fixtures/made-in-korea.sample.json`
+- `media/scripts/generate-tts.mjs`
+- `media/scripts/gemini-tts.mjs`
+- `media/scripts/audio-manifest.mjs`
+- `media/scripts/timeline.mjs`
+- `media/scripts/timeline.test.mjs`
+- `media/scripts/narrated-props.mjs`
+- `media/scripts/render-narrated.mjs`
+- `media/scripts/render-narrated-stills.mjs`
+- `media/scripts/output-metadata.mjs`
+- `docs/media-tts-spike.md`
+
+#### 검증
+
+- 상태: PASS
+- 통과: 미디어 단위 테스트 28건, TypeScript 검사, 합성 톤 narrated 렌더와 ffprobe AAC 검사
+- 통과: narrated 대표 장면 다섯 장의 자막 배치와 기존 36초 무음 렌더 회귀 검사
+- 통과: 실제 Gemini TTS 장면별 WAV 생성, 48.384초 H.264·AAC narrated MP4와 대표 장면 다섯 장 렌더
+- 통과: 사용자가 최종 MP4를 재생해 한국어 발음·음량·장면 전환·자막 동기화를 확인함
+- 저장소: `./dev/check-context`, `./dev/check-secrets --staged`
+
+#### 인계 메모
+
+- TTS API는 로컬 명시적 명령에서만 호출하며 CI와 기본 통합 검증은 네트워크를 사용하지 않는다.
+- 첫 통합 모델은 `gemini-3.1-flash-tts-preview`, 단일 화자 `Kore`이며 환경변수로 교체 가능하게 유지한다.
+- 생성되는 WAV와 manifest는 `media/out/tts/`에 저장하고 Git에 포함하지 않는다.
+- 승인 게이트는 실제 게시 파이프라인을 구현하는 MEDIA-004로 미룬다.
 
 ## READY
 
