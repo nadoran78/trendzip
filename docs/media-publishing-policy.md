@@ -197,9 +197,9 @@ MEDIA-004 이후는 아래 상태를 기본으로 사용하되, 실제 저장 �
 ```text
 CANDIDATE
   -> DRAFT
+  -> RENDERED
   -> REVIEW_REQUIRED
   -> APPROVED
-  -> RENDERED
   -> UPLOADED_PRIVATE
   -> SCHEDULED
   -> PUBLISHED
@@ -212,7 +212,7 @@ CANDIDATE
 - `NEEDS_REVISION`: 대본·음성·영상을 고친 뒤 다시 검수한다.
 - `RETIRED`: 발행했지만 정책, 권리, 사실 정정 또는 운영 판단으로 비공개·종료한다.
 
-사람 승인 없이 `REVIEW_REQUIRED`에서 `APPROVED`로 전환할 수 없다. 대본이나 근거가 바뀌면 기존 승인을 무효화하고 다시 검수한다.
+사람 승인 없이 `REVIEW_REQUIRED`에서 `APPROVED`로 전환할 수 없다. 대본, 근거, 음성이나 렌더링 결과가 바뀌면 기존 승인을 무효화하고 다시 검수한다. MEDIA-004의 자동 편집 단계는 `DRAFT`까지만 만들며 필수 운영자 편집 입력을 요구하지 않는다.
 
 ## 샘플 후보 판정
 
@@ -258,6 +258,6 @@ CANDIDATE
 ## 후속 작업
 
 1. MEDIA-004: 운영 키워드 후보를 이 정책의 입력과 제작 초안으로 변환한다.
-2. MEDIA-005: 초안을 사람이 승인, 반려하거나 재생성할 수 있는 게이트를 만든다.
+2. MEDIA-005: 초안을 음성·영상으로 렌더링하고 최종 결과를 사람이 승인, 반려하거나 재생성할 수 있는 게이트를 만든다.
 3. MEDIA-006: 승인된 결과만 YouTube 비공개로 업로드한다.
 4. MEDIA-007: 운영 지표를 확인한 뒤 예약 발행과 다른 SNS 확장을 검토한다.

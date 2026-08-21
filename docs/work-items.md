@@ -23,7 +23,76 @@
 
 ## ACTIVE
 
-현재 활성 작업 없음.
+### MEDIA-004 운영 후보 자동 선정 및 제작 이력 기반 초안 생성
+
+- 상태: IN_PROGRESS
+- 브랜치: codex/media-004-operational-draft
+- 시작일: 2026-08-21
+- 마지막 갱신: 2026-08-21
+- 다음 행동: 운영 키워드 후보와 최근 제작 이력을 수집하고 Gemini 자동 편집 계획 입력으로 연결한다.
+
+#### 목적
+
+- 운영 키워드와 최근 숏폼 제작 이력을 API로 조회해 중복되지 않는 제작 초안을 자동으로 준비한다.
+- 편집 방향은 Gemini가 구조화된 값으로 결정하고, 운영자는 후속 단계에서 최종 렌더링 결과만 승인한다.
+
+#### 범위
+
+- 키워드 상세 API에 원본 크롤링 회차와 스냅샷 시각을 추가한다.
+- 숏폼 콘텐츠와 연관 키워드의 제작 이력 스키마, 도메인, 저장소를 추가한다.
+- 최근 이력 조회, `DRAFT` 예약과 상태 갱신을 위한 인증된 운영 API를 추가한다.
+- 운영 후보·제작 이력 수집, Gemini 편집 계획, 중복 정책 검사와 구조화 초안 생성을 `media` 모듈에 연결한다.
+- Kotlin `DRAFT` 예약 서비스와 Node 30일 중복 판정을 실제 운영 코드 실습으로 진행한다.
+
+#### 제외 범위
+
+- 운영 TTS와 영상 렌더링
+- 승인·반려 UI
+- YouTube 업로드와 자동 공개
+- 운영자의 필수 편집 입력
+
+#### 진행 상황
+
+- [x] MEDIA-003에서 후보 선정, 반복 방지와 발행 정책을 확정했다.
+- [x] 키워드 상세 API에 `sourceCrawlRunId`, `snapshotAt`, `explainedAt`을 추가했다.
+- [x] 숏폼 제작 이력 스키마, 도메인, 저장소, 최근 이력 조회와 운영 API 인증 기반을 준비했다.
+- [x] Kotlin 실습을 위한 Controller·DTO·Repository와 정상·중복 실패 테스트를 준비했다.
+- [x] Kotlin `reserveDraft` 실습을 완료하고 리뷰한다.
+- [ ] 운영 후보 수집과 자동 편집 초안 생성을 연결한다.
+- [ ] Node 중복 정책 실습을 완료하고 전체 흐름을 검증한다.
+
+#### 완료 조건
+
+- 운영 API를 통해 최근 제작 이력을 조회하고 중복 없는 `DRAFT`를 원자적으로 예약할 수 있다.
+- Gemini 구조화 결과가 정책 검사를 통과한 경우에만 제작 초안과 검토 manifest를 생성한다.
+- 동일 사건, 동일 콘텐츠와 최근 30일 동일 주제의 중복을 정의된 정책대로 차단하거나 보류한다.
+- 실제 외부 API를 호출하지 않는 자동 테스트와 저장소 검증을 통과한다.
+
+#### 관련 코드
+
+- `backend/src/main/kotlin/com/mztrend/controller/ops`
+- `backend/src/main/kotlin/com/mztrend/domain/ShortformContent.kt`
+- `backend/src/main/kotlin/com/mztrend/service/ShortformContentService.kt`
+- `backend/src/main/resources/db/migration`
+- `media/scripts`
+- `docs/media-publishing-policy.md`
+
+#### 검증
+
+- 통과: 키워드 Controller·QueryRepository, 운영 API 인증·최근 이력 조회 테스트
+- 통과: `ShortformContentServiceTest` 5건과 운영 API `reserveDraft` 1건
+- 예정: 미디어 타입 검사와 Node 테스트
+- 통과: 백엔드 compileKotlin·compileTestKotlin·ktlint
+- 통과: 프론트엔드 typecheck
+- 통과: `./dev/check-context`
+- 통과: `./dev/verify --quick`
+- 예정: `./dev/check-secrets --staged`
+
+#### 인계 메모
+
+- Kotlin 실습에서 `DRAFT` 중복 검사, 키워드 불변식 검증, 콘텐츠·키워드 스냅샷 원자적 저장과 DB 경합 예외 변환을 구현했다.
+- `cd backend && ./gradlew test --tests '*ShortformContentServiceTest' --tests '*ShortformContentOperationsControllerTest.reserveDraft returns created draft'` 검증을 통과했다.
+- 사람 승인 상태는 운영 렌더링 이후로 이동하며, MEDIA-005에서 최종 영상 승인·반려·재생성을 구현한다.
 
 ## READY
 
@@ -31,8 +100,7 @@
 
 ## LATER
 
-- MEDIA-004 운영 키워드 후보를 정책 입력과 제작 초안으로 변환
-- MEDIA-005 숏폼 초안의 사람 승인·반려·재생성 게이트
+- MEDIA-005 숏폼 운영 렌더링과 최종 결과 승인·반려·재생성 게이트
 - MEDIA-006 승인된 숏폼의 YouTube 비공개 업로드
 - MEDIA-007 발행 일정·SNS 확장 자동화
 - Android Chrome 홈 화면 설치와 standalone 실행 호환성 확인
