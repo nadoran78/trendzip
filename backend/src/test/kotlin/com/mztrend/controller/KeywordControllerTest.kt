@@ -166,6 +166,9 @@ class KeywordControllerTest {
             .andExpect(jsonPath("$.data.rankTrend").value(RankTrend.NEW.name))
             .andExpect(jsonPath("$.data.rankDelta").value(nullValue()))
             .andExpect(jsonPath("$.data.explain").value("넷플릭스 신작 공개로 관련 배우와 작품명이 함께 주목받고 있습니다."))
+            .andExpect(jsonPath("$.data.sourceCrawlRunId").value(1))
+            .andExpect(jsonPath("$.data.snapshotAt").value("2026-06-08T12:00:00"))
+            .andExpect(jsonPath("$.data.explainedAt").value("2026-06-08T12:05:00"))
             .andExpect(jsonPath("$.data.relatedVideos.length()").value(2))
             .andExpect(jsonPath("$.data.relatedVideos[0].videoId").value("donggung-trailer"))
             .andExpect(jsonPath("$.data.relatedVideos[0].keywordId").value(10))
@@ -202,6 +205,9 @@ class KeywordControllerTest {
             .andExpect(jsonPath("$.data.rankTrend").value(nullValue()))
             .andExpect(jsonPath("$.data.rankDelta").value(nullValue()))
             .andExpect(jsonPath("$.data.explain").value(nullValue()))
+            .andExpect(jsonPath("$.data.sourceCrawlRunId").value(nullValue()))
+            .andExpect(jsonPath("$.data.snapshotAt").value(nullValue()))
+            .andExpect(jsonPath("$.data.explainedAt").value(nullValue()))
             .andExpect(jsonPath("$.data.relatedVideos.length()").value(0))
             .andExpect(jsonPath("$.data.trendGraph.length()").value(0))
             .andExpect(jsonPath("$.data.relatedKeywords.length()").value(0))
@@ -270,6 +276,12 @@ class KeywordControllerTest {
                 0,
                 null,
             ).execute()
+
+        dsl
+            .update(KEYWORDS)
+            .set(KEYWORDS.EXPLAINED_AT, java.time.LocalDateTime.of(2026, 6, 8, 12, 5))
+            .where(KEYWORDS.ID.eq(10L))
+            .execute()
 
         dsl
             .insertInto(

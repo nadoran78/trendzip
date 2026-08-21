@@ -69,6 +69,9 @@ class KeywordQueryRepository(
                 KEYWORDS.RANK_TREND,
                 KEYWORDS.RANK_DELTA,
                 KEYWORDS.EXPLAIN,
+                TREND_LOGS.CRAWL_RUN_ID,
+                TREND_LOGS.RECORDED_AT,
+                KEYWORDS.EXPLAINED_AT,
             ).from(KEYWORDS)
             .leftJoin(TREND_LOGS)
             .on(
@@ -87,6 +90,9 @@ class KeywordQueryRepository(
                     rankTrend = record.get(KEYWORDS.RANK_TREND)?.let(RankTrend::valueOf),
                     rankDelta = record.get(KEYWORDS.RANK_DELTA),
                     explain = record.get(KEYWORDS.EXPLAIN),
+                    sourceCrawlRunId = record.get(TREND_LOGS.CRAWL_RUN_ID),
+                    snapshotAt = record.get(TREND_LOGS.RECORDED_AT),
+                    explainedAt = record.get(KEYWORDS.EXPLAINED_AT),
                 )
             }
     }
