@@ -108,9 +108,12 @@ com.mztrend
 │   │   └── KeywordListResponse
 │   ├── FeedController
 │   ├── KeywordController
+│   ├── ops
+│   │   └── ShortformContentOperationsController
 ├── service
 │   ├── FeedService
 │   ├── KeywordService
+│   ├── ShortformContentService
 │   ├── TrendCrawlRunRecorder
 │   ├── TrendCrawlingService
 │   ├── TrendCrawlingPersistenceService
@@ -171,6 +174,10 @@ com.mztrend
 │   ├── ExternalApiPurpose
 │   ├── Keyword
 │   ├── KeywordRelation
+│   ├── ShortformContent
+│   ├── ShortformContentKeywordSnapshot
+│   ├── ShortformContentStatus
+│   ├── ShortformEditorialFormat
 │   ├── RankTrend
 │   ├── TrendCrawlRun
 │   ├── TrendCrawlRunStatus (enum: RUNNING, COMPLETED, FAILED)
@@ -283,6 +290,34 @@ CREATE TABLE trend_logs (
     score       BIGINT,
     recorded_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE shortform_contents (
+    id                    BIGSERIAL PRIMARY KEY,
+    platform              VARCHAR(20) NOT NULL,
+    status                VARCHAR(30) NOT NULL,
+    primary_keyword_id    BIGINT NOT NULL,
+    primary_keyword_word  VARCHAR(100) NOT NULL,
+    source_generation     VARCHAR(10) NOT NULL,
+    editorial_format      VARCHAR(40) NOT NULL,
+    topic_key             VARCHAR(200) NOT NULL,
+    event_key             VARCHAR(200) NOT NULL,
+    content_hash          VARCHAR(64) NOT NULL,
+    source_crawl_run_id   BIGINT NOT NULL,
+    selected_at           TIMESTAMP NOT NULL,
+    published_at          TIMESTAMP,
+    created_at            TIMESTAMP DEFAULT NOW(),
+    updated_at            TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE shortform_content_keyword_snapshots (
+    id                    BIGSERIAL PRIMARY KEY,
+    shortform_content_id  BIGINT NOT NULL,
+    keyword_id            BIGINT NOT NULL,
+    keyword_word          VARCHAR(100) NOT NULL,
+    role                  VARCHAR(10) NOT NULL,
+    display_order         INT DEFAULT 0,
+    created_at            TIMESTAMP DEFAULT NOW()
+);
 ```
 
 ---
@@ -380,7 +415,7 @@ fun crawlTrends() {
 2. **Gemini API**: 스케줄러에서만 호출. 유저 요청 경로에서 호출 절대 금지
 3. **네이버 DataLab**: YouTube 후보 키워드의 세대별 검증/점수화에 사용. 키워드 발견 소스로 단독 사용하지 않음
 4. **Google Trends 제외**: MVP에서는 공식 Alpha API와 비공식 크롤링을 모두 사용하지 않음
-5. **인증 없음**: MVP에서 사용자 인증 구현하지 않음. 모든 API 퍼블릭
+5. **사용자 인증 없음**: MVP 사용자 조회 API에는 로그인 인증이 없다. `/api/ops/media/**`는 Cloudflare Access와 `MEDIA_OPERATIONS_API_KEY` 헤더를 함께 사용하며 설정이 없으면 비활성화한다.
 
 ---
 

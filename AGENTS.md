@@ -144,6 +144,9 @@ Response:
     "rankTrend": "NEW",
     "rankDelta": null,
     "explain": "이 키워드가 뜨는 이유 설명...",
+    "sourceCrawlRunId": 101,
+    "snapshotAt": "2026-06-15T03:05:00",
+    "explainedAt": "2026-06-15T03:06:00",
     "relatedVideos": [
       {
         "videoId": "xxx",
@@ -196,6 +199,9 @@ NAVER_CLIENT_SECRET=
 
 # Gemini
 GEMINI_API_KEY=
+
+# Media operations
+MEDIA_OPERATIONS_API_KEY=
 
 # DB
 POSTGRES_URL=

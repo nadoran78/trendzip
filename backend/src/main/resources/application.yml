@@ -26,6 +26,8 @@ server:
   port: ${PORT:8080}
 
 app:
+  media-operations:
+    api-key: ${MEDIA_OPERATIONS_API_KEY:}
   crawling-scheduler:
     enabled: ${APP_CRAWLING_SCHEDULER_ENABLED:true}
     cron: "${APP_CRAWLING_SCHEDULER_CRON:0 0 3 * * MON}"
