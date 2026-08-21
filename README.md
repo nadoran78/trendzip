@@ -219,8 +219,8 @@ GitHub Actions는 pull request와 `develop` push에서 Gitleaks 검사를 먼저
 
 다음 우선순위는 다음과 같습니다.
 
-1. 운영 키워드 기반 숏폼의 TTS 비교와 사람 승인 모델 설계
-2. 키워드와 설명 기반 숏폼 콘텐츠 생성·게시 자동화
+1. 숏폼 발행 정책을 적용한 운영 후보·제작 초안 연결
+2. 제작 초안의 사람 승인·반려·재생성과 비공개 업로드 자동화
 3. OpenAPI 기반 frontend 타입 계약 자동화
 4. 핵심 사용자 흐름 E2E 테스트
 
@@ -234,5 +234,7 @@ GitHub Actions는 pull request와 `develop` push에서 Gitleaks 검사를 먼저
 - [백엔드 구현 컨벤션](docs/backend-convention.md)
 - [CI와 비밀정보 관리](docs/ci-and-secret-management.md)
 - [키워드 기반 숏폼 기술 스파이크](docs/media-shortform-spike.md)
+- [숏폼 TTS 및 오디오 동기화 기술 스파이크](docs/media-tts-spike.md)
+- [숏폼 선정·편집·발행 정책](docs/media-publishing-policy.md)
 - [Mac mini 배포 절차](docs/ops/macmini-deployment.md)
 - [CI/CD 확장 선택지](docs/ops/macmini-ci-cd-options.md)

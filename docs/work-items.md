@@ -23,7 +23,65 @@
 
 ## ACTIVE
 
-현재 활성 작업 없음.
+### MEDIA-003 숏폼 선정·편집·발행 정책 설계
+
+- 상태: REVIEW
+- 브랜치: codex/media-003-publishing-policy
+- 시작일: 2026-08-21
+- 마지막 갱신: 2026-08-21
+- 다음 행동: 사용자가 수정된 편집 형식과 일정 예시를 리뷰한 뒤 `develop`에 병합한다.
+
+#### 목적
+
+운영 키워드 숏폼을 반복·대량 생산 콘텐츠로 운영하지 않도록 선정, 편집 차별화, 검수와 발행 기준을 확정한다.
+
+#### 범위
+
+- YouTube 공식 정책과 Trendzip 내부 기준 구분
+- `ADOPT/HOLD/REJECT` 판정과 콘텐츠 동일성·재발행 기준
+- 편집 형식 순환, 4주 파일럿과 사람 검수
+- 과거 키워드 샘플 판정표와 후속 자동화 입력·상태 정의
+
+#### 제외 범위
+
+- 운영 DB 연동과 대본·TTS·영상 생성 자동화
+- 관리자 UI와 YouTube API 업로드·예약 게시
+
+#### 진행 상황
+
+- 2026-08-21 기준 YouTube 수익 창출, 스팸과 AI 콘텐츠 공개 정책을 재확인했다.
+- 숏폼 선정·반복 방지·편집 순환·발행·검수·사후 대응 정책을 문서화했다.
+- 과거 키워드 10건에 정책을 적용하고 MEDIA-004~007의 상태와 작업 경계를 정의했다.
+- 저장소 빠른 통합 검증과 미디어 테스트 28건을 통과했다.
+- 정책 리뷰에서 Trendzip 자체 순위와 실제 차이가 작은 세대 비교는 독립 편집 형식으로 적합하지 않다고 판단했다.
+- `RANK_CHANGE`·`GENERATION_COMPARE`를 `KEYWORD_PRIMER`·`CONTEXT_TIMELINE`으로 교체하고 내부 순위·세대 데이터의 사용 경계를 정책에 추가했다.
+
+#### 완료 조건
+
+- [x] YouTube 공식 정책과 Trendzip 내부 수치를 구분했다.
+- [x] 선정·반복 방지·편집·발행·검수 기준을 정의했다.
+- [x] 과거 키워드 8건 이상에 적용한 판정표를 작성했다.
+- [x] MEDIA-004 이후에 필요한 최소 상태와 데이터를 정의했다.
+
+#### 관련 코드
+
+- `docs/media-publishing-policy.md`
+- `docs/media-shortform-spike.md`
+- `docs/project-status.md`
+- `README.md`
+
+#### 검증
+
+- 상태: PASS
+- YouTube 공식 정책 출처와 검토일을 확인했다.
+- `git diff --check`를 통과했다.
+- 편집 형식 리뷰 반영 후 `./dev/check-context`와 `./dev/verify --quick`을 다시 통과했다.
+
+#### 인계 메모
+
+- 주 2회와 30일 재발행 제한은 YouTube 공식 안전 기준이 아니라 Trendzip 파일럿 내부 상한이다.
+- 고정 템플릿 사용 자체를 금지하지 않고, 영상별 핵심 내용과 가치의 실질적인 차이를 요구한다.
+- MEDIA-004는 이 정책을 운영 키워드 후보와 제작 초안에 연결하는 작업으로 시작한다.
 
 ## READY
 
@@ -31,6 +89,10 @@
 
 ## LATER
 
+- MEDIA-004 운영 키워드 후보를 정책 입력과 제작 초안으로 변환
+- MEDIA-005 숏폼 초안의 사람 승인·반려·재생성 게이트
+- MEDIA-006 승인된 숏폼의 YouTube 비공개 업로드
+- MEDIA-007 발행 일정·SNS 확장 자동화
 - Android Chrome 홈 화면 설치와 standalone 실행 호환성 확인
 - 프론트엔드 이전 production deployment 수동 롤백 workflow
 - 운영 API 노출 정책 강화: 운영 Swagger/OpenAPI 비활성화, Cloudflare rate limit 적용, 프론트 배포 도메인 기반 CORS 제한
