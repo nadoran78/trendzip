@@ -98,6 +98,8 @@ MEDIA_OPERATIONS_API_KEY=
 CLOUDFLARE_ACCESS_CLIENT_ID=
 CLOUDFLARE_ACCESS_CLIENT_SECRET=
 GEMINI_API_KEY=
+MEDIA_DRY_RUN_COUNT=1
+MEDIA_DRY_RUN_INTERVAL_MS=3500
 ```
 
 운영 API와 Gemini를 호출하지 않고 전체 코드 계약을 확인하려면 다음 명령을 사용한다.
@@ -108,6 +110,20 @@ npm run typecheck
 ```
 
 중복 정책은 동일 콘텐츠 `BLOCK`, 활성 동일 사건 `BLOCK`, 최근 동일 주제 `HOLD`, 그 외 `ALLOW` 순서로 판정한다. `REJECTED`, `RETIRED` 이력은 동일 콘텐츠 hash가 아닌 사건·주제 판정에서는 제외한다.
+
+DB 예약 없이 현재 후보와 Gemini 편집 계획을 확인하려면 dry-run을 사용한다.
+
+```bash
+npm run draft:dry-run
+```
+
+결과는 `out/operational-dry-runs/`에 JSON으로 저장된다. 동일 입력에 대한 `topicKey`, `eventKey` 일관성을 비교할 때는 Gemini를 세 번 순차 호출한다.
+
+```bash
+MEDIA_DRY_RUN_COUNT=3 npm run draft:dry-run
+```
+
+반복 호출 사이에는 기본 3.5초 간격을 두며 `MEDIA_DRY_RUN_INTERVAL_MS`로 조정할 수 있다. 후보와 최근 이력은 한 번만 조회하고, 모든 반복에서 동일한 입력을 사용한다. 보고서의 `stability`와 각 `manifestPreview`를 비교하되 dry-run은 `reserveDraft()`를 호출하지 않는다. Gemini 응답 하나가 편집 계약을 위반하면 해당 반복을 `FAILED`로 기록하고 다음 호출을 계속하며, 모든 반복이 실패한 경우에만 명령이 실패 종료 코드로 끝난다.
 
 `npm run draft:prepare`는 중복 정책이 `ALLOW`인 경우에만 운영 API에 `DRAFT`를 예약한다. 생성된 검토 manifest는 `out/operational-drafts/{contentHash}.json`에 저장된다. `HOLD` 또는 `BLOCK`이면 예약과 파일 생성을 하지 않고 종료 코드 `2`를 반환한다. 이 단계에서는 TTS, 영상 렌더링과 게시를 실행하지 않는다.
 

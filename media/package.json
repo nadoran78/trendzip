@@ -9,6 +9,7 @@
     "studio": "remotion studio src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --test scripts/*.test.mjs",
+    "draft:dry-run": "node --env-file-if-exists=.env.local scripts/dry-run-operational-draft.mjs",
     "draft:prepare": "node --env-file-if-exists=.env.local scripts/prepare-operational-draft.mjs",
     "tts:sample": "node --env-file-if-exists=.env.local scripts/generate-tts.mjs",
     "timeline:sample": "node scripts/timeline-preview.mjs",

@@ -96,8 +96,27 @@ test("editorial planner requests structured JSON and validates referenced IDs", 
   assert.equal(captured.init.headers["x-goog-api-key"], "gemini-key");
   assert.equal(request.generationConfig.responseMimeType, "application/json");
   assert.equal(request.generationConfig.responseJsonSchema.type, "object");
+  assert.match(
+    request.generationConfig.responseJsonSchema.properties.hook.description,
+    /48자 이하/,
+  );
+  assert.match(request.contents[0].parts[0].text, /hook은.*48자 이하/);
   assert.equal(result.selectedCandidate.keywordId, 101);
   assert.deepEqual(result.plan, validPlan);
+});
+
+test("editorial planner reports the received character count for an oversized hook", async () => {
+  const planner = createPlanner(async () => geminiResponse({ ...validPlan, hook: "가".repeat(49) }));
+
+  await assert.rejects(
+    () =>
+      planner.createPlan({
+        candidates: [candidate],
+        recentContents: [],
+        generatedAt: "2026-08-21T12:00:00",
+      }),
+    /editorialPlan\.hook must be at most 48 characters \(received 49\)/,
+  );
 });
 
 test("editorial planner rejects a primary keyword outside the candidate set", async () => {

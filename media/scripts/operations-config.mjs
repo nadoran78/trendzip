@@ -2,6 +2,8 @@ const DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1bet
 const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 const DEFAULT_CANDIDATE_LIMIT_PER_GENERATION = 10;
+const DEFAULT_DRY_RUN_COUNT = 1;
+const DEFAULT_DRY_RUN_INTERVAL_MS = 3_500;
 const MAXIMUM_CANDIDATE_AGE_HOURS = 72;
 
 function requireString(value, name) {
@@ -26,6 +28,16 @@ function parsePositiveInteger(value, name, defaultValue, maximum) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > maximum) {
     throw new Error(`${name} must be an integer between 1 and ${maximum}.`);
+  }
+  return parsed;
+}
+
+function parseNonNegativeInteger(value, name, defaultValue, maximum) {
+  if (value === undefined || value === "") return defaultValue;
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > maximum) {
+    throw new Error(`${name} must be an integer between 0 and ${maximum}.`);
   }
   return parsed;
 }
@@ -71,6 +83,18 @@ export function loadOperationalDraftConfig(env = process.env) {
       "MEDIA_CANDIDATE_LIMIT_PER_GENERATION",
       DEFAULT_CANDIDATE_LIMIT_PER_GENERATION,
       20,
+    ),
+    dryRunCount: parsePositiveInteger(
+      env.MEDIA_DRY_RUN_COUNT,
+      "MEDIA_DRY_RUN_COUNT",
+      DEFAULT_DRY_RUN_COUNT,
+      5,
+    ),
+    dryRunIntervalMs: parseNonNegativeInteger(
+      env.MEDIA_DRY_RUN_INTERVAL_MS,
+      "MEDIA_DRY_RUN_INTERVAL_MS",
+      DEFAULT_DRY_RUN_INTERVAL_MS,
+      60_000,
     ),
     historyWindowDays: 30,
     maximumCandidateAgeHours: MAXIMUM_CANDIDATE_AGE_HOURS,

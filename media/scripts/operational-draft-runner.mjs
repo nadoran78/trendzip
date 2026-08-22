@@ -3,11 +3,9 @@ import { DUPLICATE_POLICY_ACTIONS } from "./duplicate-policy.mjs";
 import { createOperationalDraft } from "./operational-draft.mjs";
 import { calculateHistoryFrom, formatSeoulLocalDateTime } from "./operations-time.mjs";
 
-export async function prepareOperationalDraft({
+export async function loadOperationalDraftContext({
   config,
   apiClient,
-  editorialPlanner,
-  duplicatePolicy,
   now = new Date(),
 }) {
   const generatedAt = formatSeoulLocalDateTime(now);
@@ -26,6 +24,20 @@ export async function prepareOperationalDraft({
     throw new Error("No fresh operational keyword candidate with evidence is available.");
   }
 
+  return {
+    generatedAt,
+    historyFrom,
+    candidates,
+    recentContents,
+  };
+}
+
+export async function evaluateOperationalDraft({
+  context,
+  editorialPlanner,
+  duplicatePolicy,
+}) {
+  const { generatedAt, candidates, recentContents } = context;
   const { plan, selectedCandidate } = await editorialPlanner.createPlan({
     candidates,
     recentContents,
@@ -44,6 +56,30 @@ export async function prepareOperationalDraft({
   if (!Object.values(DUPLICATE_POLICY_ACTIONS).includes(duplicateDecision?.action)) {
     throw new Error("Duplicate policy returned an unsupported action.");
   }
+
+  return {
+    plan,
+    selectedCandidate,
+    draft,
+    duplicateDecision,
+  };
+}
+
+export async function prepareOperationalDraft({
+  config,
+  apiClient,
+  editorialPlanner,
+  duplicatePolicy,
+  now = new Date(),
+}) {
+  const context = await loadOperationalDraftContext({ config, apiClient, now });
+  const evaluation = await evaluateOperationalDraft({
+    context,
+    editorialPlanner,
+    duplicatePolicy,
+  });
+  const { generatedAt, historyFrom, candidates } = context;
+  const { draft, duplicateDecision } = evaluation;
 
   if (duplicateDecision.action !== DUPLICATE_POLICY_ACTIONS.ALLOW) {
     return {

@@ -10,6 +10,7 @@ export const EDITORIAL_FORMATS = Object.freeze([
 const NARRATION_SCENE_IDS = Object.freeze(["hook", "overview", "reasons", "evidence", "cta"]);
 const TOPIC_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const EVENT_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?::[a-z0-9]+(?:-[a-z0-9]+)*)+$/;
+const EDITORIAL_HOOK_MAX_CHARACTERS = 48;
 
 const EDITORIAL_PLAN_SCHEMA = Object.freeze({
   type: "object",
@@ -42,7 +43,10 @@ const EDITORIAL_PLAN_SCHEMA = Object.freeze({
       maxItems: 10,
       items: { type: "integer" },
     },
-    hook: { type: "string" },
+    hook: {
+      type: "string",
+      description: `영상 첫 화면에 표시할 한국어 훅. 공백을 포함해 ${EDITORIAL_HOOK_MAX_CHARACTERS}자 이하여야 한다.`,
+    },
     summary: { type: "string" },
     reasons: {
       type: "array",
@@ -69,8 +73,11 @@ function requireString(value, name, maxLength) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${name} must be a non-empty string.`);
   }
-  if (value.length > maxLength) {
-    throw new Error(`${name} must be at most ${maxLength} characters.`);
+  const characterCount = Array.from(value).length;
+  if (characterCount > maxLength) {
+    throw new Error(
+      `${name} must be at most ${maxLength} characters (received ${characterCount}).`,
+    );
   }
 }
 
@@ -139,6 +146,7 @@ export function buildEditorialPlanPrompt({ candidates, recentContents, generated
     "topicKey는 영문 소문자 kebab-case, eventKey는 topicKey:event-slug 형식으로 작성한다.",
     "relatedKeywordIds는 선택한 후보의 relatedKeywords에 포함된 ID만 사용한다.",
     "evidenceVideoIds는 선택한 후보의 relatedVideos에 포함된 ID만 사용한다.",
+    `hook은 영상 첫 화면에 표시할 한 문장으로, 공백을 포함해 ${EDITORIAL_HOOK_MAX_CHARACTERS}자 이하로 작성한다.`,
     "narration은 hook, overview, reasons, evidence, cta 장면을 모두 작성하고 과장된 단정을 피한다.",
     "CTA는 Trendzip 프로필 링크에서 더 확인하라는 의미로 작성한다.",
     "응답은 지정된 JSON 구조만 반환한다.",
@@ -189,7 +197,7 @@ function validateEditorialPlan(plan, candidates) {
   requireString(plan.audienceAngle, "editorialPlan.audienceAngle", 500);
   requireString(plan.selectionReason, "editorialPlan.selectionReason", 2_000);
   requireString(plan.title, "editorialPlan.title", 100);
-  requireString(plan.hook, "editorialPlan.hook", 48);
+  requireString(plan.hook, "editorialPlan.hook", EDITORIAL_HOOK_MAX_CHARACTERS);
   requireString(plan.summary, "editorialPlan.summary", 100);
 
   requireUniqueArray(plan.relatedKeywordIds, "editorialPlan.relatedKeywordIds", { maximum: 10 });
