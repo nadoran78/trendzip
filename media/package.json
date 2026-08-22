@@ -9,7 +9,7 @@
     "studio": "remotion studio src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --test scripts/*.test.mjs",
-    "test:prepared": "node --test scripts/fixture.test.mjs scripts/gemini-tts.test.mjs scripts/wav.test.mjs scripts/audio-manifest.test.mjs",
+    "draft:prepare": "node --env-file-if-exists=.env.local scripts/prepare-operational-draft.mjs",
     "tts:sample": "node --env-file-if-exists=.env.local scripts/generate-tts.mjs",
     "timeline:sample": "node scripts/timeline-preview.mjs",
     "render:sample": "node scripts/render.mjs",
