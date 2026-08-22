@@ -28,8 +28,8 @@
 - 상태: IN_PROGRESS
 - 브랜치: codex/media-004-operational-draft
 - 시작일: 2026-08-21
-- 마지막 갱신: 2026-08-21
-- 다음 행동: 운영 키워드 후보와 최근 제작 이력을 수집하고 Gemini 자동 편집 계획 입력으로 연결한다.
+- 마지막 갱신: 2026-08-22
+- 다음 행동: DB 예약 없이 운영 데이터와 Gemini 편집 계획을 확인하는 dry-run 경로를 추가한다.
 
 #### 목적
 
@@ -58,8 +58,8 @@
 - [x] 숏폼 제작 이력 스키마, 도메인, 저장소, 최근 이력 조회와 운영 API 인증 기반을 준비했다.
 - [x] Kotlin 실습을 위한 Controller·DTO·Repository와 정상·중복 실패 테스트를 준비했다.
 - [x] Kotlin `reserveDraft` 실습을 완료하고 리뷰한다.
-- [ ] 운영 후보 수집과 자동 편집 초안 생성을 연결한다.
-- [ ] Node 중복 정책 실습을 완료하고 전체 흐름을 검증한다.
+- [x] 운영 후보 수집과 Gemini 구조화 편집 계획, 콘텐츠 hash, `DRAFT` 예약과 검토 manifest 생성을 연결했다.
+- [x] Node 중복 정책 실습을 완료하고 전체 미디어 테스트로 판정 우선순위를 검증했다.
 
 #### 완료 조건
 
@@ -81,7 +81,7 @@
 
 - 통과: 키워드 Controller·QueryRepository, 운영 API 인증·최근 이력 조회 테스트
 - 통과: `ShortformContentServiceTest` 5건과 운영 API `reserveDraft` 1건
-- 예정: 미디어 타입 검사와 Node 테스트
+- 통과: 미디어 테스트 58건과 타입 검사
 - 통과: 백엔드 compileKotlin·compileTestKotlin·ktlint
 - 통과: 프론트엔드 typecheck
 - 통과: `./dev/check-context`
@@ -93,6 +93,9 @@
 - Kotlin 실습에서 `DRAFT` 중복 검사, 키워드 불변식 검증, 콘텐츠·키워드 스냅샷 원자적 저장과 DB 경합 예외 변환을 구현했다.
 - `cd backend && ./gradlew test --tests '*ShortformContentServiceTest' --tests '*ShortformContentOperationsControllerTest.reserveDraft returns created draft'` 검증을 통과했다.
 - 사람 승인 상태는 운영 렌더링 이후로 이동하며, MEDIA-005에서 최종 영상 승인·반려·재생성을 구현한다.
+- 운영 후보는 설명·근거 영상·출처 크롤링 회차가 있고 스냅샷이 72시간 이내인 키워드로 제한한다.
+- Gemini는 구조화 JSON으로 후보, 편집 형식, `topicKey`, `eventKey`, 대본과 근거 ID를 고르며 실제 후보에 없는 키워드·영상 ID는 거부한다.
+- 두 번째 실습으로 동일 hash, 활성 동일 사건, 최근 동일 주제와 허용 순서를 구현했고, 여러 이력이 섞여도 hash 충돌을 우선하는 회귀 테스트를 추가했다.
 
 ## READY
 
