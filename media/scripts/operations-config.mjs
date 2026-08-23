@@ -2,6 +2,7 @@ const DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1bet
 const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 const DEFAULT_CANDIDATE_LIMIT_PER_GENERATION = 10;
+const DEFAULT_GEMINI_REPAIR_DELAY_MS = 3_500;
 const DEFAULT_DRY_RUN_COUNT = 1;
 const DEFAULT_DRY_RUN_INTERVAL_MS = 3_500;
 const MAXIMUM_CANDIDATE_AGE_HOURS = 72;
@@ -83,6 +84,12 @@ export function loadOperationalDraftConfig(env = process.env) {
       "MEDIA_CANDIDATE_LIMIT_PER_GENERATION",
       DEFAULT_CANDIDATE_LIMIT_PER_GENERATION,
       20,
+    ),
+    geminiRepairDelayMs: parseNonNegativeInteger(
+      env.MEDIA_GEMINI_REPAIR_DELAY_MS,
+      "MEDIA_GEMINI_REPAIR_DELAY_MS",
+      DEFAULT_GEMINI_REPAIR_DELAY_MS,
+      60_000,
     ),
     dryRunCount: parsePositiveInteger(
       env.MEDIA_DRY_RUN_COUNT,

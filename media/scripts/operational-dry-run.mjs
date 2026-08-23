@@ -8,6 +8,12 @@ function uniqueValues(iterations, selectValue) {
   return [...new Set(iterations.map(selectValue))];
 }
 
+function generationAttemptCountOf(iteration) {
+  return iteration.status === "SUCCESS"
+    ? iteration.generationAttemptCount
+    : iteration.error.generationAttemptCount;
+}
+
 export function summarizeDryRunStability(iterations) {
   if (!Array.isArray(iterations) || iterations.length === 0) {
     throw new Error("At least one dry-run iteration is required.");
@@ -31,11 +37,13 @@ export function summarizeDryRunStability(iterations) {
     (iteration) => iteration.reservationRequest.contentHash,
   );
   const hasSuccessfulIteration = successfulIterations.length > 0;
+  const generationAttemptCounts = iterations.map(generationAttemptCountOf);
 
   return {
     attemptedCount: iterations.length,
     successfulCount: successfulIterations.length,
     failedCount: iterations.length - successfulIterations.length,
+    repairedCount: generationAttemptCounts.filter((count) => count > 1).length,
     stablePrimaryKeyword: hasSuccessfulIteration && primaryKeywordIds.length === 1,
     stableTopicKey: hasSuccessfulIteration && topicKeys.length === 1,
     stableEventKey: hasSuccessfulIteration && eventKeys.length === 1,
@@ -44,6 +52,7 @@ export function summarizeDryRunStability(iterations) {
     topicKeys,
     eventKeys,
     contentHashes,
+    generationAttemptCounts,
   };
 }
 
@@ -55,6 +64,11 @@ function toDryRunError(error) {
   return {
     name: error instanceof Error ? error.name : "Error",
     message: error instanceof Error ? error.message : String(error),
+    generationAttemptCount: Number.isInteger(error?.generationAttemptCount)
+      ? error.generationAttemptCount
+      : 1,
+    ...(typeof error?.code === "string" ? { code: error.code } : {}),
+    ...(error?.details && typeof error.details === "object" ? { details: error.details } : {}),
   };
 }
 
@@ -76,11 +90,12 @@ export async function runOperationalDraftDryRun({
         editorialPlanner,
         duplicatePolicy,
       });
-      const { draft, duplicateDecision } = evaluation;
+      const { draft, duplicateDecision, generationAttemptCount } = evaluation;
 
       iterations.push({
         iteration: index + 1,
         status: "SUCCESS",
+        generationAttemptCount,
         wouldReserve: duplicateDecision.action === DUPLICATE_POLICY_ACTIONS.ALLOW,
         duplicateDecision,
         reservationRequest: draft.reservation,

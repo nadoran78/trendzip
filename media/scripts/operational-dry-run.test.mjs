@@ -78,7 +78,11 @@ test("dry run reuses one API context, compares repeated plans, and never reserve
     async createPlan(input) {
       planCallCount += 1;
       const topicKey = planCallCount === 2 ? "made-in-korea-series" : "made-in-korea";
-      return { plan: editorialPlan(topicKey), selectedCandidate: input.candidates[0] };
+      return {
+        plan: editorialPlan(topicKey),
+        selectedCandidate: input.candidates[0],
+        generationAttemptCount: planCallCount === 3 ? 2 : 1,
+      };
     },
   };
   const sleepCalls = [];
@@ -118,6 +122,8 @@ test("dry run reuses one API context, compares repeated plans, and never reserve
   assert.equal(report.stability.attemptedCount, 3);
   assert.equal(report.stability.successfulCount, 3);
   assert.equal(report.stability.failedCount, 0);
+  assert.equal(report.stability.repairedCount, 1);
+  assert.deepEqual(report.stability.generationAttemptCounts, [1, 1, 2]);
   assert.equal(report.stability.stableTopicKey, false);
   assert.equal(report.stability.stableEventKey, false);
   assert.deepEqual(report.stability.topicKeys, ["made-in-korea", "made-in-korea-series"]);
@@ -129,7 +135,9 @@ test("dry run records a failed plan and continues the remaining iterations", asy
     async createPlan(input) {
       planCallCount += 1;
       if (planCallCount === 2) {
-        throw new Error("editorialPlan.hook must be at most 48 characters (received 52).");
+        const error = new Error("editorialPlan.hook must be at most 48 characters (received 52).");
+        error.generationAttemptCount = 2;
+        throw error;
       }
       return { plan: editorialPlan("made-in-korea"), selectedCandidate: input.candidates[0] };
     },
@@ -172,9 +180,11 @@ test("dry run records a failed plan and continues the remaining iterations", asy
   assert.deepEqual(report.iterations[1].error, {
     name: "Error",
     message: "editorialPlan.hook must be at most 48 characters (received 52).",
+    generationAttemptCount: 2,
   });
   assert.equal(report.stability.successfulCount, 2);
   assert.equal(report.stability.failedCount, 1);
+  assert.equal(report.stability.repairedCount, 1);
   assert.equal(report.stability.stableContent, true);
 });
 
@@ -213,6 +223,8 @@ test("dry run reports unstable false when every plan fails validation", async ()
 
   assert.equal(report.stability.successfulCount, 0);
   assert.equal(report.stability.failedCount, 2);
+  assert.equal(report.stability.repairedCount, 0);
+  assert.deepEqual(report.stability.generationAttemptCounts, [1, 1]);
   assert.equal(report.stability.stablePrimaryKeyword, false);
   assert.equal(report.stability.stableTopicKey, false);
   assert.equal(report.stability.stableEventKey, false);

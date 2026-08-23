@@ -23,6 +23,7 @@ const editorialPlanner = createGeminiEditorialPlanner({
   baseUrl: config.geminiBaseUrl,
   model: config.geminiModel,
   timeoutMs: config.requestTimeoutMs,
+  repairDelayMs: config.geminiRepairDelayMs,
 });
 
 const result = await prepareOperationalDraft({
@@ -44,6 +45,7 @@ if (!result.manifest) {
     `${JSON.stringify(
       {
         shortformContentId: result.reservation.id,
+        generationAttemptCount: result.generationAttemptCount,
         duplicateDecision: result.duplicateDecision,
         outputPath,
       },

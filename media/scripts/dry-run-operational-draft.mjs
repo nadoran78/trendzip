@@ -23,6 +23,7 @@ const editorialPlanner = createGeminiEditorialPlanner({
   baseUrl: config.geminiBaseUrl,
   model: config.geminiModel,
   timeoutMs: config.requestTimeoutMs,
+  repairDelayMs: config.geminiRepairDelayMs,
 });
 
 const report = await runOperationalDraftDryRun({
@@ -51,6 +52,7 @@ process.stdout.write(
           : {
               iteration: iteration.iteration,
               status: iteration.status,
+              generationAttemptCount: iteration.generationAttemptCount,
               primaryKeywordId: iteration.reservationRequest.primaryKeywordId,
               primaryKeywordWord: iteration.reservationRequest.primaryKeywordWord,
               topicKey: iteration.reservationRequest.topicKey,

@@ -16,6 +16,7 @@ test("operational draft config applies safe defaults and normalizes the API URL"
   assert.equal(config.geminiModel, "gemini-3.1-flash-lite");
   assert.equal(config.requestTimeoutMs, 15_000);
   assert.equal(config.candidateLimitPerGeneration, 10);
+  assert.equal(config.geminiRepairDelayMs, 3_500);
   assert.equal(config.dryRunCount, 1);
   assert.equal(config.dryRunIntervalMs, 3_500);
   assert.equal(config.historyWindowDays, 30);
@@ -50,8 +51,10 @@ test("operational draft config accepts repeated dry runs without a wait", () => 
     ...requiredEnv,
     MEDIA_DRY_RUN_COUNT: "3",
     MEDIA_DRY_RUN_INTERVAL_MS: "0",
+    MEDIA_GEMINI_REPAIR_DELAY_MS: "0",
   });
 
   assert.equal(config.dryRunCount, 3);
   assert.equal(config.dryRunIntervalMs, 0);
+  assert.equal(config.geminiRepairDelayMs, 0);
 });

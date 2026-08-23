@@ -87,7 +87,7 @@ test("operational runner reserves an allowed draft and returns a review manifest
     async createPlan(input) {
       assert.equal(input.generatedAt, "2026-08-21T12:00:00");
       assert.equal(input.candidates.length, 1);
-      return { plan, selectedCandidate: input.candidates[0] };
+      return { plan, selectedCandidate: input.candidates[0], generationAttemptCount: 2 };
     },
   };
 
@@ -108,6 +108,7 @@ test("operational runner reserves an allowed draft and returns a review manifest
   assert.equal(result.reservation.id, 77);
   assert.equal(result.manifest.reservation.shortformContentId, 77);
   assert.equal(result.manifest.source.keywordId, 101);
+  assert.equal(result.generationAttemptCount, 2);
 });
 
 test("operational runner does not reserve or expose a manifest when policy holds the draft", async () => {

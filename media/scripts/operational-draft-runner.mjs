@@ -38,11 +38,13 @@ export async function evaluateOperationalDraft({
   duplicatePolicy,
 }) {
   const { generatedAt, candidates, recentContents } = context;
-  const { plan, selectedCandidate } = await editorialPlanner.createPlan({
+  const planResult = await editorialPlanner.createPlan({
     candidates,
     recentContents,
     generatedAt,
   });
+  const { plan, selectedCandidate } = planResult;
+  const generationAttemptCount = planResult.generationAttemptCount ?? 1;
   const draft = createOperationalDraft({
     candidates,
     selectedCandidate,
@@ -62,6 +64,7 @@ export async function evaluateOperationalDraft({
     selectedCandidate,
     draft,
     duplicateDecision,
+    generationAttemptCount,
   };
 }
 
@@ -79,13 +82,14 @@ export async function prepareOperationalDraft({
     duplicatePolicy,
   });
   const { generatedAt, historyFrom, candidates } = context;
-  const { draft, duplicateDecision } = evaluation;
+  const { draft, duplicateDecision, generationAttemptCount } = evaluation;
 
   if (duplicateDecision.action !== DUPLICATE_POLICY_ACTIONS.ALLOW) {
     return {
       generatedAt,
       historyFrom,
       candidateCount: candidates.length,
+      generationAttemptCount,
       duplicateDecision,
       reservation: null,
       manifest: null,
@@ -97,6 +101,7 @@ export async function prepareOperationalDraft({
     generatedAt,
     historyFrom,
     candidateCount: candidates.length,
+    generationAttemptCount,
     duplicateDecision,
     reservation: reservedContent,
     manifest: {

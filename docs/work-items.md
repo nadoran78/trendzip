@@ -28,8 +28,8 @@
 - 상태: IN_PROGRESS
 - 브랜치: codex/media-004-operational-draft
 - 시작일: 2026-08-21
-- 마지막 갱신: 2026-08-22
-- 다음 행동: 운영 인증값으로 3회 dry-run을 실행해 `topicKey`, `eventKey`와 선택 후보의 일관성을 검토한다.
+- 마지막 갱신: 2026-08-23
+- 다음 행동: 후보 밖 참조 ID의 1회 보정, 성공 표본 기반 안정성 판정과 세대 표현 근거 검증을 추가한다.
 
 #### 목적
 
@@ -61,6 +61,9 @@
 - [x] 운영 후보 수집과 Gemini 구조화 편집 계획, 콘텐츠 hash, `DRAFT` 예약과 검토 manifest 생성을 연결했다.
 - [x] Node 중복 정책 실습을 완료하고 전체 미디어 테스트로 판정 우선순위를 검증했다.
 - [x] 후보와 이력을 한 번만 조회하고 Gemini 계획을 반복 비교하는 무예약 dry-run 경로를 추가했다.
+- [x] 근거 없는 주장과 과장 표현을 구분하고 hook 40자 목표·48자 한계를 적용하는 편집 계약 검증을 추가했다.
+- [x] 사용자가 실제 운영 코드의 `shouldRepairEditorialPlan(error)` 재호출 판정을 구현하고 경계값을 보완했다.
+- [x] 복구 가능한 편집 계약 오류만 지연 후 한 번 보정하고 생성 시도 횟수를 dry-run 보고서에 기록한다.
 
 #### 완료 조건
 
@@ -82,11 +85,14 @@
 
 - 통과: 키워드 Controller·QueryRepository, 운영 API 인증·최근 이력 조회 테스트
 - 통과: `ShortformContentServiceTest` 5건과 운영 API `reserveDraft` 1건
-- 통과: 미디어 테스트 64건과 타입 검사
+- 통과: 미디어 테스트 72건과 타입 검사
+- 통과: 보완된 Gemini 편집 계획 테스트 8건과 미디어 타입 검사
+- 통과: `editorial-plan-validation.test.mjs`의 복구 가능 오류, 일반 오류, 미지원 코드 판정 3건
 - 통과: 백엔드 compileKotlin·compileTestKotlin·ktlint
 - 통과: 프론트엔드 typecheck
 - 통과: `./dev/check-context`
 - 통과: `./dev/verify --quick`
+- 확인: 실제 3회 운영 dry-run에서 1회 성공, 후보 밖 `evidenceVideoIds`로 2회 실패했으며 성공 표본 1건만으로 안정성 값이 `true`가 되는 문제를 발견했다.
 - 예정: `./dev/check-secrets --staged`
 
 #### 인계 메모
@@ -99,6 +105,10 @@
 - 두 번째 실습으로 동일 hash, 활성 동일 사건, 최근 동일 주제와 허용 순서를 구현했고, 여러 이력이 섞여도 hash 충돌을 우선하는 회귀 테스트를 추가했다.
 - dry-run은 실제 예약과 동일한 후보·Gemini·중복 정책 코드를 사용하지만 `reserveDraft()`는 호출하지 않으며, 반복 결과의 key와 콘텐츠 hash 안정성을 보고서로 남긴다.
 - Gemini 편집 계획의 `hook`은 모델 지시와 schema 설명에서 공백 포함 48자 이하로 제한하고 애플리케이션에서 실제 글자 수를 검증한다. dry-run 중 개별 계획이 계약을 위반하면 실패 원인을 기록하고 남은 반복을 계속한다.
+- 편집 계획은 입력에 없는 차트·역주행·챌린지·세대 반응을 새로 만들거나 과장된 표현을 사용하면 구조화된 검증 오류로 거부한다. hook은 40자 이하 생성을 목표로 하되 화면 계약의 48자 한계를 유지한다.
+- 사용자 실습은 `HOOK_TOO_LONG`, `UNSUPPORTED_CLAIM`, `OVERSTATED_TONE`만 보정 대상으로 허용하고 일반 HTTP·JSON·미지원 검증 오류는 제외하는 순수 판정 함수다.
+- 보정 호출은 최초 편집 계획의 키워드·편집 형식·주제·사건·관계 키워드·근거 영상 식별자를 유지하고 문제가 된 텍스트만 한 번 수정한다. dry-run은 반복별 `generationAttemptCount`와 전체 `repairedCount`를 기록한다.
+- 2026-08-23 운영 dry-run의 성공 초안은 포켓로그를 선택했지만 근거 없는 `2030 세대` 표현이 포함됐다. 후속 보완에서는 30~40대를 설명 대상과 트렌드 관측 대상으로 구분하고 실제 후보 세대만 관심 주체로 허용한다.
 
 ## READY
 
