@@ -124,7 +124,7 @@ npm run draft:dry-run
 MEDIA_DRY_RUN_COUNT=3 npm run draft:dry-run
 ```
 
-반복 호출 사이에는 기본 3.5초 간격을 두며 `MEDIA_DRY_RUN_INTERVAL_MS`로 조정할 수 있다. 후보와 최근 이력은 한 번만 조회하고, 모든 반복에서 동일한 입력을 사용한다. 보고서의 `stability`와 각 `manifestPreview`를 비교하되 dry-run은 `reserveDraft()`를 호출하지 않는다. Gemini 응답이 hook 길이, 근거 또는 중립적 어조 계약을 위반하면 `MEDIA_GEMINI_REPAIR_DELAY_MS`만큼 기다린 뒤 식별자를 유지하는 보정 호출을 한 번 수행한다. 보정 결과도 실패하면 해당 반복을 `FAILED`로 기록하고 다음 호출을 계속하며, 모든 반복이 실패한 경우에만 명령이 실패 종료 코드로 끝난다.
+반복 호출 사이에는 기본 3.5초 간격을 두며 `MEDIA_DRY_RUN_INTERVAL_MS`로 조정할 수 있다. 후보와 최근 이력은 한 번만 조회하고, 모든 반복에서 동일한 입력을 사용한다. 보고서의 `stability`와 각 `manifestPreview`를 비교하되 dry-run은 `reserveDraft()`를 호출하지 않는다. Gemini 응답이 hook 길이, 근거, 중립적 어조, 후보 참조 ID 또는 관측 세대 계약을 위반하면 `MEDIA_GEMINI_REPAIR_DELAY_MS`만큼 기다린 뒤 식별자를 유지하는 보정 호출을 한 번 수행한다. 30~40대는 설명 대상이며 관심·화제·인기·순위의 주체는 선택 키워드가 실제 후보로 존재하는 `TEEN`, `TWENTY`만 허용한다. 각 성공 반복의 `evidenceDiagnostics`는 영상별 게시 후 경과 일수를 기록하고 `WHY_NOW`에 최근 30일 근거가 없으면 경고하지만 예약 가능 여부는 바꾸지 않는다. `KEYWORD_PRIMER`는 오래된 대표 근거도 허용한다. 보정 결과도 실패하면 해당 반복을 `FAILED`로 기록하고 다음 호출을 계속하며, 모든 반복이 실패한 경우에만 명령이 실패 종료 코드로 끝난다.
 
 `npm run draft:prepare`는 중복 정책이 `ALLOW`인 경우에만 운영 API에 `DRAFT`를 예약한다. 생성된 검토 manifest는 `out/operational-drafts/{contentHash}.json`에 저장된다. `HOLD` 또는 `BLOCK`이면 예약과 파일 생성을 하지 않고 종료 코드 `2`를 반환한다. 이 단계에서는 TTS, 영상 렌더링과 게시를 실행하지 않는다.
 

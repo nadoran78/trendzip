@@ -40,6 +40,53 @@ const OVERSTATED_TONE_PATTERNS = Object.freeze([
   { label: "역대급", pattern: /역대급/iu },
   { label: "필수 시청·관람", pattern: /필수\s*(?:시청|관람|확인)/iu },
 ]);
+const TREND_CONTEXT_PATTERN =
+  "(?:관심|화제|유행|인기|주목|검색|확산|반응|순위|트렌드|소비|열광)";
+
+function createGenerationClaimPattern(generationPattern) {
+  return new RegExp(
+    `(?:(?:${generationPattern}).{0,32}${TREND_CONTEXT_PATTERN}|${TREND_CONTEXT_PATTERN}.{0,32}(?:${generationPattern}))`,
+    "iu",
+  );
+}
+
+const GENERATION_CLAIM_DEFINITIONS = Object.freeze([
+  {
+    label: "10대",
+    generation: "TEEN",
+    pattern: createGenerationClaimPattern("(?:10\\s*대|십\\s*대)"),
+  },
+  {
+    label: "20대",
+    generation: "TWENTY",
+    pattern: createGenerationClaimPattern("20\\s*대"),
+  },
+  {
+    label: "30대",
+    generation: null,
+    pattern: createGenerationClaimPattern("30\\s*대"),
+  },
+  {
+    label: "40대",
+    generation: null,
+    pattern: createGenerationClaimPattern("40\\s*대"),
+  },
+  {
+    label: "2030 세대",
+    generation: null,
+    pattern: createGenerationClaimPattern("2030\\s*(?:세대|층)?"),
+  },
+  {
+    label: "3040 세대",
+    generation: null,
+    pattern: createGenerationClaimPattern("3040\\s*(?:세대|층)?"),
+  },
+  {
+    label: "전 세대",
+    generation: null,
+    pattern: createGenerationClaimPattern("(?:전|모든)\\s*세대"),
+  },
+]);
 
 const EDITORIAL_PLAN_SCHEMA = Object.freeze({
   type: "object",
@@ -66,7 +113,8 @@ const EDITORIAL_PLAN_SCHEMA = Object.freeze({
     eventKey: { type: "string" },
     audienceAngle: {
       type: "string",
-      description: "입력 근거에 확인되는 사실만 사용한 30~40대 대상 설명 관점.",
+      description:
+        "입력 근거에 확인되는 사실만 사용한 30~40대 대상 설명 관점. 30~40대는 설명 대상이며 트렌드 관측 세대가 아니다.",
     },
     selectionReason: {
       type: "string",
@@ -218,6 +266,39 @@ function collectCandidateSourceText(candidate) {
     .join("\n");
 }
 
+function normalizeKeywordWord(word) {
+  return word.trim().toLocaleLowerCase("ko-KR");
+}
+
+function collectObservedGenerations(candidates, selectedCandidate) {
+  const selectedWord = normalizeKeywordWord(selectedCandidate.keyword);
+  return new Set(
+    candidates
+      .filter((candidate) => normalizeKeywordWord(candidate.keyword) === selectedWord)
+      .map((candidate) => candidate.generation),
+  );
+}
+
+function validateObservedGenerationClaims(plan, candidates, selectedCandidate) {
+  const planText = collectPlanText(plan);
+  const observedGenerations = collectObservedGenerations(candidates, selectedCandidate);
+  const unsupportedClaims = GENERATION_CLAIM_DEFINITIONS.filter(
+    ({ generation, pattern }) =>
+      pattern.test(planText) && (generation === null || !observedGenerations.has(generation)),
+  ).map(({ label }) => label);
+
+  if (unsupportedClaims.length > 0) {
+    throw new EditorialPlanValidationError(
+      EDITORIAL_PLAN_VALIDATION_CODES.UNSUPPORTED_GENERATION_CLAIM,
+      `editorialPlan contains generation claims outside the observed candidates: ${unsupportedClaims.join(", ")}.`,
+      {
+        claims: unsupportedClaims,
+        observedGenerations: [...observedGenerations],
+      },
+    );
+  }
+}
+
 function validateGroundedLanguage(plan, selectedCandidate) {
   const planText = collectPlanText(plan);
   const sourceText = collectCandidateSourceText(selectedCandidate);
@@ -250,6 +331,8 @@ export function buildEditorialPlanPrompt({ candidates, recentContents, generated
     "주어진 운영 키워드 후보 중 하나를 골라 30~40대가 이해하기 쉬운 정보형 숏폼 초안을 설계한다.",
     "입력에 없는 사실, 키워드 ID, 영상 ID를 만들지 않는다.",
     "후보 explain과 관련 영상의 제목·채널·조회수·게시 시각에 명시된 사실만 사용한다.",
+    "30~40대는 설명을 읽는 대상일 뿐 트렌드 관측 세대가 아니다.",
+    "관심·화제·인기·순위의 주체는 선택 키워드가 실제 후보로 존재하는 TEEN 또는 TWENTY 세대만 사용한다.",
     "차트, 역주행, SNS, 챌린지, 전 세대 반응, 특정 세대의 추억·향수는 입력 근거에 같은 내용이 있을 때만 사용한다.",
     "난리, 점령, 폭발적, 완벽하게 저격, 역대급, 필수 시청 같은 과장·선동 표현을 사용하지 않는다.",
     "게임·리뷰·플랫폼명처럼 범용적인 표현보다 작품명, 인물, 그룹, 이벤트처럼 구체적인 주제를 우선한다.",
@@ -269,13 +352,33 @@ export function buildEditorialPlanPrompt({ candidates, recentContents, generated
 }
 
 export function buildEditorialPlanRepairPrompt(error) {
+  const mutableReferenceField =
+    error.code === EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_RELATED_KEYWORD_ID
+      ? "relatedKeywordIds"
+      : error.code === EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_EVIDENCE_VIDEO_ID
+        ? "evidenceVideoIds"
+        : null;
+  const immutableFields = [
+    "primaryKeywordId",
+    "editorialFormat",
+    "topicKey",
+    "eventKey",
+    "relatedKeywordIds",
+    "evidenceVideoIds",
+  ].filter((field) => field !== mutableReferenceField);
+
   return [
     "직전 JSON 편집 계획이 Trendzip 편집 계약을 위반했다.",
     `검증 오류 코드: ${error.code}`,
     `검증 오류 메시지: ${error.message}`,
     `검증 오류 상세: ${JSON.stringify(error.details)}`,
-    "primaryKeywordId, editorialFormat, topicKey, eventKey, relatedKeywordIds, evidenceVideoIds는 변경하지 않는다.",
-    "입력 근거와 검증 오류를 다시 확인하고 문제가 된 텍스트 필드만 최소한으로 수정한다.",
+    `${immutableFields.join(", ")}는 변경하지 않는다.`,
+    ...(mutableReferenceField
+      ? [
+          `${mutableReferenceField}만 검증 오류 상세의 allowedValues 안에서 다시 선택한다.`,
+        ]
+      : []),
+    "입력 근거와 검증 오류를 다시 확인하고 문제가 된 필드만 최소한으로 수정한다.",
     "수정한 전체 편집 계획을 지정된 JSON 구조로 다시 반환한다.",
   ].join("\n");
 }
@@ -332,7 +435,19 @@ function validateEditorialPlan(plan, candidates) {
       (keywordId) => !Number.isInteger(keywordId) || !allowedRelatedKeywordIds.has(keywordId),
     )
   ) {
-    throw new Error("editorialPlan.relatedKeywordIds contains an unknown keyword ID.");
+    const invalidValues = plan.relatedKeywordIds.filter(
+      (keywordId) => !Number.isInteger(keywordId) || !allowedRelatedKeywordIds.has(keywordId),
+    );
+    throw new EditorialPlanValidationError(
+      EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_RELATED_KEYWORD_ID,
+      "editorialPlan.relatedKeywordIds contains an unknown keyword ID.",
+      {
+        field: "relatedKeywordIds",
+        primaryKeywordId: selectedCandidate.keywordId,
+        invalidValues,
+        allowedValues: [...allowedRelatedKeywordIds],
+      },
+    );
   }
 
   requireUniqueArray(plan.reasons, "editorialPlan.reasons", { minimum: 2, maximum: 2 });
@@ -360,9 +475,20 @@ function validateEditorialPlan(plan, candidates) {
   });
   const allowedVideoIds = new Set(selectedCandidate.relatedVideos.map((video) => video.videoId));
   if (plan.evidenceVideoIds.some((videoId) => !allowedVideoIds.has(videoId))) {
-    throw new Error("editorialPlan.evidenceVideoIds contains an unknown video ID.");
+    const invalidValues = plan.evidenceVideoIds.filter((videoId) => !allowedVideoIds.has(videoId));
+    throw new EditorialPlanValidationError(
+      EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_EVIDENCE_VIDEO_ID,
+      "editorialPlan.evidenceVideoIds contains an unknown video ID.",
+      {
+        field: "evidenceVideoIds",
+        primaryKeywordId: selectedCandidate.keywordId,
+        invalidValues,
+        allowedValues: [...allowedVideoIds],
+      },
+    );
   }
 
+  validateObservedGenerationClaims(plan, candidates, selectedCandidate);
   validateGroundedLanguage(plan, selectedCandidate);
 
   return { plan, selectedCandidate };

@@ -11,9 +11,12 @@ const repairableCodes = [
   EDITORIAL_PLAN_VALIDATION_CODES.HOOK_TOO_LONG,
   EDITORIAL_PLAN_VALIDATION_CODES.UNSUPPORTED_CLAIM,
   EDITORIAL_PLAN_VALIDATION_CODES.OVERSTATED_TONE,
+  EDITORIAL_PLAN_VALIDATION_CODES.UNSUPPORTED_GENERATION_CLAIM,
+  EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_RELATED_KEYWORD_ID,
+  EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_EVIDENCE_VIDEO_ID,
 ];
 
-test("repair policy accepts only repairable editorial content violations", () => {
+test("repair policy accepts only repairable editorial plan violations", () => {
   repairableCodes.forEach((code) => {
     const error = new EditorialPlanValidationError(code, `invalid editorial plan: ${code}`);
 

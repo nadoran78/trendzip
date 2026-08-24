@@ -59,6 +59,7 @@ process.stdout.write(
               eventKey: iteration.reservationRequest.eventKey,
               wouldReserve: iteration.wouldReserve,
               duplicateDecision: iteration.duplicateDecision,
+              evidenceDiagnostics: iteration.evidenceDiagnostics,
             },
       ),
       outputPath,

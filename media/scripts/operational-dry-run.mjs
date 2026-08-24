@@ -1,4 +1,5 @@
 import { DUPLICATE_POLICY_ACTIONS } from "./duplicate-policy.mjs";
+import { createEvidenceDiagnostics } from "./evidence-diagnostics.mjs";
 import {
   evaluateOperationalDraft,
   loadOperationalDraftContext,
@@ -12,6 +13,13 @@ function generationAttemptCountOf(iteration) {
   return iteration.status === "SUCCESS"
     ? iteration.generationAttemptCount
     : iteration.error.generationAttemptCount;
+}
+
+export function resolveStabilityMetric(successfulCount, uniqueValueCount) {
+  if (successfulCount < 2) {
+    return null;
+  }
+  return uniqueValueCount === 1;
 }
 
 export function summarizeDryRunStability(iterations) {
@@ -36,18 +44,20 @@ export function summarizeDryRunStability(iterations) {
     successfulIterations,
     (iteration) => iteration.reservationRequest.contentHash,
   );
-  const hasSuccessfulIteration = successfulIterations.length > 0;
+  const successfulCount = successfulIterations.length;
   const generationAttemptCounts = iterations.map(generationAttemptCountOf);
 
   return {
     attemptedCount: iterations.length,
-    successfulCount: successfulIterations.length,
-    failedCount: iterations.length - successfulIterations.length,
+    successfulCount,
+    failedCount: iterations.length - successfulCount,
     repairedCount: generationAttemptCounts.filter((count) => count > 1).length,
-    stablePrimaryKeyword: hasSuccessfulIteration && primaryKeywordIds.length === 1,
-    stableTopicKey: hasSuccessfulIteration && topicKeys.length === 1,
-    stableEventKey: hasSuccessfulIteration && eventKeys.length === 1,
-    stableContent: hasSuccessfulIteration && contentHashes.length === 1,
+    comparisonEligible: successfulCount >= 2,
+    fullySuccessful: successfulCount === iterations.length,
+    stablePrimaryKeyword: resolveStabilityMetric(successfulCount, primaryKeywordIds.length),
+    stableTopicKey: resolveStabilityMetric(successfulCount, topicKeys.length),
+    stableEventKey: resolveStabilityMetric(successfulCount, eventKeys.length),
+    stableContent: resolveStabilityMetric(successfulCount, contentHashes.length),
     primaryKeywordIds,
     topicKeys,
     eventKeys,
@@ -91,6 +101,11 @@ export async function runOperationalDraftDryRun({
         duplicatePolicy,
       });
       const { draft, duplicateDecision, generationAttemptCount } = evaluation;
+      const evidenceDiagnostics = createEvidenceDiagnostics({
+        editorialFormat: draft.manifest.editorial.format,
+        generatedAt: context.generatedAt,
+        evidence: draft.manifest.evidence,
+      });
 
       iterations.push({
         iteration: index + 1,
@@ -98,6 +113,7 @@ export async function runOperationalDraftDryRun({
         generationAttemptCount,
         wouldReserve: duplicateDecision.action === DUPLICATE_POLICY_ACTIONS.ALLOW,
         duplicateDecision,
+        evidenceDiagnostics,
         reservationRequest: draft.reservation,
         manifestPreview: {
           ...draft.manifest,

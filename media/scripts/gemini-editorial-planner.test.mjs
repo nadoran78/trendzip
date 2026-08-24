@@ -110,6 +110,8 @@ test("editorial planner requests structured JSON and validates referenced IDs", 
   assert.match(request.contents[0].parts[0].text, /입력 근거에 같은 내용이 있을 때만 사용/);
   assert.match(request.contents[0].parts[0].text, /과장·선동 표현을 사용하지 않는다/);
   assert.match(request.contents[0].parts[0].text, /단순 인물 출연 영상은 제외/);
+  assert.match(request.contents[0].parts[0].text, /30~40대는 설명을 읽는 대상/);
+  assert.match(request.contents[0].parts[0].text, /실제 후보로 존재하는 TEEN 또는 TWENTY/);
   assert.equal(result.selectedCandidate.keywordId, 101);
   assert.deepEqual(result.plan, validPlan);
 });
@@ -249,6 +251,91 @@ test("editorial planner rejects overstated language even when the plan is otherw
   );
 });
 
+test("editorial planner repairs a generation claim outside the observed candidates", async () => {
+  const invalidPlan = {
+    ...validPlan,
+    audienceAngle:
+      "웹 브라우저로 즐기는 게임으로 최근 2030 세대 사이에서 화제가 된 배경",
+  };
+  const responses = [invalidPlan, validPlan];
+  const planner = createPlanner(async () => geminiResponse(responses.shift()));
+
+  const result = await planner.createPlan({
+    candidates: [candidate],
+    recentContents: [],
+    generatedAt: "2026-08-21T12:00:00",
+  });
+
+  assert.equal(result.generationAttemptCount, 2);
+  assert.deepEqual(result.plan, validPlan);
+});
+
+test("editorial planner reports an unsupported generation after one repair", async () => {
+  const invalidPlan = {
+    ...validPlan,
+    selectionReason: "최근 10대 사이에서 화제가 된 점을 반영했습니다.",
+  };
+  const planner = createPlanner(async () => geminiResponse(invalidPlan));
+
+  await assert.rejects(
+    () =>
+      planner.createPlan({
+        candidates: [candidate],
+        recentContents: [],
+        generatedAt: "2026-08-21T12:00:00",
+      }),
+    (error) => {
+      assert.equal(error instanceof EditorialPlanValidationError, true);
+      assert.equal(error.code, EDITORIAL_PLAN_VALIDATION_CODES.UNSUPPORTED_GENERATION_CLAIM);
+      assert.equal(error.generationAttemptCount, 2);
+      assert.deepEqual(error.details, {
+        claims: ["10대"],
+        observedGenerations: ["TWENTY"],
+      });
+      return true;
+    },
+  );
+});
+
+test("editorial planner allows interest claims for both observed generations", async () => {
+  const teenCandidate = {
+    ...candidate,
+    keywordId: 201,
+    generation: "TEEN",
+  };
+  const bothGenerationPlan = {
+    ...validPlan,
+    audienceAngle: "최근 10대와 20대 사이에서 화제가 된 배경",
+  };
+  const planner = createPlanner(async () => geminiResponse(bothGenerationPlan));
+
+  const result = await planner.createPlan({
+    candidates: [candidate, teenCandidate],
+    recentContents: [],
+    generatedAt: "2026-08-21T12:00:00",
+  });
+
+  assert.equal(result.generationAttemptCount, 1);
+  assert.deepEqual(result.plan, bothGenerationPlan);
+});
+
+test("editorial planner allows 30 to 40s as the explanation audience", async () => {
+  const audiencePlan = {
+    ...validPlan,
+    audienceAngle: "30~40대 사용자가 작품을 쉽게 이해할 수 있는 설명 관점",
+  };
+  const planner = createPlanner(async () => geminiResponse(audiencePlan));
+
+  const result = await planner.createPlan({
+    candidates: [candidate],
+    recentContents: [],
+    generatedAt: "2026-08-21T12:00:00",
+  });
+
+  assert.equal(result.generationAttemptCount, 1);
+  assert.deepEqual(result.plan, audiencePlan);
+});
+
 test("editorial planner rejects a primary keyword outside the candidate set", async () => {
   const planner = createPlanner(async () => geminiResponse({ ...validPlan, primaryKeywordId: 999 }));
 
@@ -263,7 +350,56 @@ test("editorial planner rejects a primary keyword outside the candidate set", as
   );
 });
 
-test("editorial planner rejects evidence from another keyword", async () => {
+test("editorial planner repairs an unknown evidence video ID from the selected candidate", async () => {
+  const invalidPlan = { ...validPlan, evidenceVideoIds: ["unknown-video"] };
+  const responses = [invalidPlan, validPlan];
+  const requests = [];
+  const planner = createPlanner(async (url, init) => {
+    requests.push({ url, body: JSON.parse(init.body) });
+    return geminiResponse(responses.shift());
+  });
+
+  const result = await planner.createPlan({
+    candidates: [candidate],
+    recentContents: [],
+    generatedAt: "2026-08-21T12:00:00",
+  });
+
+  assert.equal(result.generationAttemptCount, 2);
+  assert.deepEqual(result.plan.evidenceVideoIds, ["video-101"]);
+  assert.equal(requests.length, 2);
+  const repairPrompt = requests[1].body.contents[2].parts[0].text;
+  assert.match(repairPrompt, /UNKNOWN_EVIDENCE_VIDEO_ID/);
+  assert.match(repairPrompt, /"invalidValues":\["unknown-video"\]/);
+  assert.match(repairPrompt, /"allowedValues":\["video-101"\]/);
+  assert.match(repairPrompt, /evidenceVideoIds만.*allowedValues 안에서 다시 선택한다/);
+  assert.doesNotMatch(repairPrompt, /evidenceVideoIds는 변경하지 않는다/);
+});
+
+test("editorial planner repairs an unknown related keyword ID from the selected candidate", async () => {
+  const invalidPlan = { ...validPlan, relatedKeywordIds: [999] };
+  const responses = [invalidPlan, validPlan];
+  const requests = [];
+  const planner = createPlanner(async (url, init) => {
+    requests.push({ url, body: JSON.parse(init.body) });
+    return geminiResponse(responses.shift());
+  });
+
+  const result = await planner.createPlan({
+    candidates: [candidate],
+    recentContents: [],
+    generatedAt: "2026-08-21T12:00:00",
+  });
+
+  assert.equal(result.generationAttemptCount, 2);
+  assert.deepEqual(result.plan.relatedKeywordIds, [102]);
+  const repairPrompt = requests[1].body.contents[2].parts[0].text;
+  assert.match(repairPrompt, /UNKNOWN_RELATED_KEYWORD_ID/);
+  assert.match(repairPrompt, /relatedKeywordIds만.*allowedValues 안에서 다시 선택한다/);
+  assert.doesNotMatch(repairPrompt, /relatedKeywordIds는 변경하지 않는다/);
+});
+
+test("editorial planner reports an unknown evidence video ID after one repair", async () => {
   let requestCount = 0;
   const planner = createPlanner(async () => {
     requestCount += 1;
@@ -277,9 +413,20 @@ test("editorial planner rejects evidence from another keyword", async () => {
         recentContents: [],
         generatedAt: "2026-08-21T12:00:00",
       }),
-    /evidenceVideoIds contains an unknown video ID/,
+    (error) => {
+      assert.equal(error instanceof EditorialPlanValidationError, true);
+      assert.equal(error.code, EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_EVIDENCE_VIDEO_ID);
+      assert.equal(error.generationAttemptCount, 2);
+      assert.deepEqual(error.details, {
+        field: "evidenceVideoIds",
+        primaryKeywordId: 101,
+        invalidValues: ["unknown-video"],
+        allowedValues: ["video-101"],
+      });
+      return true;
+    },
   );
-  assert.equal(requestCount, 1);
+  assert.equal(requestCount, 2);
 });
 
 test("editorial planner does not repair an HTTP failure", async () => {

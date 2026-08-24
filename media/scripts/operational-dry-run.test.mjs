@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { DUPLICATE_POLICY_ACTIONS, DUPLICATE_POLICY_REASONS } from "./duplicate-policy.mjs";
-import { runOperationalDraftDryRun } from "./operational-dry-run.mjs";
+import {
+  resolveStabilityMetric,
+  runOperationalDraftDryRun,
+} from "./operational-dry-run.mjs";
 
 const candidate = {
   keywordId: 101,
@@ -52,6 +55,18 @@ function editorialPlan(topicKey) {
     evidenceVideoIds: ["video-101"],
   };
 }
+
+test("stability metric is not comparable with fewer than two successful iterations", () => {
+  assert.equal(resolveStabilityMetric(0, 0), null);
+  assert.equal(resolveStabilityMetric(1, 1), null);
+});
+
+test("stability metric compares unique values from two or more successful iterations", () => {
+  assert.equal(resolveStabilityMetric(2, 1), true);
+  assert.equal(resolveStabilityMetric(2, 2), false);
+  assert.equal(resolveStabilityMetric(3, 1), true);
+  assert.equal(resolveStabilityMetric(3, 2), false);
+});
 
 test("dry run reuses one API context, compares repeated plans, and never reserves a draft", async () => {
   const calls = { keywordLists: 0, keywordDetails: 0, histories: 0, reservations: 0 };
@@ -117,11 +132,28 @@ test("dry run reuses one API context, compares repeated plans, and never reserve
   assert.equal(report.iterations.every((iteration) => iteration.status === "SUCCESS"), true);
   assert.equal(report.iterations[0].manifestPreview.status, "DRY_RUN");
   assert.equal(report.iterations.every((iteration) => iteration.wouldReserve), true);
+  assert.deepEqual(report.iterations[0].evidenceDiagnostics, {
+    requiresRecentEvidence: true,
+    recentEvidenceWindowDays: 30,
+    hasRecentEvidence: true,
+    latestEvidencePublishedAt: "2026-08-20T12:00:00",
+    evidence: [
+      {
+        videoId: "video-101",
+        publishedAt: "2026-08-20T12:00:00",
+        ageDays: 1,
+        isRecent: true,
+      },
+    ],
+    warnings: [],
+  });
   assert.deepEqual(sleepCalls, [3_500, 3_500]);
   assert.equal(report.stability.stablePrimaryKeyword, true);
   assert.equal(report.stability.attemptedCount, 3);
   assert.equal(report.stability.successfulCount, 3);
   assert.equal(report.stability.failedCount, 0);
+  assert.equal(report.stability.comparisonEligible, true);
+  assert.equal(report.stability.fullySuccessful, true);
   assert.equal(report.stability.repairedCount, 1);
   assert.deepEqual(report.stability.generationAttemptCounts, [1, 1, 2]);
   assert.equal(report.stability.stableTopicKey, false);
@@ -184,6 +216,8 @@ test("dry run records a failed plan and continues the remaining iterations", asy
   });
   assert.equal(report.stability.successfulCount, 2);
   assert.equal(report.stability.failedCount, 1);
+  assert.equal(report.stability.comparisonEligible, true);
+  assert.equal(report.stability.fullySuccessful, false);
   assert.equal(report.stability.repairedCount, 1);
   assert.equal(report.stability.stableContent, true);
 });
@@ -225,8 +259,10 @@ test("dry run reports unstable false when every plan fails validation", async ()
   assert.equal(report.stability.failedCount, 2);
   assert.equal(report.stability.repairedCount, 0);
   assert.deepEqual(report.stability.generationAttemptCounts, [1, 1]);
-  assert.equal(report.stability.stablePrimaryKeyword, false);
-  assert.equal(report.stability.stableTopicKey, false);
-  assert.equal(report.stability.stableEventKey, false);
-  assert.equal(report.stability.stableContent, false);
+  assert.equal(report.stability.comparisonEligible, false);
+  assert.equal(report.stability.fullySuccessful, false);
+  assert.equal(report.stability.stablePrimaryKeyword, null);
+  assert.equal(report.stability.stableTopicKey, null);
+  assert.equal(report.stability.stableEventKey, null);
+  assert.equal(report.stability.stableContent, null);
 });
