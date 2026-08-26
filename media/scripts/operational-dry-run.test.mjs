@@ -37,7 +37,6 @@ function editorialPlan(topicKey) {
     primaryKeywordId: 101,
     editorialFormat: "WHY_NOW",
     topicKey,
-    eventKey: `${topicKey}:official-release`,
     audienceAngle: "작품 공개 배경",
     selectionReason: "공식 예고편이 확인됐습니다.",
     title: "메이드 인 코리아가 주목받는 이유",
@@ -52,7 +51,50 @@ function editorialPlan(topicKey) {
       evidence: "관련 영상에서 작품명을 확인했습니다.",
       cta: "자세한 내용은 트렌드집 프로필 링크에서 확인해 보세요.",
     },
-    evidenceVideoIds: ["video-101"],
+    evidenceClaims: [
+      {
+        reasonIndex: 0,
+        statement: "공식 예고편이 공개됐습니다.",
+        evidenceVideoId: "video-101",
+        sourceExcerpt: "메인 예고편",
+      },
+      {
+        reasonIndex: 1,
+        statement: "출연진 정보가 확산했습니다.",
+        evidenceVideoId: "video-101",
+        sourceExcerpt: "Disney Plus Korea",
+      },
+    ],
+  };
+}
+
+const selection = {
+  primaryKeywordId: 101,
+  editorialFormat: "WHY_NOW",
+  relatedKeywordIds: [],
+  evidenceSelections: [
+    { evidenceVideoId: "video-101", sourceExcerpt: "메인 예고편" },
+  ],
+};
+
+const factCards = [
+  {
+    videoId: "video-101",
+    channelName: "Disney Plus Korea",
+    title: "메이드 인 코리아 메인 예고편",
+    sourceExcerpt: "메인 예고편",
+    publishedAt: "2026-08-20T12:00:00",
+  },
+];
+
+function plannerResult(input, overrides = {}) {
+  return {
+    plan: editorialPlan("made-in-korea"),
+    selection,
+    factCards,
+    reviewWarnings: [],
+    selectedCandidate: input.candidates[0],
+    ...overrides,
   };
 }
 
@@ -92,12 +134,17 @@ test("dry run reuses one API context, compares repeated plans, and never reserve
   const editorialPlanner = {
     async createPlan(input) {
       planCallCount += 1;
-      const topicKey = planCallCount === 2 ? "made-in-korea-series" : "made-in-korea";
-      return {
-        plan: editorialPlan(topicKey),
-        selectedCandidate: input.candidates[0],
+      return plannerResult(input, {
         generationAttemptCount: planCallCount === 3 ? 2 : 1,
-      };
+        repairDiagnostics:
+          planCallCount === 3
+            ? {
+                code: "UNKNOWN_EVIDENCE_VIDEO_ID",
+                message: "video reference was repaired",
+                details: { field: "evidenceSelections[0].evidenceVideoId" },
+              }
+            : null,
+      });
     },
   };
   const sleepCalls = [];
@@ -128,9 +175,15 @@ test("dry run reuses one API context, compares repeated plans, and never reserve
     reservations: 0,
   });
   assert.equal(report.mode, "DRY_RUN");
+  assert.equal(report.schemaVersion, 3);
   assert.equal(report.iterations.length, 3);
   assert.equal(report.iterations.every((iteration) => iteration.status === "SUCCESS"), true);
   assert.equal(report.iterations[0].manifestPreview.status, "DRY_RUN");
+  assert.equal(report.iterations[0].manifestPreview.schemaVersion, 3);
+  assert.deepEqual(report.iterations[0].selection, selection);
+  assert.deepEqual(report.iterations[0].factCards, factCards);
+  assert.equal(report.iterations[0].systemDraft.topicKey, "made-in-korea");
+  assert.deepEqual(report.iterations[0].reviewWarnings, []);
   assert.equal(report.iterations.every((iteration) => iteration.wouldReserve), true);
   assert.deepEqual(report.iterations[0].evidenceDiagnostics, {
     requiresRecentEvidence: true,
@@ -156,9 +209,22 @@ test("dry run reuses one API context, compares repeated plans, and never reserve
   assert.equal(report.stability.fullySuccessful, true);
   assert.equal(report.stability.repairedCount, 1);
   assert.deepEqual(report.stability.generationAttemptCounts, [1, 1, 2]);
-  assert.equal(report.stability.stableTopicKey, false);
-  assert.equal(report.stability.stableEventKey, false);
-  assert.deepEqual(report.stability.topicKeys, ["made-in-korea", "made-in-korea-series"]);
+  assert.deepEqual(report.iterations[2].repairDiagnostics, {
+    code: "UNKNOWN_EVIDENCE_VIDEO_ID",
+    message: "video reference was repaired",
+    details: { field: "evidenceSelections[0].evidenceVideoId" },
+  });
+  assert.deepEqual(report.iterations[2].manifestPreview.generationDiagnostics, {
+    attemptCount: 2,
+    repair: {
+      code: "UNKNOWN_EVIDENCE_VIDEO_ID",
+      message: "video reference was repaired",
+      details: { field: "evidenceSelections[0].evidenceVideoId" },
+    },
+  });
+  assert.equal(report.stability.stableTopicKey, true);
+  assert.equal(report.stability.stableEventKey, true);
+  assert.deepEqual(report.stability.topicKeys, ["made-in-korea"]);
 });
 
 test("dry run records a failed plan and continues the remaining iterations", async () => {
@@ -167,11 +233,24 @@ test("dry run records a failed plan and continues the remaining iterations", asy
     async createPlan(input) {
       planCallCount += 1;
       if (planCallCount === 2) {
-        const error = new Error("editorialPlan.hook must be at most 48 characters (received 52).");
+        const error = new Error("Gemini returned the same invalid editorial selection after repair.");
         error.generationAttemptCount = 2;
+        error.code = "REPAIR_NO_EFFECT";
+        error.failureStage = "SELECTION";
+        error.generationDiagnostics = {
+          attemptCount: 2,
+          initial: {
+            selection: { relatedKeywordIds: [999] },
+            validation: { code: "UNKNOWN_RELATED_KEYWORD_ID", message: "initial validation failed" },
+          },
+          final: {
+            selection: { relatedKeywordIds: [999] },
+            validation: { code: "REPAIR_NO_EFFECT", message: "final validation failed" },
+          },
+        };
         throw error;
       }
-      return { plan: editorialPlan("made-in-korea"), selectedCandidate: input.candidates[0] };
+      return plannerResult(input);
     },
   };
   const apiClient = {
@@ -211,8 +290,21 @@ test("dry run records a failed plan and continues the remaining iterations", asy
   );
   assert.deepEqual(report.iterations[1].error, {
     name: "Error",
-    message: "editorialPlan.hook must be at most 48 characters (received 52).",
+    message: "Gemini returned the same invalid editorial selection after repair.",
     generationAttemptCount: 2,
+    code: "REPAIR_NO_EFFECT",
+    generationDiagnostics: {
+      attemptCount: 2,
+      initial: {
+        selection: { relatedKeywordIds: [999] },
+        validation: { code: "UNKNOWN_RELATED_KEYWORD_ID", message: "initial validation failed" },
+      },
+      final: {
+        selection: { relatedKeywordIds: [999] },
+        validation: { code: "REPAIR_NO_EFFECT", message: "final validation failed" },
+      },
+    },
+    failureStage: "SELECTION",
   });
   assert.equal(report.stability.successfulCount, 2);
   assert.equal(report.stability.failedCount, 1);

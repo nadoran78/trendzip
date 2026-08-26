@@ -1,22 +1,51 @@
 import { createHash } from "node:crypto";
 
-const MANIFEST_SCHEMA_VERSION = 1;
+import { deriveEvidenceVideoIds } from "./editorial-evidence.mjs";
+
+const MANIFEST_SCHEMA_VERSION = 3;
 const CAMPAIGN_BASE_URL = "https://trendzip.nadoran.com";
 
 function normalizeKeywordWord(word) {
   return word.trim().toLocaleLowerCase("ko-KR");
 }
 
-function determineSourceGeneration(candidates, selectedCandidate) {
+function collectGenerationObservations(candidates, selectedCandidate) {
   const selectedWord = normalizeKeywordWord(selectedCandidate.keyword);
-  const generations = new Set(
-    candidates
-      .filter((candidate) => normalizeKeywordWord(candidate.keyword) === selectedWord)
-      .map((candidate) => candidate.generation),
-  );
+  return candidates
+    .filter((candidate) => normalizeKeywordWord(candidate.keyword) === selectedWord)
+    .map((candidate) => ({
+      generation: candidate.generation,
+      keywordId: candidate.keywordId,
+      rank: candidate.rank,
+      trendScore: candidate.trendScore,
+      rankTrend: candidate.rankTrend,
+      rankDelta: candidate.rankDelta,
+      sourceCrawlRunId: candidate.sourceCrawlRunId,
+      snapshotAt: candidate.snapshotAt,
+    }))
+    .sort((left, right) => left.generation.localeCompare(right.generation));
+}
+
+function determineSourceGeneration(generationObservations) {
+  const generations = new Set(generationObservations.map((observation) => observation.generation));
   return generations.has("TEEN") && generations.has("TWENTY")
     ? "BOTH"
-    : selectedCandidate.generation;
+    : generationObservations[0].generation;
+}
+
+export function createCanonicalEventKey({ topicKey, editorialFormat, sourceCrawlRunId }) {
+  if (typeof topicKey !== "string" || topicKey.length === 0) {
+    throw new Error("topicKey is required to create an event key.");
+  }
+  if (typeof editorialFormat !== "string" || editorialFormat.length === 0) {
+    throw new Error("editorialFormat is required to create an event key.");
+  }
+  if (!Number.isInteger(sourceCrawlRunId) || sourceCrawlRunId < 1) {
+    throw new Error("sourceCrawlRunId must be a positive integer to create an event key.");
+  }
+
+  const formatSlug = editorialFormat.toLowerCase().replaceAll("_", "-");
+  return `${topicKey}:${formatSlug}:crawl-${sourceCrawlRunId}`;
 }
 
 function resolveRelatedKeywords(selectedCandidate, relatedKeywordIds) {
@@ -57,7 +86,11 @@ function createCampaignUrl(primaryKeywordId, topicKey) {
   return url.toString();
 }
 
-export function hashDraftContent({ selectedCandidate, plan, sourceGeneration }) {
+export function hashDraftContent({ selectedCandidate, plan, selection, factCards, sourceGeneration, eventKey }) {
+  if (typeof eventKey !== "string" || eventKey.length === 0) {
+    throw new Error("eventKey is required to hash draft content.");
+  }
+  const evidenceVideoIds = deriveEvidenceVideoIds(plan.evidenceClaims);
   const identity = {
     schemaVersion: MANIFEST_SCHEMA_VERSION,
     platform: "YOUTUBE",
@@ -67,15 +100,18 @@ export function hashDraftContent({ selectedCandidate, plan, sourceGeneration }) 
     sourceCrawlRunId: selectedCandidate.sourceCrawlRunId,
     editorialFormat: plan.editorialFormat,
     topicKey: plan.topicKey,
-    eventKey: plan.eventKey,
+    eventKey,
     audienceAngle: plan.audienceAngle,
     title: plan.title,
     relatedKeywordIds: plan.relatedKeywordIds,
     hook: plan.hook,
     summary: plan.summary,
     reasons: plan.reasons,
+    evidenceClaims: plan.evidenceClaims,
     narration: plan.narration,
-    evidenceVideoIds: plan.evidenceVideoIds,
+    evidenceVideoIds,
+    selection,
+    factCards,
   };
   return createHash("sha256").update(JSON.stringify(identity), "utf8").digest("hex");
 }
@@ -83,6 +119,9 @@ export function hashDraftContent({ selectedCandidate, plan, sourceGeneration }) 
 export function createOperationalDraft({
   candidates,
   selectedCandidate,
+  selection,
+  factCards,
+  reviewWarnings,
   plan,
   generatedAt,
 }) {
@@ -90,10 +129,27 @@ export function createOperationalDraft({
     throw new Error("Selected candidate does not match the editorial plan primary keyword.");
   }
 
-  const sourceGeneration = determineSourceGeneration(candidates, selectedCandidate);
+  const generationObservations = collectGenerationObservations(candidates, selectedCandidate);
+  if (generationObservations.length === 0) {
+    throw new Error("Selected candidate is not included in the operational candidate set.");
+  }
+  const sourceGeneration = determineSourceGeneration(generationObservations);
+  const eventKey = createCanonicalEventKey({
+    topicKey: plan.topicKey,
+    editorialFormat: plan.editorialFormat,
+    sourceCrawlRunId: selectedCandidate.sourceCrawlRunId,
+  });
   const relatedKeywords = resolveRelatedKeywords(selectedCandidate, plan.relatedKeywordIds);
-  const evidence = resolveEvidence(selectedCandidate, plan.evidenceVideoIds);
-  const contentHash = hashDraftContent({ selectedCandidate, plan, sourceGeneration });
+  const evidenceVideoIds = deriveEvidenceVideoIds(plan.evidenceClaims);
+  const evidence = resolveEvidence(selectedCandidate, evidenceVideoIds);
+  const contentHash = hashDraftContent({
+    selectedCandidate,
+    plan,
+    selection,
+    factCards,
+    sourceGeneration,
+    eventKey,
+  });
   const reservation = {
     platform: "YOUTUBE",
     primaryKeywordId: selectedCandidate.keywordId,
@@ -101,7 +157,7 @@ export function createOperationalDraft({
     sourceGeneration,
     editorialFormat: plan.editorialFormat,
     topicKey: plan.topicKey,
-    eventKey: plan.eventKey,
+    eventKey,
     audienceAngle: plan.audienceAngle,
     selectionReason: plan.selectionReason,
     title: plan.title,
@@ -121,11 +177,12 @@ export function createOperationalDraft({
         keyword: selectedCandidate.keyword,
         generation: selectedCandidate.generation,
         sourceGeneration,
+        generationObservations,
         category: selectedCandidate.category,
         rank: selectedCandidate.rank,
         rankTrend: selectedCandidate.rankTrend,
         trendScore: selectedCandidate.trendScore,
-        explain: selectedCandidate.explain,
+        contextSummary: selectedCandidate.explain,
         crawlRunId: selectedCandidate.sourceCrawlRunId,
         snapshotAt: selectedCandidate.snapshotAt,
         explainedAt: selectedCandidate.explainedAt,
@@ -133,15 +190,19 @@ export function createOperationalDraft({
       editorial: {
         format: plan.editorialFormat,
         topicKey: plan.topicKey,
-        eventKey: plan.eventKey,
+        eventKey,
         audienceAngle: plan.audienceAngle,
         selectionReason: plan.selectionReason,
         title: plan.title,
         hook: plan.hook,
         summary: plan.summary,
         reasons: plan.reasons,
+        evidenceClaims: plan.evidenceClaims,
         narration: plan.narration,
       },
+      selection,
+      factCards,
+      reviewWarnings,
       relatedKeywords,
       evidence,
       ctaUrl: createCampaignUrl(selectedCandidate.keywordId, plan.topicKey),

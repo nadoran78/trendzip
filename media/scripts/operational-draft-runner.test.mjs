@@ -33,7 +33,6 @@ const plan = {
   primaryKeywordId: 101,
   editorialFormat: "WHY_NOW",
   topicKey: "made-in-korea",
-  eventKey: "made-in-korea:official-release",
   audienceAngle: "작품 공개 배경",
   selectionReason: "공식 예고편이 확인됐습니다.",
   title: "메이드 인 코리아가 주목받는 이유",
@@ -48,8 +47,51 @@ const plan = {
     evidence: "관련 영상에서 작품명을 확인했습니다.",
     cta: "자세한 내용은 트렌드집 프로필 링크에서 확인해 보세요.",
   },
-  evidenceVideoIds: ["video-101"],
+  evidenceClaims: [
+    {
+      reasonIndex: 0,
+      statement: "공식 예고편이 공개됐습니다.",
+      evidenceVideoId: "video-101",
+      sourceExcerpt: "메인 예고편",
+    },
+    {
+      reasonIndex: 1,
+      statement: "출연진 정보가 확산했습니다.",
+      evidenceVideoId: "video-101",
+      sourceExcerpt: "Disney Plus Korea",
+    },
+  ],
 };
+
+const selection = {
+  primaryKeywordId: 101,
+  editorialFormat: "WHY_NOW",
+  relatedKeywordIds: [],
+  evidenceSelections: [
+    { evidenceVideoId: "video-101", sourceExcerpt: "메인 예고편" },
+  ],
+};
+
+const factCards = [
+  {
+    videoId: "video-101",
+    channelName: "Disney Plus Korea",
+    title: "메이드 인 코리아 메인 예고편",
+    sourceExcerpt: "메인 예고편",
+    publishedAt: "2026-08-20T12:00:00",
+  },
+];
+
+function planResult(input, overrides = {}) {
+  return {
+    plan,
+    selection,
+    factCards,
+    reviewWarnings: [],
+    selectedCandidate: input.candidates[0],
+    ...overrides,
+  };
+}
 
 const config = {
   candidateLimitPerGeneration: 10,
@@ -87,7 +129,14 @@ test("operational runner reserves an allowed draft and returns a review manifest
     async createPlan(input) {
       assert.equal(input.generatedAt, "2026-08-21T12:00:00");
       assert.equal(input.candidates.length, 1);
-      return { plan, selectedCandidate: input.candidates[0], generationAttemptCount: 2 };
+      return planResult(input, {
+        generationAttemptCount: 2,
+        repairDiagnostics: {
+          code: "HOOK_TOO_LONG",
+          message: "hook was repaired",
+          details: { field: "hook" },
+        },
+      });
     },
   };
 
@@ -104,11 +153,22 @@ test("operational runner reserves an allowed draft and returns a review manifest
   });
 
   assert.equal(apiClient.calls.historyFrom, "2026-07-22T12:00:00");
-  assert.equal(apiClient.calls.reservedDraft.eventKey, plan.eventKey);
+  assert.equal(apiClient.calls.reservedDraft.eventKey, "made-in-korea:why-now:crawl-501");
   assert.equal(result.reservation.id, 77);
   assert.equal(result.manifest.reservation.shortformContentId, 77);
   assert.equal(result.manifest.source.keywordId, 101);
+  assert.deepEqual(result.manifest.selection, selection);
+  assert.deepEqual(result.manifest.factCards, factCards);
   assert.equal(result.generationAttemptCount, 2);
+  assert.equal(result.repairDiagnostics.code, "HOOK_TOO_LONG");
+  assert.deepEqual(result.manifest.generationDiagnostics, {
+    attemptCount: 2,
+    repair: {
+      code: "HOOK_TOO_LONG",
+      message: "hook was repaired",
+      details: { field: "hook" },
+    },
+  });
 });
 
 test("operational runner does not reserve or expose a manifest when policy holds the draft", async () => {
@@ -118,7 +178,7 @@ test("operational runner does not reserve or expose a manifest when policy holds
     apiClient,
     editorialPlanner: {
       async createPlan(input) {
-        return { plan, selectedCandidate: input.candidates[0] };
+        return planResult(input);
       },
     },
     duplicatePolicy: () => ({
@@ -145,7 +205,7 @@ test("operational runner rejects an unknown duplicate policy action", async () =
         apiClient,
         editorialPlanner: {
           async createPlan(input) {
-            return { plan, selectedCandidate: input.candidates[0] };
+            return planResult(input);
           },
         },
         duplicatePolicy: () => ({ action: "ADOPT" }),
@@ -154,4 +214,22 @@ test("operational runner rejects an unknown duplicate policy action", async () =
     /unsupported action/,
   );
   assert.equal(apiClient.calls.reservedDraft, null);
+});
+
+test("operational runner marks duplicate policy failures with their stage", async () => {
+  const apiClient = createApiClient();
+
+  await assert.rejects(
+    () =>
+      prepareOperationalDraft({
+        config,
+        apiClient,
+        editorialPlanner: { async createPlan(input) { return planResult(input); } },
+        duplicatePolicy: () => {
+          throw new Error("duplicate lookup failed");
+        },
+        now: new Date("2026-08-21T03:00:00.000Z"),
+      }),
+    (error) => error.failureStage === "DUPLICATE_POLICY",
+  );
 });

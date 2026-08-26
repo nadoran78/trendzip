@@ -88,7 +88,7 @@ npm run verify:narrated
 
 ## 운영 초안 준비
 
-MEDIA-004는 운영 API에서 10대·20대 키워드와 최근 30일 제작 이력을 읽고, Gemini 구조화 응답으로 하나의 편집 계획을 만든다. 후보는 설명과 근거 영상이 있고 최신 크롤링 스냅샷이 72시간 이내인 데이터만 사용한다.
+MEDIA-004는 운영 API에서 10대·20대 키워드와 최근 30일 제작 이력을 읽고 하나의 편집 초안을 만든다. 후보는 설명과 근거 영상이 있고 최신 크롤링 스냅샷이 72시간 이내인 데이터만 사용한다. Gemini는 후보·편집 형식·관계 키워드와 영상 메타데이터의 원문 발췌만 선택한다. 애플리케이션은 선택 결과를 검증된 fact card로 바꾸고 제목·훅·요약·이유·내레이션을 길이 제한 안에서 결정적으로 조립한다. 기존 키워드 설명은 선정용 `contextSummary`일 뿐 사실 근거가 아니다.
 
 `media/.env.local`에 다음 값을 설정한다. Cloudflare Access가 API를 보호하는 운영 환경에서는 service token 두 값도 함께 설정한다. 실제 키, 토큰과 운영 API 인증값은 Git에 커밋하지 않는다.
 
@@ -112,19 +112,19 @@ npm run typecheck
 
 중복 정책은 동일 콘텐츠 `BLOCK`, 활성 동일 사건 `BLOCK`, 최근 동일 주제 `HOLD`, 그 외 `ALLOW` 순서로 판정한다. `REJECTED`, `RETIRED` 이력은 동일 콘텐츠 hash가 아닌 사건·주제 판정에서는 제외한다.
 
-DB 예약 없이 현재 후보와 Gemini 편집 계획을 확인하려면 dry-run을 사용한다.
+DB 예약 없이 현재 후보, Gemini 선택 결과와 시스템 조립 문안을 확인하려면 dry-run을 사용한다.
 
 ```bash
 npm run draft:dry-run
 ```
 
-결과는 `out/operational-dry-runs/`에 JSON으로 저장된다. 동일 입력에 대한 `topicKey`, `eventKey` 일관성을 비교할 때는 Gemini를 세 번 순차 호출한다.
+결과는 `out/operational-dry-runs/`에 JSON으로 저장된다. 동일 입력에 대한 후보·`topicKey` 일관성과 시스템 생성 `eventKey`를 비교할 때는 Gemini를 세 번 순차 호출한다.
 
 ```bash
 MEDIA_DRY_RUN_COUNT=3 npm run draft:dry-run
 ```
 
-반복 호출 사이에는 기본 3.5초 간격을 두며 `MEDIA_DRY_RUN_INTERVAL_MS`로 조정할 수 있다. 후보와 최근 이력은 한 번만 조회하고, 모든 반복에서 동일한 입력을 사용한다. 보고서의 `stability`와 각 `manifestPreview`를 비교하되 dry-run은 `reserveDraft()`를 호출하지 않는다. Gemini 응답이 hook 길이, 근거, 중립적 어조, 후보 참조 ID 또는 관측 세대 계약을 위반하면 `MEDIA_GEMINI_REPAIR_DELAY_MS`만큼 기다린 뒤 식별자를 유지하는 보정 호출을 한 번 수행한다. 30~40대는 설명 대상이며 관심·화제·인기·순위의 주체는 선택 키워드가 실제 후보로 존재하는 `TEEN`, `TWENTY`만 허용한다. 각 성공 반복의 `evidenceDiagnostics`는 영상별 게시 후 경과 일수를 기록하고 `WHY_NOW`에 최근 30일 근거가 없으면 경고하지만 예약 가능 여부는 바꾸지 않는다. `KEYWORD_PRIMER`는 오래된 대표 근거도 허용한다. 보정 결과도 실패하면 해당 반복을 `FAILED`로 기록하고 다음 호출을 계속하며, 모든 반복이 실패한 경우에만 명령이 실패 종료 코드로 끝난다.
+반복 호출 사이에는 기본 3.5초 간격을 두며 `MEDIA_DRY_RUN_INTERVAL_MS`로 조정할 수 있다. 후보와 최근 이력은 한 번만 조회하고 모든 반복에서 동일한 입력을 사용한다. dry-run은 `reserveDraft()`를 호출하지 않는다. 보고서 v3은 반복별 `selection`, `factCards`, `systemDraft`, `reviewWarnings`와 `manifestPreview`를 기록한다. `topicKey`는 정규화한 키워드 hash로, `eventKey`는 `topicKey`, 편집 형식과 크롤링 실행 ID로 생성하므로 문구 변화에 영향을 받지 않는다. 후보 밖 키워드·영상 ID 또는 영상 메타데이터에 없는 발췌만 `MEDIA_GEMINI_REPAIR_DELAY_MS` 뒤 한 번 보정하며, 같은 잘못된 선택이 반복되면 `REPAIR_NO_EFFECT`로 기록한다. 실패 단계는 `SELECTION`, `FACT_ASSEMBLY`, `COMPOSITION`, `DUPLICATE_POLICY` 중 하나로 남는다. `reviewWarnings`는 클릭 유도형 제목, 30일이 지난 근거와 주제 불일치를 사람 검수용으로 알리지만 예약을 자동 차단하지 않는다. `WHY_NOW`의 기존 `evidenceDiagnostics`도 최근 30일 근거 여부를 별도로 기록한다.
 
 `npm run draft:prepare`는 중복 정책이 `ALLOW`인 경우에만 운영 API에 `DRAFT`를 예약한다. 생성된 검토 manifest는 `out/operational-drafts/{contentHash}.json`에 저장된다. `HOLD` 또는 `BLOCK`이면 예약과 파일 생성을 하지 않고 종료 코드 `2`를 반환한다. 이 단계에서는 TTS, 영상 렌더링과 게시를 실행하지 않는다.
 

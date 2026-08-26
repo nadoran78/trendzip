@@ -79,6 +79,10 @@ function toDryRunError(error) {
       : 1,
     ...(typeof error?.code === "string" ? { code: error.code } : {}),
     ...(error?.details && typeof error.details === "object" ? { details: error.details } : {}),
+    ...(error?.generationDiagnostics && typeof error.generationDiagnostics === "object"
+      ? { generationDiagnostics: error.generationDiagnostics }
+      : {}),
+    failureStage: error?.failureStage ?? "SELECTION",
   };
 }
 
@@ -100,7 +104,16 @@ export async function runOperationalDraftDryRun({
         editorialPlanner,
         duplicatePolicy,
       });
-      const { draft, duplicateDecision, generationAttemptCount } = evaluation;
+      const {
+        selection,
+        factCards,
+        reviewWarnings,
+        plan,
+        draft,
+        duplicateDecision,
+        generationAttemptCount,
+        repairDiagnostics,
+      } = evaluation;
       const evidenceDiagnostics = createEvidenceDiagnostics({
         editorialFormat: draft.manifest.editorial.format,
         generatedAt: context.generatedAt,
@@ -111,6 +124,11 @@ export async function runOperationalDraftDryRun({
         iteration: index + 1,
         status: "SUCCESS",
         generationAttemptCount,
+        repairDiagnostics,
+        selection,
+        factCards,
+        systemDraft: plan,
+        reviewWarnings,
         wouldReserve: duplicateDecision.action === DUPLICATE_POLICY_ACTIONS.ALLOW,
         duplicateDecision,
         evidenceDiagnostics,
@@ -118,6 +136,10 @@ export async function runOperationalDraftDryRun({
         manifestPreview: {
           ...draft.manifest,
           status: "DRY_RUN",
+          generationDiagnostics: {
+            attemptCount: generationAttemptCount,
+            repair: repairDiagnostics,
+          },
           duplicateDecision,
         },
       });
@@ -135,7 +157,7 @@ export async function runOperationalDraftDryRun({
   }
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 3,
     mode: "DRY_RUN",
     generatedAt: context.generatedAt,
     historyFrom: context.historyFrom,

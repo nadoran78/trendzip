@@ -1,8 +1,12 @@
+import { composeEditorialDraft } from "./editorial-draft-composer.mjs";
+import { createEvidenceFactCards } from "./editorial-fact-card.mjs";
 import {
   EDITORIAL_PLAN_VALIDATION_CODES,
   EditorialPlanValidationError,
   shouldRepairEditorialPlan,
 } from "./editorial-plan-validation.mjs";
+import { OPERATIONAL_DRAFT_FAILURE_STAGES } from "./operational-draft-failure.mjs";
+import { createSourceReviewWarnings } from "./source-review-warnings.mjs";
 
 export const EDITORIAL_FORMATS = Object.freeze([
   "WHY_NOW",
@@ -13,189 +17,40 @@ export const EDITORIAL_FORMATS = Object.freeze([
   "WEEKLY_BUNDLE",
 ]);
 
-const NARRATION_SCENE_IDS = Object.freeze(["hook", "overview", "reasons", "evidence", "cta"]);
-const TOPIC_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const EVENT_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?::[a-z0-9]+(?:-[a-z0-9]+)*)+$/;
 const DEFAULT_REPAIR_DELAY_MS = 3_500;
-const EDITORIAL_HOOK_TARGET_CHARACTERS = 40;
-const EDITORIAL_HOOK_MAX_CHARACTERS = 48;
-const SOURCE_REQUIRED_CLAIMS = Object.freeze([
-  { label: "차트", pattern: /차트/iu },
-  { label: "역주행", pattern: /역주행/iu },
-  { label: "SNS", pattern: /(?:\bSNS\b|소셜\s*미디어)/iu },
-  { label: "챌린지", pattern: /챌린지/iu },
-  { label: "전 세대", pattern: /(?:전\s*세대|모든\s*세대)/iu },
-  { label: "열풍", pattern: /열풍/iu },
-  {
-    label: "세대별 추억·향수",
-    pattern:
-      /(?:(?:10|20|30|40)대|3040|세대).{0,20}(?:추억|향수)|(?:추억|향수).{0,20}(?:(?:10|20|30|40)대|3040|세대)/iu,
-  },
-]);
-const OVERSTATED_TONE_PATTERNS = Object.freeze([
-  { label: "난리", pattern: /난리/iu },
-  { label: "점령", pattern: /점령/iu },
-  { label: "폭발적", pattern: /폭발적/iu },
-  { label: "완벽하게 저격", pattern: /완벽(?:하게|히)?[^.!?\n]{0,16}저격/iu },
-  { label: "역대급", pattern: /역대급/iu },
-  { label: "필수 시청·관람", pattern: /필수\s*(?:시청|관람|확인)/iu },
-]);
-const TREND_CONTEXT_PATTERN =
-  "(?:관심|화제|유행|인기|주목|검색|확산|반응|순위|트렌드|소비|열광)";
-
-function createGenerationClaimPattern(generationPattern) {
-  return new RegExp(
-    `(?:(?:${generationPattern}).{0,32}${TREND_CONTEXT_PATTERN}|${TREND_CONTEXT_PATTERN}.{0,32}(?:${generationPattern}))`,
-    "iu",
-  );
-}
-
-const GENERATION_CLAIM_DEFINITIONS = Object.freeze([
-  {
-    label: "10대",
-    generation: "TEEN",
-    pattern: createGenerationClaimPattern("(?:10\\s*대|십\\s*대)"),
-  },
-  {
-    label: "20대",
-    generation: "TWENTY",
-    pattern: createGenerationClaimPattern("20\\s*대"),
-  },
-  {
-    label: "30대",
-    generation: null,
-    pattern: createGenerationClaimPattern("30\\s*대"),
-  },
-  {
-    label: "40대",
-    generation: null,
-    pattern: createGenerationClaimPattern("40\\s*대"),
-  },
-  {
-    label: "2030 세대",
-    generation: null,
-    pattern: createGenerationClaimPattern("2030\\s*(?:세대|층)?"),
-  },
-  {
-    label: "3040 세대",
-    generation: null,
-    pattern: createGenerationClaimPattern("3040\\s*(?:세대|층)?"),
-  },
-  {
-    label: "전 세대",
-    generation: null,
-    pattern: createGenerationClaimPattern("(?:전|모든)\\s*세대"),
-  },
-]);
-
-const EDITORIAL_PLAN_SCHEMA = Object.freeze({
+const EDITORIAL_SELECTION_SCHEMA = Object.freeze({
   type: "object",
   additionalProperties: false,
   required: [
     "primaryKeywordId",
     "editorialFormat",
-    "topicKey",
-    "eventKey",
-    "audienceAngle",
-    "selectionReason",
-    "title",
     "relatedKeywordIds",
-    "hook",
-    "summary",
-    "reasons",
-    "narration",
-    "evidenceVideoIds",
+    "evidenceSelections",
   ],
   properties: {
     primaryKeywordId: { type: "integer" },
     editorialFormat: { type: "string", enum: EDITORIAL_FORMATS },
-    topicKey: { type: "string" },
-    eventKey: { type: "string" },
-    audienceAngle: {
-      type: "string",
-      description:
-        "입력 근거에 확인되는 사실만 사용한 30~40대 대상 설명 관점. 30~40대는 설명 대상이며 트렌드 관측 세대가 아니다.",
-    },
-    selectionReason: {
-      type: "string",
-      description: "후보 explain과 관련 영상 메타데이터에서 확인되는 선정 이유.",
-    },
-    title: {
-      type: "string",
-      description: "과장·선동 표현을 피한 중립적인 정보형 제목.",
-    },
     relatedKeywordIds: {
       type: "array",
       maxItems: 10,
       items: { type: "integer" },
     },
-    hook: {
-      type: "string",
-      description: `영상 첫 화면에 표시할 중립적인 한국어 훅. 공백 포함 ${EDITORIAL_HOOK_TARGET_CHARACTERS}자 이하를 목표로 하고 ${EDITORIAL_HOOK_MAX_CHARACTERS}자를 초과하지 않는다.`,
-    },
-    summary: { type: "string" },
-    reasons: {
-      type: "array",
-      minItems: 2,
-      maxItems: 2,
-      items: { type: "string" },
-    },
-    narration: {
-      type: "object",
-      additionalProperties: false,
-      required: NARRATION_SCENE_IDS,
-      properties: Object.fromEntries(NARRATION_SCENE_IDS.map((sceneId) => [sceneId, { type: "string" }])),
-    },
-    evidenceVideoIds: {
+    evidenceSelections: {
       type: "array",
       minItems: 1,
       maxItems: 3,
-      items: { type: "string" },
-      description: "선택한 사건을 직접 뒷받침하는 최소한의 관련 영상 ID. 일반적인 인물 출연 영상은 제외한다.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["evidenceVideoId", "sourceExcerpt"],
+        properties: {
+          evidenceVideoId: { type: "string" },
+          sourceExcerpt: { type: "string" },
+        },
+      },
     },
   },
 });
-
-function requireString(value, name, maxLength) {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`${name} must be a non-empty string.`);
-  }
-  const characterCount = Array.from(value).length;
-  if (characterCount > maxLength) {
-    throw new Error(
-      `${name} must be at most ${maxLength} characters (received ${characterCount}).`,
-    );
-  }
-}
-
-function requireEditorialHook(value) {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error("editorialPlan.hook must be a non-empty string.");
-  }
-
-  const characterCount = Array.from(value).length;
-  if (characterCount > EDITORIAL_HOOK_MAX_CHARACTERS) {
-    throw new EditorialPlanValidationError(
-      EDITORIAL_PLAN_VALIDATION_CODES.HOOK_TOO_LONG,
-      `editorialPlan.hook must be at most ${EDITORIAL_HOOK_MAX_CHARACTERS} characters (received ${characterCount}).`,
-      {
-        field: "hook",
-        targetCharacters: EDITORIAL_HOOK_TARGET_CHARACTERS,
-        maximumCharacters: EDITORIAL_HOOK_MAX_CHARACTERS,
-        receivedCharacters: characterCount,
-      },
-    );
-  }
-}
-
-function requireUniqueArray(value, name, { minimum = 0, maximum }) {
-  if (!Array.isArray(value) || value.length < minimum || value.length > maximum) {
-    throw new Error(`${name} must contain between ${minimum} and ${maximum} items.`);
-  }
-  if (new Set(value).size !== value.length) {
-    throw new Error(`${name} must not contain duplicates.`);
-  }
-}
 
 function toPromptCandidate(candidate) {
   return {
@@ -203,25 +58,19 @@ function toPromptCandidate(candidate) {
     keyword: candidate.keyword,
     generation: candidate.generation,
     category: candidate.category,
-    rank: candidate.rank,
-    trendScore: candidate.trendScore,
-    rankTrend: candidate.rankTrend,
-    rankDelta: candidate.rankDelta,
-    explain: candidate.explain,
+    contextSummary: candidate.explain,
     sourceCrawlRunId: candidate.sourceCrawlRunId,
     snapshotAt: candidate.snapshotAt,
-    relatedKeywords: candidate.relatedKeywords.map(({ id, word, rank, category }) => ({
+    relatedKeywords: candidate.relatedKeywords.map(({ id, word, category }) => ({
       id,
       word,
-      rank,
       category,
     })),
     relatedVideos: candidate.relatedVideos.map(
-      ({ videoId, title, channelName, viewCount, publishedAt }) => ({
+      ({ videoId, title, channelName, publishedAt }) => ({
         videoId,
         title,
         channelName,
-        viewCount,
         publishedAt,
       }),
     ),
@@ -236,113 +85,26 @@ function toPromptHistory(content) {
     editorialFormat: content.editorialFormat,
     topicKey: content.topicKey,
     eventKey: content.eventKey,
-    audienceAngle: content.audienceAngle,
-    title: content.title,
     selectedAt: content.selectedAt,
     publishedAt: content.publishedAt,
   };
 }
 
-function collectPlanText(plan) {
-  return [
-    plan.audienceAngle,
-    plan.selectionReason,
-    plan.title,
-    plan.hook,
-    plan.summary,
-    ...plan.reasons,
-    ...NARRATION_SCENE_IDS.map((sceneId) => plan.narration[sceneId]),
-  ].join("\n");
-}
-
-function collectCandidateSourceText(candidate) {
-  return [
-    candidate.keyword,
-    candidate.explain,
-    ...candidate.relatedKeywords.map((keyword) => keyword.word),
-    ...candidate.relatedVideos.flatMap((video) => [video.title, video.channelName]),
-  ]
-    .filter((value) => typeof value === "string")
-    .join("\n");
-}
-
-function normalizeKeywordWord(word) {
-  return word.trim().toLocaleLowerCase("ko-KR");
-}
-
-function collectObservedGenerations(candidates, selectedCandidate) {
-  const selectedWord = normalizeKeywordWord(selectedCandidate.keyword);
-  return new Set(
-    candidates
-      .filter((candidate) => normalizeKeywordWord(candidate.keyword) === selectedWord)
-      .map((candidate) => candidate.generation),
-  );
-}
-
-function validateObservedGenerationClaims(plan, candidates, selectedCandidate) {
-  const planText = collectPlanText(plan);
-  const observedGenerations = collectObservedGenerations(candidates, selectedCandidate);
-  const unsupportedClaims = GENERATION_CLAIM_DEFINITIONS.filter(
-    ({ generation, pattern }) =>
-      pattern.test(planText) && (generation === null || !observedGenerations.has(generation)),
-  ).map(({ label }) => label);
-
-  if (unsupportedClaims.length > 0) {
-    throw new EditorialPlanValidationError(
-      EDITORIAL_PLAN_VALIDATION_CODES.UNSUPPORTED_GENERATION_CLAIM,
-      `editorialPlan contains generation claims outside the observed candidates: ${unsupportedClaims.join(", ")}.`,
-      {
-        claims: unsupportedClaims,
-        observedGenerations: [...observedGenerations],
-      },
-    );
-  }
-}
-
-function validateGroundedLanguage(plan, selectedCandidate) {
-  const planText = collectPlanText(plan);
-  const sourceText = collectCandidateSourceText(selectedCandidate);
-  const unsupportedClaims = SOURCE_REQUIRED_CLAIMS.filter(
-    ({ pattern }) => pattern.test(planText) && !pattern.test(sourceText),
-  ).map(({ label }) => label);
-  if (unsupportedClaims.length > 0) {
-    throw new EditorialPlanValidationError(
-      EDITORIAL_PLAN_VALIDATION_CODES.UNSUPPORTED_CLAIM,
-      `editorialPlan contains claims that are not present in the candidate evidence: ${unsupportedClaims.join(", ")}.`,
-      { claims: unsupportedClaims },
-    );
-  }
-
-  const overstatedTerms = OVERSTATED_TONE_PATTERNS.filter(({ pattern }) => pattern.test(planText)).map(
-    ({ label }) => label,
-  );
-  if (overstatedTerms.length > 0) {
-    throw new EditorialPlanValidationError(
-      EDITORIAL_PLAN_VALIDATION_CODES.OVERSTATED_TONE,
-      `editorialPlan contains overstated language: ${overstatedTerms.join(", ")}.`,
-      { terms: overstatedTerms },
-    );
-  }
-}
-
 export function buildEditorialPlanPrompt({ candidates, recentContents, generatedAt }) {
   return [
-    "너는 Trendzip의 한국 트렌드 숏폼 편집자다.",
-    "주어진 운영 키워드 후보 중 하나를 골라 30~40대가 이해하기 쉬운 정보형 숏폼 초안을 설계한다.",
-    "입력에 없는 사실, 키워드 ID, 영상 ID를 만들지 않는다.",
-    "후보 explain과 관련 영상의 제목·채널·조회수·게시 시각에 명시된 사실만 사용한다.",
-    "30~40대는 설명을 읽는 대상일 뿐 트렌드 관측 세대가 아니다.",
-    "관심·화제·인기·순위의 주체는 선택 키워드가 실제 후보로 존재하는 TEEN 또는 TWENTY 세대만 사용한다.",
-    "차트, 역주행, SNS, 챌린지, 전 세대 반응, 특정 세대의 추억·향수는 입력 근거에 같은 내용이 있을 때만 사용한다.",
-    "난리, 점령, 폭발적, 완벽하게 저격, 역대급, 필수 시청 같은 과장·선동 표현을 사용하지 않는다.",
-    "게임·리뷰·플랫폼명처럼 범용적인 표현보다 작품명, 인물, 그룹, 이벤트처럼 구체적인 주제를 우선한다.",
-    "최근 제작 이력과 같은 eventKey는 피하고, 같은 topicKey는 새로운 사건이 명확할 때만 선택한다.",
-    "topicKey는 영문 소문자 kebab-case, eventKey는 topicKey:event-slug 형식으로 작성한다.",
-    "relatedKeywordIds는 선택한 후보의 relatedKeywords에 포함된 ID만 사용한다.",
-    "evidenceVideoIds는 선택한 사건을 직접 뒷받침하는 최소한의 relatedVideos ID만 사용하고, 단순 인물 출연 영상은 제외한다.",
-    `hook은 영상 첫 화면에 표시할 한 문장으로 공백 포함 ${EDITORIAL_HOOK_TARGET_CHARACTERS}자 이하를 목표로 하며, ${EDITORIAL_HOOK_MAX_CHARACTERS}자를 절대 초과하지 않는다.`,
-    "narration은 hook, overview, reasons, evidence, cta 장면을 모두 작성하고 과장된 단정을 피한다.",
-    "CTA는 Trendzip 프로필 링크에서 더 확인하라는 의미로 작성한다.",
+    "너는 Trendzip의 한국 트렌드 숏폼 주제 선정자다.",
+    "운영 후보 중 하나와 편집 형식, 관련 키워드, 직접 확인할 영상 근거만 선택한다.",
+    "제목, 훅, 요약, 이유, 내레이션, topicKey, eventKey는 시스템이 생성하므로 응답에 쓰지 않는다.",
+    "후보 contextSummary는 주제 선택 참고 문맥이며 사실 근거가 아니다.",
+    "영상 근거는 relatedVideos의 title 또는 channelName에 실제로 존재하는 원문만 사용한다.",
+    "sourceExcerpt는 선택 영상의 title 또는 channelName에서 연속된 문자열을 그대로 복사한다.",
+    "게임, 리뷰, 플랫폼명 같은 범용 표현보다 작품명, 인물, 그룹, 이벤트처럼 구체적인 주제를 우선한다.",
+    "최근 제작 이력과 같은 키워드는 새로운 근거 영상이 명확한 경우에만 다시 선택한다.",
+    "편집 형식 정의: WHY_NOW는 최근 공개·발표 계기, KEYWORD_PRIMER는 낯선 용어 설명, PERSON_WORK_RELATION은 인물과 작품 관계, EVENT_KEYWORD_MAP은 사건과 연결 표현, CONTEXT_TIMELINE은 여러 시점의 흐름, WEEKLY_BUNDLE은 여러 관련 주제 묶음이다.",
+    "primaryKeywordId는 운영 후보에 있는 ID만 사용한다.",
+    "relatedKeywordIds는 선택 후보의 relatedKeywords에 있는 ID만 사용한다.",
+    "evidenceVideoId는 선택 후보의 relatedVideos에 있는 ID만 사용한다.",
+    "같은 영상은 evidenceSelections에서 한 번만 선택한다.",
     "응답은 지정된 JSON 구조만 반환한다.",
     "",
     `생성 기준 시각: ${generatedAt}`,
@@ -351,35 +113,76 @@ export function buildEditorialPlanPrompt({ candidates, recentContents, generated
   ].join("\n");
 }
 
-export function buildEditorialPlanRepairPrompt(error) {
-  const mutableReferenceField =
-    error.code === EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_RELATED_KEYWORD_ID
-      ? "relatedKeywordIds"
-      : error.code === EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_EVIDENCE_VIDEO_ID
-        ? "evidenceVideoIds"
-        : null;
-  const immutableFields = [
-    "primaryKeywordId",
-    "editorialFormat",
-    "topicKey",
-    "eventKey",
-    "relatedKeywordIds",
-    "evidenceVideoIds",
-  ].filter((field) => field !== mutableReferenceField);
+function requireSelectionStructure(selection) {
+  if (typeof selection !== "object" || selection === null || Array.isArray(selection)) {
+    throw new Error("Gemini editorial selection must be an object.");
+  }
+  if (!Number.isInteger(selection.primaryKeywordId)) {
+    throw new Error("editorialSelection.primaryKeywordId must be an integer.");
+  }
+  if (!EDITORIAL_FORMATS.includes(selection.editorialFormat)) {
+    throw new Error("editorialSelection.editorialFormat is not supported.");
+  }
+  if (!Array.isArray(selection.relatedKeywordIds) || selection.relatedKeywordIds.length > 10) {
+    throw new Error("editorialSelection.relatedKeywordIds must contain at most 10 items.");
+  }
+  if (new Set(selection.relatedKeywordIds).size !== selection.relatedKeywordIds.length) {
+    throw new Error("editorialSelection.relatedKeywordIds must not contain duplicates.");
+  }
+  if (
+    !Array.isArray(selection.evidenceSelections) ||
+    selection.evidenceSelections.length < 1 ||
+    selection.evidenceSelections.length > 3
+  ) {
+    throw new Error("editorialSelection.evidenceSelections must contain between 1 and 3 items.");
+  }
+}
 
+function validateRelatedKeywordIds(selection, selectedCandidate) {
+  const allowedValues = selectedCandidate.relatedKeywords.map((keyword) => keyword.id);
+  const allowedIds = new Set(allowedValues);
+  const invalidValues = selection.relatedKeywordIds.filter(
+    (keywordId) => !Number.isInteger(keywordId) || !allowedIds.has(keywordId),
+  );
+  if (invalidValues.length > 0) {
+    throw new EditorialPlanValidationError(
+      EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_RELATED_KEYWORD_ID,
+      "editorialSelection.relatedKeywordIds contains an unknown keyword ID.",
+      { field: "relatedKeywordIds", invalidValues, allowedValues },
+    );
+  }
+}
+
+function validateEditorialSelection(selection, candidates) {
+  requireSelectionStructure(selection);
+  const selectedCandidate = candidates.find(
+    (candidate) => candidate.keywordId === selection.primaryKeywordId,
+  );
+  if (!selectedCandidate) {
+    throw new EditorialPlanValidationError(
+      EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_PRIMARY_KEYWORD_ID,
+      "editorialSelection.primaryKeywordId is not an operational candidate.",
+      {
+        field: "primaryKeywordId",
+        invalidValue: selection.primaryKeywordId,
+        allowedValues: candidates.map((candidate) => candidate.keywordId),
+      },
+    );
+  }
+
+  validateRelatedKeywordIds(selection, selectedCandidate);
+  const factCards = createEvidenceFactCards(selectedCandidate, selection.evidenceSelections);
+  return { selectedCandidate, factCards };
+}
+
+export function buildEditorialPlanRepairPrompt(error) {
   return [
-    "직전 JSON 편집 계획이 Trendzip 편집 계약을 위반했다.",
+    "직전 JSON 선택 결과가 Trendzip의 참조 계약을 위반했다.",
     `검증 오류 코드: ${error.code}`,
     `검증 오류 메시지: ${error.message}`,
     `검증 오류 상세: ${JSON.stringify(error.details)}`,
-    `${immutableFields.join(", ")}는 변경하지 않는다.`,
-    ...(mutableReferenceField
-      ? [
-          `${mutableReferenceField}만 검증 오류 상세의 allowedValues 안에서 다시 선택한다.`,
-        ]
-      : []),
-    "입력 근거와 검증 오류를 다시 확인하고 문제가 된 필드만 최소한으로 수정한다.",
-    "수정한 전체 편집 계획을 지정된 JSON 구조로 다시 반환한다.",
+    "오류 상세의 allowedValues와 allowedSourceText만 사용해 잘못된 ID 또는 sourceExcerpt를 수정한다.",
+    "자유 문안을 추가하지 말고 수정한 전체 선택 결과를 같은 JSON 구조로 반환한다.",
   ].join("\n");
 }
 
@@ -389,109 +192,12 @@ function extractResponseText(payload) {
   if (candidate.finishReason && candidate.finishReason !== "STOP") {
     throw new Error(`Gemini editorial response was not completed. finishReason=${candidate.finishReason}`);
   }
-
   const text = candidate.content?.parts
     ?.map((part) => part?.text?.trim())
     .filter(Boolean)
     .join("\n");
   if (!text) throw new Error("Gemini editorial response did not contain text.");
   return text;
-}
-
-function validateEditorialPlan(plan, candidates) {
-  if (typeof plan !== "object" || plan === null || Array.isArray(plan)) {
-    throw new Error("Gemini editorial plan must be an object.");
-  }
-
-  const selectedCandidate = candidates.find(
-    (candidate) => candidate.keywordId === plan.primaryKeywordId,
-  );
-  if (!selectedCandidate) {
-    throw new Error("Gemini editorial plan primaryKeywordId is not an operational candidate.");
-  }
-  if (!EDITORIAL_FORMATS.includes(plan.editorialFormat)) {
-    throw new Error("Gemini editorial plan editorialFormat is not supported.");
-  }
-  requireString(plan.topicKey, "editorialPlan.topicKey", 200);
-  requireString(plan.eventKey, "editorialPlan.eventKey", 200);
-  if (!TOPIC_KEY_PATTERN.test(plan.topicKey)) {
-    throw new Error("editorialPlan.topicKey must use lowercase kebab-case.");
-  }
-  if (!EVENT_KEY_PATTERN.test(plan.eventKey) || !plan.eventKey.startsWith(`${plan.topicKey}:`)) {
-    throw new Error("editorialPlan.eventKey must start with topicKey and use colon-separated slugs.");
-  }
-  requireString(plan.audienceAngle, "editorialPlan.audienceAngle", 500);
-  requireString(plan.selectionReason, "editorialPlan.selectionReason", 2_000);
-  requireString(plan.title, "editorialPlan.title", 100);
-  requireEditorialHook(plan.hook);
-  requireString(plan.summary, "editorialPlan.summary", 100);
-
-  requireUniqueArray(plan.relatedKeywordIds, "editorialPlan.relatedKeywordIds", { maximum: 10 });
-  const allowedRelatedKeywordIds = new Set(
-    selectedCandidate.relatedKeywords.map((keyword) => keyword.id),
-  );
-  if (
-    plan.relatedKeywordIds.some(
-      (keywordId) => !Number.isInteger(keywordId) || !allowedRelatedKeywordIds.has(keywordId),
-    )
-  ) {
-    const invalidValues = plan.relatedKeywordIds.filter(
-      (keywordId) => !Number.isInteger(keywordId) || !allowedRelatedKeywordIds.has(keywordId),
-    );
-    throw new EditorialPlanValidationError(
-      EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_RELATED_KEYWORD_ID,
-      "editorialPlan.relatedKeywordIds contains an unknown keyword ID.",
-      {
-        field: "relatedKeywordIds",
-        primaryKeywordId: selectedCandidate.keywordId,
-        invalidValues,
-        allowedValues: [...allowedRelatedKeywordIds],
-      },
-    );
-  }
-
-  requireUniqueArray(plan.reasons, "editorialPlan.reasons", { minimum: 2, maximum: 2 });
-  plan.reasons.forEach((reason, index) =>
-    requireString(reason, `editorialPlan.reasons[${index}]`, 100),
-  );
-  if (typeof plan.narration !== "object" || plan.narration === null) {
-    throw new Error("editorialPlan.narration must be an object.");
-  }
-  const narrationKeys = Object.keys(plan.narration).sort();
-  const expectedNarrationKeys = [...NARRATION_SCENE_IDS].sort();
-  if (
-    narrationKeys.length !== expectedNarrationKeys.length ||
-    narrationKeys.some((key, index) => key !== expectedNarrationKeys[index])
-  ) {
-    throw new Error(`editorialPlan.narration must contain exactly: ${NARRATION_SCENE_IDS.join(", ")}.`);
-  }
-  NARRATION_SCENE_IDS.forEach((sceneId) =>
-    requireString(plan.narration[sceneId], `editorialPlan.narration.${sceneId}`, 320),
-  );
-
-  requireUniqueArray(plan.evidenceVideoIds, "editorialPlan.evidenceVideoIds", {
-    minimum: 1,
-    maximum: 3,
-  });
-  const allowedVideoIds = new Set(selectedCandidate.relatedVideos.map((video) => video.videoId));
-  if (plan.evidenceVideoIds.some((videoId) => !allowedVideoIds.has(videoId))) {
-    const invalidValues = plan.evidenceVideoIds.filter((videoId) => !allowedVideoIds.has(videoId));
-    throw new EditorialPlanValidationError(
-      EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_EVIDENCE_VIDEO_ID,
-      "editorialPlan.evidenceVideoIds contains an unknown video ID.",
-      {
-        field: "evidenceVideoIds",
-        primaryKeywordId: selectedCandidate.keywordId,
-        invalidValues,
-        allowedValues: [...allowedVideoIds],
-      },
-    );
-  }
-
-  validateObservedGenerationClaims(plan, candidates, selectedCandidate);
-  validateGroundedLanguage(plan, selectedCandidate);
-
-  return { plan, selectedCandidate };
 }
 
 async function createHttpError(response) {
@@ -511,10 +217,90 @@ function defaultSleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+function withFailureStage(error, failureStage) {
+  const normalizedError = error instanceof Error ? error : new Error(String(error));
+  normalizedError.failureStage ??= failureStage;
+  return normalizedError;
+}
+
 function withGenerationAttemptCount(error, generationAttemptCount) {
   const normalizedError = error instanceof Error ? error : new Error(String(error));
   normalizedError.generationAttemptCount = generationAttemptCount;
   return normalizedError;
+}
+
+function toErrorDiagnostics(error) {
+  return {
+    name: error instanceof Error ? error.name : "Error",
+    message: error instanceof Error ? error.message : String(error),
+    ...(typeof error?.code === "string" ? { code: error.code } : {}),
+    ...(error?.details && typeof error.details === "object" ? { details: error.details } : {}),
+  };
+}
+
+function withFailedRepairDiagnostics(error, { initialSelection, initialError, finalSelection }) {
+  const normalizedError = withGenerationAttemptCount(error, 2);
+  normalizedError.generationDiagnostics = {
+    attemptCount: 2,
+    initial: {
+      selection: initialSelection,
+      validation: toErrorDiagnostics(initialError),
+    },
+    final: {
+      selection: finalSelection,
+      validation: toErrorDiagnostics(normalizedError),
+    },
+  };
+  return normalizedError;
+}
+
+function createPlannerResult({
+  selection,
+  candidates,
+  generatedAt,
+  generationAttemptCount,
+  repairDiagnostics,
+}) {
+  let selectedCandidate;
+  let factCards;
+  try {
+    ({ selectedCandidate, factCards } = validateEditorialSelection(selection, candidates));
+  } catch (error) {
+    const stage =
+      error?.code === EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_EVIDENCE_VIDEO_ID ||
+      error?.code === EDITORIAL_PLAN_VALIDATION_CODES.INVALID_EVIDENCE_EXCERPT
+        ? OPERATIONAL_DRAFT_FAILURE_STAGES.FACT_ASSEMBLY
+        : OPERATIONAL_DRAFT_FAILURE_STAGES.SELECTION;
+    throw withFailureStage(error, stage);
+  }
+
+  let plan;
+  try {
+    plan = composeEditorialDraft({ candidate: selectedCandidate, selection, factCards });
+  } catch (error) {
+    throw withFailureStage(error, OPERATIONAL_DRAFT_FAILURE_STAGES.COMPOSITION);
+  }
+  let reviewWarnings;
+  try {
+    reviewWarnings = createSourceReviewWarnings({
+      candidate: selectedCandidate,
+      selection,
+      factCards,
+      generatedAt,
+    });
+  } catch (error) {
+    throw withFailureStage(error, OPERATIONAL_DRAFT_FAILURE_STAGES.FACT_ASSEMBLY);
+  }
+
+  return {
+    selection,
+    factCards,
+    reviewWarnings,
+    plan,
+    selectedCandidate,
+    generationAttemptCount,
+    repairDiagnostics,
+  };
 }
 
 export function createGeminiEditorialPlanner({
@@ -527,19 +313,15 @@ export function createGeminiEditorialPlanner({
   sleepImpl = defaultSleep,
 }) {
   if (typeof apiKey !== "string" || apiKey.trim().length === 0) {
-    throw new Error("GEMINI_API_KEY is required to create an editorial plan.");
+    throw new Error("GEMINI_API_KEY is required to create an editorial selection.");
   }
-  if (typeof fetchImpl !== "function") {
-    throw new Error("A fetch implementation is required.");
-  }
+  if (typeof fetchImpl !== "function") throw new Error("A fetch implementation is required.");
   if (!Number.isInteger(repairDelayMs) || repairDelayMs < 0) {
     throw new Error("repairDelayMs must be a non-negative integer.");
   }
-  if (typeof sleepImpl !== "function") {
-    throw new Error("A sleep implementation is required.");
-  }
+  if (typeof sleepImpl !== "function") throw new Error("A sleep implementation is required.");
 
-  async function requestPlan(contents) {
+  async function requestSelection(contents) {
     const response = await fetchImpl(`${baseUrl}/models/${model}:generateContent`, {
       method: "POST",
       headers: {
@@ -550,16 +332,15 @@ export function createGeminiEditorialPlanner({
       body: JSON.stringify({
         contents,
         generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 2_048,
+          temperature: 0.1,
+          maxOutputTokens: 1_024,
           thinkingConfig: { thinkingLevel: "MINIMAL" },
           responseMimeType: "application/json",
-          responseJsonSchema: EDITORIAL_PLAN_SCHEMA,
+          responseJsonSchema: EDITORIAL_SELECTION_SCHEMA,
         },
       }),
       signal: AbortSignal.timeout(timeoutMs),
     });
-
     if (!response.ok) throw await createHttpError(response);
 
     const text = extractResponseText(await response.json());
@@ -577,16 +358,25 @@ export function createGeminiEditorialPlanner({
       }
 
       const prompt = buildEditorialPlanPrompt({ candidates, recentContents, generatedAt });
-      let plan;
+      let selection;
       try {
-        plan = await requestPlan([{ role: "user", parts: [{ text: prompt }] }]);
+        selection = await requestSelection([{ role: "user", parts: [{ text: prompt }] }]);
       } catch (error) {
-        throw withGenerationAttemptCount(error, 1);
+        throw withFailureStage(
+          withGenerationAttemptCount(error, 1),
+          OPERATIONAL_DRAFT_FAILURE_STAGES.SELECTION,
+        );
       }
 
       let repairableError;
       try {
-        return { ...validateEditorialPlan(plan, candidates), generationAttemptCount: 1 };
+        return createPlannerResult({
+          selection,
+          candidates,
+          generatedAt,
+          generationAttemptCount: 1,
+          repairDiagnostics: null,
+        });
       } catch (error) {
         if (!shouldRepairEditorialPlan(error)) {
           throw withGenerationAttemptCount(error, 1);
@@ -594,28 +384,55 @@ export function createGeminiEditorialPlanner({
         repairableError = error;
       }
 
-      if (repairDelayMs > 0) {
-        await sleepImpl(repairDelayMs);
-      }
+      if (repairDelayMs > 0) await sleepImpl(repairDelayMs);
 
-      let repairedPlan;
+      let repairedSelection;
       try {
-        repairedPlan = await requestPlan([
+        repairedSelection = await requestSelection([
           { role: "user", parts: [{ text: prompt }] },
-          { role: "model", parts: [{ text: JSON.stringify(plan) }] },
-          {
-            role: "user",
-            parts: [{ text: buildEditorialPlanRepairPrompt(repairableError) }],
-          },
+          { role: "model", parts: [{ text: JSON.stringify(selection) }] },
+          { role: "user", parts: [{ text: buildEditorialPlanRepairPrompt(repairableError) }] },
         ]);
       } catch (error) {
-        throw withGenerationAttemptCount(error, 2);
+        throw withFailedRepairDiagnostics(
+          withFailureStage(error, OPERATIONAL_DRAFT_FAILURE_STAGES.SELECTION),
+          { initialSelection: selection, initialError: repairableError, finalSelection: null },
+        );
+      }
+
+      if (JSON.stringify(repairedSelection) === JSON.stringify(selection)) {
+        const noEffectError = new EditorialPlanValidationError(
+          EDITORIAL_PLAN_VALIDATION_CODES.REPAIR_NO_EFFECT,
+          "Gemini returned the same invalid editorial selection after repair.",
+          { initialValidationCode: repairableError.code },
+        );
+        throw withFailedRepairDiagnostics(
+          withFailureStage(
+            noEffectError,
+            repairableError.failureStage ?? OPERATIONAL_DRAFT_FAILURE_STAGES.SELECTION,
+          ),
+          {
+            initialSelection: selection,
+            initialError: repairableError,
+            finalSelection: repairedSelection,
+          },
+        );
       }
 
       try {
-        return { ...validateEditorialPlan(repairedPlan, candidates), generationAttemptCount: 2 };
+        return createPlannerResult({
+          selection: repairedSelection,
+          candidates,
+          generatedAt,
+          generationAttemptCount: 2,
+          repairDiagnostics: toErrorDiagnostics(repairableError),
+        });
       } catch (error) {
-        throw withGenerationAttemptCount(error, 2);
+        throw withFailedRepairDiagnostics(error, {
+          initialSelection: selection,
+          initialError: repairableError,
+          finalSelection: repairedSelection,
+        });
       }
     },
   });

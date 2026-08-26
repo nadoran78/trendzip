@@ -8,32 +8,34 @@ import {
 } from "./editorial-plan-validation.mjs";
 
 const repairableCodes = [
-  EDITORIAL_PLAN_VALIDATION_CODES.HOOK_TOO_LONG,
-  EDITORIAL_PLAN_VALIDATION_CODES.UNSUPPORTED_CLAIM,
-  EDITORIAL_PLAN_VALIDATION_CODES.OVERSTATED_TONE,
-  EDITORIAL_PLAN_VALIDATION_CODES.UNSUPPORTED_GENERATION_CLAIM,
+  EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_PRIMARY_KEYWORD_ID,
   EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_RELATED_KEYWORD_ID,
   EDITORIAL_PLAN_VALIDATION_CODES.UNKNOWN_EVIDENCE_VIDEO_ID,
+  EDITORIAL_PLAN_VALIDATION_CODES.INVALID_EVIDENCE_EXCERPT,
+  EDITORIAL_PLAN_VALIDATION_CODES.EDITORIAL_SELECTION_CONTRACT_VIOLATIONS,
 ];
 
-test("repair policy accepts only repairable editorial plan violations", () => {
+test("repair policy accepts only reference selection violations", () => {
   repairableCodes.forEach((code) => {
-    const error = new EditorialPlanValidationError(code, `invalid editorial plan: ${code}`);
-
-    assert.equal(shouldRepairEditorialPlan(error), true, `${code} should be repairable`);
+    assert.equal(
+      shouldRepairEditorialPlan(new EditorialPlanValidationError(code, code)),
+      true,
+      `${code} should be repairable`,
+    );
   });
 });
 
-test("repair policy rejects ordinary transport and parsing errors", () => {
+test("repair policy rejects prose, transport, parsing, and no-effect failures", () => {
+  assert.equal(shouldRepairEditorialPlan(new Error("summary too long")), false);
   assert.equal(shouldRepairEditorialPlan(new Error("Gemini request failed with HTTP 429")), false);
   assert.equal(shouldRepairEditorialPlan(new SyntaxError("invalid JSON")), false);
-  assert.equal(shouldRepairEditorialPlan(null), false);
-  assert.equal(shouldRepairEditorialPlan(undefined), false);
-  assert.equal(shouldRepairEditorialPlan({ code: "HOOK_TOO_LONG" }), false);
-});
-
-test("repair policy rejects unknown editorial validation codes", () => {
-  const error = new EditorialPlanValidationError("UNKNOWN_REFERENCE", "unknown video ID");
-
-  assert.equal(shouldRepairEditorialPlan(error), false);
+  assert.equal(
+    shouldRepairEditorialPlan(
+      new EditorialPlanValidationError(
+        EDITORIAL_PLAN_VALIDATION_CODES.REPAIR_NO_EFFECT,
+        "same selection",
+      ),
+    ),
+    false,
+  );
 });

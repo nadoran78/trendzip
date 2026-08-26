@@ -47,6 +47,7 @@ if (!result.manifest) {
         shortformContentId: result.reservation.id,
         generationAttemptCount: result.generationAttemptCount,
         duplicateDecision: result.duplicateDecision,
+        reviewWarnings: result.manifest.reviewWarnings,
         outputPath,
       },
       null,

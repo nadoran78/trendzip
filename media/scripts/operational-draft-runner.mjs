@@ -1,5 +1,6 @@
 import { collectOperationalCandidates } from "./candidate-collector.mjs";
 import { DUPLICATE_POLICY_ACTIONS } from "./duplicate-policy.mjs";
+import { OPERATIONAL_DRAFT_FAILURE_STAGES } from "./operational-draft-failure.mjs";
 import { createOperationalDraft } from "./operational-draft.mjs";
 import { calculateHistoryFrom, formatSeoulLocalDateTime } from "./operations-time.mjs";
 
@@ -43,28 +44,52 @@ export async function evaluateOperationalDraft({
     recentContents,
     generatedAt,
   });
-  const { plan, selectedCandidate } = planResult;
+  const { plan, selection, factCards, reviewWarnings, selectedCandidate } = planResult;
   const generationAttemptCount = planResult.generationAttemptCount ?? 1;
-  const draft = createOperationalDraft({
-    candidates,
-    selectedCandidate,
-    plan,
-    generatedAt,
-  });
-  const duplicateDecision = duplicatePolicy({
-    draft: draft.reservation,
-    recentContents,
-  });
+  const repairDiagnostics = planResult.repairDiagnostics ?? null;
+  let draft;
+  try {
+    draft = createOperationalDraft({
+      candidates,
+      selectedCandidate,
+      selection,
+      factCards,
+      reviewWarnings,
+      plan,
+      generatedAt,
+    });
+  } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    normalizedError.failureStage ??= OPERATIONAL_DRAFT_FAILURE_STAGES.COMPOSITION;
+    throw normalizedError;
+  }
+  let duplicateDecision;
+  try {
+    duplicateDecision = duplicatePolicy({
+      draft: draft.reservation,
+      recentContents,
+    });
+  } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    normalizedError.failureStage = OPERATIONAL_DRAFT_FAILURE_STAGES.DUPLICATE_POLICY;
+    throw normalizedError;
+  }
   if (!Object.values(DUPLICATE_POLICY_ACTIONS).includes(duplicateDecision?.action)) {
-    throw new Error("Duplicate policy returned an unsupported action.");
+    const error = new Error("Duplicate policy returned an unsupported action.");
+    error.failureStage = OPERATIONAL_DRAFT_FAILURE_STAGES.DUPLICATE_POLICY;
+    throw error;
   }
 
   return {
     plan,
+    selection,
+    factCards,
+    reviewWarnings,
     selectedCandidate,
     draft,
     duplicateDecision,
     generationAttemptCount,
+    repairDiagnostics,
   };
 }
 
@@ -82,7 +107,13 @@ export async function prepareOperationalDraft({
     duplicatePolicy,
   });
   const { generatedAt, historyFrom, candidates } = context;
-  const { draft, duplicateDecision, generationAttemptCount } = evaluation;
+  const {
+    draft,
+    reviewWarnings,
+    duplicateDecision,
+    generationAttemptCount,
+    repairDiagnostics,
+  } = evaluation;
 
   if (duplicateDecision.action !== DUPLICATE_POLICY_ACTIONS.ALLOW) {
     return {
@@ -90,6 +121,7 @@ export async function prepareOperationalDraft({
       historyFrom,
       candidateCount: candidates.length,
       generationAttemptCount,
+      repairDiagnostics,
       duplicateDecision,
       reservation: null,
       manifest: null,
@@ -102,10 +134,16 @@ export async function prepareOperationalDraft({
     historyFrom,
     candidateCount: candidates.length,
     generationAttemptCount,
+    repairDiagnostics,
     duplicateDecision,
     reservation: reservedContent,
     manifest: {
       ...draft.manifest,
+      generationDiagnostics: {
+        attemptCount: generationAttemptCount,
+        repair: repairDiagnostics,
+      },
+      reviewWarnings,
       duplicateDecision,
       reservation: {
         shortformContentId: reservedContent.id,
