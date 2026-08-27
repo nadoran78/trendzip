@@ -28,20 +28,20 @@
 - 상태: IN_PROGRESS
 - 브랜치: codex/media-004-operational-draft
 - 시작일: 2026-08-21
-- 마지막 갱신: 2026-08-26
-- 다음 행동: 3회 dry-run에서 확인한 문장 중간 절단, 제목 재진술과 형식별 다양성 부족을 해결할 composer 개선 계획을 수립한다.
+- 마지막 갱신: 2026-08-27
+- 다음 행동: 검토한 운영 초안을 `draft:prepare`로 최초 예약하고 제작 이력이 생긴 상태에서 사건·주제 중복 판정을 확인한다.
 
 #### 목적
 
 - 운영 키워드와 최근 숏폼 제작 이력을 API로 조회해 중복되지 않는 제작 초안을 자동으로 준비한다.
-- Gemini는 후보와 직접 근거만 선택하고 시스템이 편집 문안을 결정적으로 조립하며, 운영자는 후속 단계에서 최종 렌더링 결과를 승인한다.
+- Gemini 1차 호출은 후보와 직접 근거를 선택하고 2차 호출은 검증된 Editorial Brief만으로 문안을 작성하며, 운영자는 후속 단계에서 최종 렌더링 결과를 승인한다.
 
 #### 범위
 
 - 키워드 상세 API에 원본 크롤링 회차와 스냅샷 시각을 추가한다.
 - 숏폼 콘텐츠와 연관 키워드의 제작 이력 스키마, 도메인, 저장소를 추가한다.
 - 최근 이력 조회, `DRAFT` 예약과 상태 갱신을 위한 인증된 운영 API를 추가한다.
-- 운영 후보·제작 이력 수집, Gemini 근거 선택, fact card·문안 조립, 중복 정책 검사와 구조화 초안 생성을 `media` 모듈에 연결한다.
+- 운영 후보·제작 이력 수집, Gemini 근거 선택, fact card·Editorial Brief·별도 작성기, 중복 정책 검사와 구조화 초안 생성을 `media` 모듈에 연결한다.
 - Kotlin `DRAFT` 예약 서비스와 Node 30일 중복 판정을 실제 운영 코드 실습으로 진행한다.
 
 #### 제외 범위
@@ -80,6 +80,15 @@
 - [x] 후보 밖 ID와 존재하지 않는 원문 발췌만 한 번 보정하고 동일 응답은 `REPAIR_NO_EFFECT`로 진단한다.
 - [x] 클릭 유도형 제목·오래된 근거·주제 불일치를 비차단 `reviewWarnings`로 기록한다.
 - [x] dry-run·manifest v3에 선택 결과, fact card, 시스템 문안과 `SELECTION`·`FACT_ASSEMBLY`·`COMPOSITION`·`DUPLICATE_POLICY` 실패 단계를 기록한다.
+- [x] `trend_videos`에 YouTube 설명·태그를 보존하고 보호된 운영 상세 API에서 `channelId`와 함께 제공한다.
+- [x] 1차 Gemini 선택 계약에 통제된 사건 유형, 근거 필드와 근거 역할을 추가했다.
+- [x] 실제 판정에 사용되지 않는 수동 출처 등급 설정은 제거하고 향후 정책 확장을 위한 원본 `channelId`만 유지했다.
+- [x] 검증된 fact card, 허용 엔티티, 금지 주장과 형식 fallback 진단을 담는 Editorial Brief 조립기를 준비했다.
+- [x] 편집 형식별 최소 근거를 판정하고 부족한 형식을 `KEYWORD_PRIMER`로 낮추는 `validateEditorialFormatEligibility()`를 구현했다.
+- [x] 검증된 Editorial Brief 전용 Gemini 작성기와 결과 검증·1회 보정·결정적 fallback을 연결했다.
+- [x] 백엔드 V7과 운영 근거 API를 배포한 뒤 실제 운영 dry-run으로 2단계 생성 결과를 검증했다.
+- [x] 근거 발췌에서 확인되지 않는 관련 키워드를 제거하고 감정 방향을 단정하는 작성 문구를 중립 표현으로 보정한다.
+- [x] 정상 결과의 중간 산출물 중복을 제거하고 이상 진단만 조건부로 남기는 dry-run 보고서 v5를 적용했다.
 
 #### 완료 조건
 
@@ -101,10 +110,12 @@
 
 - 통과: 키워드 Controller·QueryRepository, 운영 API 인증·최근 이력 조회 테스트
 - 통과: `ShortformContentServiceTest` 5건과 운영 API `reserveDraft` 1건
-- 통과: 미디어 테스트 86건에서 선택 계약, fact card, 전 편집 형식 문안 길이, 출처 경고와 dry-run v3 보고서를 검증했다.
+- 통과: 미디어 테스트 111건에서 선택 계약, fact card, 형식 적격성, Brief 전용 작성·보정·fallback과 dry-run v5 보고서를 검증했다.
 - 통과: 후보 밖 ID·원문 불일치의 1회 보정과 `REPAIR_NO_EFFECT`, 일반 HTTP·JSON 오류 비보정을 검증했다.
 - 통과: `WHY_NOW` 최근 근거와 `KEYWORD_PRIMER` 대표 근거 허용을 검증하는 근거 시점 진단 테스트 3건
-- 통과: 시스템 topicKey·eventKey 결정성, manifest v3 세대 관측치와 대본 변경 시 eventKey 유지 테스트
+- 통과: 시스템 topicKey·eventKey 결정성, manifest v4 세대 관측치와 대본 변경 시 eventKey 유지 테스트
+- 통과: 운영 키워드 상세, YouTube 근거 메타데이터 저장과 기존 공개 API 회귀를 포함한 백엔드 집중 테스트
+- 통과: `editorial-format-eligibility.test.mjs` 6건을 포함한 전체 미디어 테스트
 - 통과: 백엔드 compileKotlin·compileTestKotlin·ktlint
 - 통과: 프론트엔드 typecheck
 - 통과: `./dev/check-context`
@@ -115,7 +126,9 @@
 - 통과: 개편 후 실제 3회 운영 dry-run은 3건 모두 첫 호출에 성공했고 후보·topicKey·eventKey·contentHash가 일치했으며 보정 호출은 없었다.
 - 확인: 동일 dry-run에서 `인턴`과 `WHY_NOW`, 관계 키워드 `한소희`·`최민식`, 최근 예고편 근거를 일관되게 선택했다.
 - 확인: 긴 클릭 유도형 제목 전체를 발췌해 첫 번째 이유가 100자 제한에서 문장 중간에 잘렸고, 시스템 문안이 영상 제목 확인을 반복해 정보 가치와 편집 다양성이 부족했다.
-- 예정: 형식 적용 조건, 짧은 원문 발췌, 문장 단위 길이 보장과 근거 기반 사실 슬롯을 포함하는 composer 개선
+- 통과: 2026-08-27 실제 운영 dry-run은 `재혼 황후`와 동일 topicKey·eventKey를 3회 유지하고 첫 호출에서 모두 성공했으며 작성 fallback은 없었다.
+- 확인: 같은 dry-run에서 근거 없는 관련 키워드 `스캔들`을 세 번 모두 제거하고, 감정 방향 단정 없이 관심·화제의 중립 문안만 생성했다.
+- 확인: dry-run 보고서 v5는 동일 실행 기준 118,002바이트에서 18,209바이트로 줄고 정상 iteration에서 중간 Brief·writer·manifest 중복을 제거했다.
 - 예정: `./dev/check-secrets --staged`
 
 #### 인계 메모
@@ -124,10 +137,10 @@
 - `cd backend && ./gradlew test --tests '*ShortformContentServiceTest' --tests '*ShortformContentOperationsControllerTest.reserveDraft returns created draft'` 검증을 통과했다.
 - 사람 승인 상태는 운영 렌더링 이후로 이동하며, MEDIA-005에서 최종 영상 승인·반려·재생성을 구현한다.
 - 운영 후보는 설명·근거 영상·출처 크롤링 회차가 있고 스냅샷이 72시간 이내인 키워드로 제한한다.
-- Gemini는 구조화 JSON으로 후보, 편집 형식, 관계 키워드와 영상 원문 발췌만 고른다. `topicKey`, `eventKey`, 제목·훅·요약·이유·내레이션과 근거 claim은 시스템이 생성한다.
+- 첫 번째 Gemini는 후보, 편집 형식, 사건 유형, 관계 키워드와 영상 원문 발췌만 고른다. 두 번째 Gemini는 검증된 Brief만 받아 문안을 작성하고 시스템은 `topicKey`, `eventKey`와 근거 claim을 결정한다.
 - 두 번째 실습으로 동일 hash, 활성 동일 사건, 최근 동일 주제와 허용 순서를 구현했고, 여러 이력이 섞여도 hash 충돌을 우선하는 회귀 테스트를 추가했다.
 - dry-run은 실제 예약과 동일한 후보·Gemini·중복 정책 코드를 사용하지만 `reserveDraft()`는 호출하지 않으며, 반복 결과의 key와 콘텐츠 hash 안정성을 보고서로 남긴다.
-- 제목·훅·요약·이유·내레이션은 애플리케이션 템플릿과 공통 길이 제한 함수로 생성하므로 모델 문안 길이와 과장 표현을 보정하지 않는다.
+- 작성 문안은 공통 길이·fact ID·금지 주장·근거 수치 계약을 검사하고 한 번 보정한다. 실패하면 애플리케이션 템플릿이 결정적 fallback을 생성한다.
 - 사용자 실습 대상이었던 보정 판정은 현재 후보·관계 키워드·영상 ID·원문 발췌 참조 오류만 허용하고 일반 HTTP·JSON·문안 오류는 제외한다.
 - 보정 호출은 허용 ID와 영상 제목·채널명 원문 안에서 잘못된 참조만 한 번 수정한다. 같은 잘못된 선택을 반환하면 추가 호출 없이 `REPAIR_NO_EFFECT`로 종료한다.
 - 2026-08-23 운영 dry-run의 성공 초안은 포켓로그를 선택했지만 근거 없는 `2030 세대` 표현이 포함됐다. 후속 보완에서는 30~40대를 설명 대상과 트렌드 관측 대상으로 구분하고 실제 후보 세대만 관심 주체로 허용한다.
@@ -136,8 +149,9 @@
 - dry-run의 `evidenceDiagnostics`는 근거별 게시 후 경과 일수와 최근 여부를 기록한다. `WHY_NOW`의 30일 기준은 사람 검수를 돕는 경고이며 초안 예약을 자동 차단하지 않는다.
 - 2026-08-24 운영 dry-run은 `FC온라인`을 3회 모두 선택했지만 Gemini가 같은 계기에 서로 다른 `eventKey`를 만들고 직접 영상 메타데이터에 없는 인물·금액·행동과 내부 순위를 대본에 사용했다. 후속 구현은 eventKey 시스템 생성, 원문 발췌 근거 계약, 내부 순위 금지와 성공 보정 진단으로 이 문제를 제한한다.
 - 같은 날 후속 dry-run은 검증을 강화한 대신 첫 위반만 고치는 보정과 별도 근거 ID 필드의 불일치로 3회 모두 실패했다. 내부 순위 신호를 프롬프트에서 제거하고 claim 기반 단일 근거 원천, 복합 위반 보정과 실패 진단을 추가했다.
-- 2026-08-26 dry-run은 검증 규칙을 늘려도 모델 자유 문안의 길이와 의미적 근거를 안정화하지 못한다는 점을 확인했다. 현재 구조는 Gemini를 선택기로 제한하고 `editorial-fact-card.mjs`, `editorial-draft-composer.mjs`, `source-review-warnings.mjs`가 검증·문안·사람 검수 경고를 각각 담당한다.
+- 2026-08-26 dry-run은 검증 규칙을 늘려도 후보 전체를 받은 모델의 자유 문안을 안정화하지 못한다는 점을 확인했다. 현재 구조는 선택 Gemini와 Brief 전용 작성 Gemini를 분리하고 `editorial-fact-card.mjs`, `editorial-writer-validation.mjs`, `editorial-draft-composer.mjs`가 각각 근거 검증, 작성 계약, fallback을 담당한다.
 - 개편 후 `dry-run-2026-08-26T14-32-58.json`은 가용성과 식별자 안정성 목표를 충족했다. 다만 결정적 composer가 긴 원문을 문자 단위로 자르고 모든 근거를 동일 문장으로 재진술하므로 현재 결과는 발행 가능한 대본이 아니라 다음 편집 다양성 개선의 기준선이다.
+- 2단계 구조는 `/api/ops/media/keywords/{id}`, `editorial-contract.mjs`, `editorial-fact-card.mjs`, `editorial-brief.mjs`, `gemini-editorial-writer.mjs`, `editorial-writer-validation.mjs` 순서로 이어진다. 백엔드 V7 배포와 실제 운영 dry-run 검증을 완료했다.
 
 ## READY
 
