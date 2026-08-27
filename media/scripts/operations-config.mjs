@@ -56,7 +56,7 @@ function loadCloudflareAccessCredentials(env) {
   return clientId && clientSecret ? { clientId, clientSecret } : null;
 }
 
-export function loadOperationalDraftConfig(env = process.env) {
+export function loadMediaOperationsConfig(env = process.env) {
   return Object.freeze({
     apiBaseUrl: requireUrl(env.TRENDZIP_API_BASE_URL, "TRENDZIP_API_BASE_URL"),
     mediaOperationsApiKey: requireString(
@@ -64,6 +64,19 @@ export function loadOperationalDraftConfig(env = process.env) {
       "MEDIA_OPERATIONS_API_KEY",
     ),
     cloudflareAccess: loadCloudflareAccessCredentials(env),
+    requestTimeoutMs: parsePositiveInteger(
+      env.MEDIA_REQUEST_TIMEOUT_MS,
+      "MEDIA_REQUEST_TIMEOUT_MS",
+      DEFAULT_REQUEST_TIMEOUT_MS,
+      120_000,
+    ),
+  });
+}
+
+export function loadOperationalDraftConfig(env = process.env) {
+  const mediaOperationsConfig = loadMediaOperationsConfig(env);
+  return Object.freeze({
+    ...mediaOperationsConfig,
     geminiApiKey: requireString(env.GEMINI_API_KEY, "GEMINI_API_KEY"),
     geminiBaseUrl: requireUrl(
       env.GEMINI_BASE_URL ?? DEFAULT_GEMINI_BASE_URL,
@@ -72,12 +85,6 @@ export function loadOperationalDraftConfig(env = process.env) {
     geminiModel: requireString(
       env.GEMINI_EDITORIAL_MODEL ?? DEFAULT_GEMINI_MODEL,
       "GEMINI_EDITORIAL_MODEL",
-    ),
-    requestTimeoutMs: parsePositiveInteger(
-      env.MEDIA_REQUEST_TIMEOUT_MS,
-      "MEDIA_REQUEST_TIMEOUT_MS",
-      DEFAULT_REQUEST_TIMEOUT_MS,
-      120_000,
     ),
     candidateLimitPerGeneration: parsePositiveInteger(
       env.MEDIA_CANDIDATE_LIMIT_PER_GENERATION,

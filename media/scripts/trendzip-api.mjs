@@ -107,5 +107,38 @@ export function createTrendzipApiClient({
       }
       return data;
     },
+    async registerRenderArtifact(shortformContentId, artifact) {
+      const data = await request(
+        `/api/ops/media/contents/${shortformContentId}/render-artifacts`,
+        {
+          method: "POST",
+          body: artifact,
+          operations: true,
+        },
+      );
+      if (
+        data?.content?.id !== shortformContentId ||
+        data.content.status !== "REVIEW_REQUIRED" ||
+        data?.artifact?.artifactHash !== artifact.artifactHash
+      ) {
+        throw new TrendzipApiError("Trendzip render artifact response has an invalid shape.");
+      }
+      return data;
+    },
+    async reviewRenderArtifact(shortformContentId, review) {
+      const data = await request(`/api/ops/media/contents/${shortformContentId}/reviews`, {
+        method: "POST",
+        body: review,
+        operations: true,
+      });
+      if (
+        data?.content?.id !== shortformContentId ||
+        data?.review?.artifactHash !== review.artifactHash ||
+        data.review.decision !== review.decision
+      ) {
+        throw new TrendzipApiError("Trendzip render review response has an invalid shape.");
+      }
+      return data;
+    },
   });
 }
