@@ -23,17 +23,13 @@
 
 ## ACTIVE
 
-현재 활성 작업 없음.
-
-## READY
-
 ### MEDIA-005 운영 숏폼 렌더링 및 사람 승인 게이트
 
-- 상태: READY
-- 브랜치: 미정
-- 시작일: 미정
+- 상태: REVIEW
+- 브랜치: codex/media-005-render-review-gate
+- 시작일: 2026-08-27
 - 마지막 갱신: 2026-08-27
-- 다음 행동: `codex/media-005-render-review-gate` 브랜치를 만들고 렌더 아티팩트·검수 이력 계약과 첫 운영 manifest 입력 검증부터 구현한다.
+- 다음 행동: 첫 검수본을 운영 API에 등록하고, 사용자가 MP4 전체를 재생해 명시적인 검수 결정을 기록한다.
 
 #### 목적
 
@@ -85,9 +81,9 @@
 
 #### 사용자 실습
 
-- Codex는 운영 manifest 입력 타입, 실패 테스트와 호출부를 준비한다.
-- 사용자는 실제 코드의 `createOperationalRenderProps()`를 구현해 manifest의 대본·근거·세대 정보를 `KeywordShortformProps`로 변환한다.
-- 타입 검사와 단위 테스트를 통과한 뒤 Codex가 불변식, 누락 필드와 샘플 렌더 회귀를 리뷰한다.
+- 최초 계획에서는 사용자가 `createOperationalRenderProps()`를 구현할 예정이었다.
+- 사용자의 명시적 요청에 따라 Codex가 이 실습 범위까지 구현하고, manifest의 대본·근거·세대 정보 매핑과 실패 계약을 테스트했다.
+- 운영 props에서는 샘플 표기를 제거하고 `운영 검수본` 배지를 사용하며 기존 샘플 렌더 회귀를 유지했다.
 
 #### 완료 조건
 
@@ -128,6 +124,35 @@
 - `media/src/types.ts`
 - `docs/media-publishing-policy.md`
 - `docs/media-tts-spike.md`
+
+#### 진행 상황
+
+- 렌더 아티팩트·검수 결정 이력, 상태 전이와 보호된 운영 API를 V8 migration과 함께 구현했다.
+- 운영 manifest v4를 Remotion props로 변환하고 공통 TTS, 격리된 실행 디렉터리, MP4·대표 장면·render manifest 생성을 구현했다.
+- 등록과 검수 CLI는 원본 manifest, WAV, props, MP4, 대표 장면과 영상 메타데이터 hash를 다시 검증한 뒤에만 운영 API를 호출한다.
+- 첫 `DRAFT(id=1)`로 실제 Gemini TTS와 51.179초 H.264·AAC 검수본을 생성했다. 대표 장면 다섯 개에서 텍스트 잘림과 요소 겹침이 없음을 확인했다.
+- 운영 DB에 V8 migration과 렌더·검수 API를 배포했다. 아티팩트 등록과 사람 결정은 아직 실행하지 않았다.
+
+#### 검증
+
+- 상태: PASS
+- 백엔드 렌더·검수 서비스 및 Controller 테스트 16건과 전체 `test`, `ktlintCheck`를 통과했다.
+- 미디어 테스트 125건과 TypeScript 검사를 통과했다.
+- 실제 운영 render manifest의 모든 파일 hash와 1080x1920·30fps·H.264·AAC 규격을 재검증했다.
+- 기존 무음 샘플을 다시 렌더해 1080x1920·30fps·36초·H.264·yuv420p·무음 규격을 확인했다.
+- 전체 Git 이력 비밀정보 검사, `./dev/verify --quick`과 `./dev/check-context --strict`를 통과했다.
+
+#### 인계 메모
+
+- 첫 검수본은 `media/out/operational-renders/1/2026-08-27T13-25-35-473Z/`에 있으며 Git에는 포함하지 않는다.
+- 아티팩트 hash는 `68ea7e23fdec28e528c2530b55ce2e0878bceb662433d1bdbf6d6fe3aa6cd7a0`이다.
+- 운영 백엔드 배포를 완료했다. 다음으로 `npm run draft:register -- <run-directory>`를 실행해 등록하며, 등록 전에는 검수 결정 명령을 실행할 수 없다.
+- 사용자가 MP4 전체의 발음·음량·자막 싱크·장면 전환과 근거를 확인한 뒤에만 `npm run draft:review -- <run-directory> --decision=... --reviewer=... --reason="..."`를 실행한다.
+- 코드와 자동 검증은 완료됐지만 사람 승인을 자동화하지 않는 것이 이 작업의 핵심 불변식이므로, 사용자 결정 전까지 `REVIEW`로 유지한다.
+
+## READY
+
+현재 준비된 작업 없음.
 
 ## LATER
 

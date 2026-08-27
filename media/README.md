@@ -130,6 +130,50 @@ MEDIA_DRY_RUN_COUNT=3 npm run draft:dry-run
 
 `npm run draft:prepare`는 중복 정책이 `ALLOW`인 경우에만 운영 API에 `DRAFT`를 예약한다. 생성된 검토 manifest는 `out/operational-drafts/{contentHash}.json`에 저장된다. `HOLD` 또는 `BLOCK`이면 예약과 파일 생성을 하지 않고 종료 코드 `2`를 반환한다. 이 단계에서는 TTS, 영상 렌더링과 게시를 실행하지 않는다.
 
+## 운영 TTS·렌더·사람 검수
+
+MEDIA-005는 예약된 manifest v4 하나를 불변 입력으로 사용한다. TTS는 Gemini 비용이 발생하므로 명시적으로 실행하고, 기본 출력 디렉터리는 콘텐츠 ID와 실행 시각으로 격리한다.
+
+```bash
+npm run tts:operational -- out/operational-drafts/<content-hash>.json
+```
+
+명령이 출력한 실행 디렉터리에는 원본 `source-manifest.json`, 장면별 WAV와 `tts/audio-manifest.json`이 생성된다. 일부 장면 생성이 실패하면 임시 디렉터리를 제거하고 완성 실행으로 노출하지 않는다. 같은 경로를 덮어쓰지 않으므로 실패한 실행 뒤에는 새 명령을 실행한다.
+
+기존 음성을 사용해 MP4, 대표 장면과 render manifest를 만든다. 이 단계는 Gemini API를 호출하지 않는다.
+
+```bash
+npm run render:operational -- out/operational-renders/<content-id>/<run-directory>
+```
+
+렌더가 성공하면 다음 결과가 같은 실행 디렉터리에 남는다.
+
+- `video.mp4`: 1080x1920, 30fps, H.264·AAC 검수본
+- `stills/*.png`: 장면별 대표 프레임 다섯 개
+- `render-props.json`: 실제 음성 길이로 계산한 Remotion 입력
+- `render-manifest.json`: 원본, 음성, props, MP4, 대표 장면 hash와 TTS·영상 규격
+
+렌더 중 실패하면 임시 MP4, 대표 장면과 props를 제거한다. 완성된 `render-manifest.json`이 있는 실행은 덮어쓰지 않는다. 파일을 바꿔 재렌더하려면 새 실행 디렉터리를 만들고 TTS부터 다시 생성한다.
+
+운영 백엔드에 V8 migration이 배포된 뒤 검수 대상을 등록한다. 등록 명령은 모든 파일 hash와 ffprobe 메타데이터를 다시 확인한 후 API를 호출하며 콘텐츠를 `REVIEW_REQUIRED`로 전환한다.
+
+```bash
+npm run draft:register -- out/operational-renders/<content-id>/<run-directory>
+```
+
+등록 후에는 `video.mp4` 전체와 대표 장면을 사람이 확인한다. 발음·속도·음량, 장면 전환·자막 싱크·겹침, 두 이유와 근거, CTA와 AI 제작 보조 공개를 모두 확인하기 전에는 결정을 기록하지 않는다.
+
+```bash
+npm run draft:review -- out/operational-renders/<content-id>/<run-directory> \
+  --decision=APPROVED \
+  --reviewer=operator \
+  --reason="전체 영상과 근거를 확인했습니다."
+```
+
+`--decision`은 `APPROVED`, `NEEDS_REVISION`, `REJECTED` 중 하나다. 검수자와 사유는 필수이며 등록된 최신 아티팩트 hash가 아니면 결정할 수 없다. `NEEDS_REVISION`은 같은 대본으로 음성·렌더를 다시 만들 때 사용한다. 대본이나 근거를 고쳐야 하면 기존 hash를 수정하지 말고 MEDIA-004에서 새 `DRAFT`를 생성한다. 이전 렌더와 검수 결정은 DB에 보존한다.
+
+테스트와 CI는 가짜 TTS client와 임시 파일을 사용하며 Gemini API나 운영 등록·검수 API를 호출하지 않는다. `GEMINI_API_KEY`, `MEDIA_OPERATIONS_API_KEY`와 Cloudflare service token은 `.env.local`에만 두고 manifest나 로그에 기록하지 않는다. 승인 명령은 자동 파이프라인에 포함하지 않는다.
+
 정책, 라이선스와 후속 판단은 [`docs/media-shortform-spike.md`](../docs/media-shortform-spike.md)를 따른다.
 TTS 선택과 비용 경계는 [`docs/media-tts-spike.md`](../docs/media-tts-spike.md)를 따른다.
 운영 후보와 중복 판정 기준은 [`docs/media-publishing-policy.md`](../docs/media-publishing-policy.md)를 따른다.

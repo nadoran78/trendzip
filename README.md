@@ -105,7 +105,7 @@ trendzip/
 ├── .github/workflows/       # CI workflow
 ├── backend/                 # Kotlin + Spring Boot API and scheduler
 ├── frontend/                # Next.js App Router web application
-├── media/                   # Remotion short-form rendering spike
+├── media/                   # Remotion short-form draft, TTS, rendering and review tools
 ├── docker/                  # Local PostgreSQL initialization
 ├── infra/                   # Shared Mac mini reverse proxy configuration
 ├── design/                  # Confirmed screen designs
@@ -161,6 +161,7 @@ npm run dev
 - Backend local: [`backend/.env.example`](backend/.env.example)
 - Backend production: [`backend/.env.prod.example`](backend/.env.prod.example)
 - Frontend: [`frontend/.env.example`](frontend/.env.example)
+- Media operations: [`media/.env.example`](media/.env.example)
 
 주요 외부 연동 값은 다음과 같습니다.
 
@@ -219,8 +220,8 @@ GitHub Actions는 pull request와 `develop` push에서 Gitleaks 검사를 먼저
 
 다음 우선순위는 다음과 같습니다.
 
-1. 숏폼 발행 정책을 적용한 운영 후보·제작 초안 연결
-2. 제작 초안의 사람 승인·반려·재생성과 비공개 업로드 자동화
+1. 첫 운영 숏폼 검수본의 운영 등록과 사람 승인
+2. 승인된 숏폼의 YouTube 비공개 업로드 자동화
 3. OpenAPI 기반 frontend 타입 계약 자동화
 4. 핵심 사용자 흐름 E2E 테스트
 
