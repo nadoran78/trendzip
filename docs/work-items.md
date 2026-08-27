@@ -23,82 +23,98 @@
 
 ## ACTIVE
 
-### MEDIA-004 운영 후보 자동 선정 및 제작 이력 기반 초안 생성
+현재 활성 작업 없음.
 
-- 상태: REVIEW
-- 브랜치: codex/media-004-operational-draft
-- 시작일: 2026-08-21
+## READY
+
+### MEDIA-005 운영 숏폼 렌더링 및 사람 승인 게이트
+
+- 상태: READY
+- 브랜치: 미정
+- 시작일: 미정
 - 마지막 갱신: 2026-08-27
-- 다음 행동: MEDIA-004 커밋을 검토해 `develop`에 병합한 뒤 첫 운영 `DRAFT(id=1)`를 MEDIA-005 렌더링 입력으로 사용한다.
+- 다음 행동: `codex/media-005-render-review-gate` 브랜치를 만들고 렌더 아티팩트·검수 이력 계약과 첫 운영 manifest 입력 검증부터 구현한다.
 
 #### 목적
 
-- 운영 키워드와 최근 숏폼 제작 이력을 API로 조회해 중복되지 않는 제작 초안을 자동으로 준비한다.
-- Gemini 1차 호출은 후보와 직접 근거를 선택하고 2차 호출은 검증된 Editorial Brief만으로 문안을 작성하며, 운영자는 후속 단계에서 최종 렌더링 결과를 승인한다.
+- MEDIA-004가 예약한 운영 `DRAFT`를 실제 한국어 음성, 세로형 MP4와 검수용 대표 장면으로 변환한다.
+- 렌더 결과를 원본 콘텐츠 hash와 결합해 기록하고, 사람이 확인한 동일 아티팩트만 승인·반려·재생성할 수 있게 한다.
 
 #### 범위
 
-- 키워드 상세 API에 원본 크롤링 회차와 스냅샷 시각을 추가한다.
-- 숏폼 콘텐츠와 연관 키워드의 제작 이력 스키마, 도메인, 저장소를 추가한다.
-- 최근 이력 조회, `DRAFT` 예약과 상태 갱신을 위한 인증된 운영 API를 추가한다.
-- 운영 후보·제작 이력 수집, Gemini 근거 선택, fact card·Editorial Brief·별도 작성기, 중복 정책 검사와 구조화 초안 생성을 `media` 모듈에 연결한다.
-- Kotlin `DRAFT` 예약 서비스와 Node 30일 중복 판정을 실제 운영 코드 실습으로 진행한다.
+- manifest v4의 예약 ID, 콘텐츠 hash, 대본, 근거와 경고를 검증하는 운영 렌더 입력 계약을 추가한다.
+- 운영 manifest를 기존 `KeywordShortformProps`로 변환하고 샘플 전용 fixture와 운영 입력 경계를 분리한다.
+- 기존 Gemini TTS, audio manifest, timeline과 Remotion 렌더 코드를 임의의 운영 초안에도 재사용할 수 있게 모듈화한다.
+- 실행마다 격리된 출력 디렉터리에 WAV, audio manifest, MP4, 대표 장면과 render manifest를 생성한다.
+- MP4 hash, 원본 콘텐츠 hash, TTS 모델·음성, 음성 manifest hash, 영상 규격과 생성 시각을 렌더 아티팩트로 기록한다.
+- 렌더 아티팩트와 사람 검수 결정을 보존하는 Flyway 스키마, 도메인, 저장소와 보호된 운영 API를 추가한다.
+- 검증된 렌더를 `REVIEW_REQUIRED`로 전환하고 `APPROVED`, `NEEDS_REVISION`, `REJECTED` 결정을 검수자·사유·아티팩트 hash와 함께 기록하는 CLI를 추가한다.
+- 첫 운영 초안 `DRAFT(id=1)`를 사용해 실제 TTS·렌더·대표 장면 생성과 수동 전체 재생 검수를 진행한다.
 
 #### 제외 범위
 
-- 운영 TTS와 영상 렌더링
-- 승인·반려 UI
-- YouTube 업로드와 자동 공개
-- 운영자의 필수 편집 입력
+- YouTube 비공개 업로드, 예약 공개와 다른 SNS 배포
+- 사람 승인을 대신하는 자동 품질 판정
+- 운영자용 웹 관리 화면
+- 권리를 확보하지 않은 YouTube 영상·썸네일·방송·영화 클립과 외부 음원 사용
+- 대본 내용 수정과 새 콘텐츠 hash 생성. 문안 변경이 필요하면 기존 초안을 반려하고 MEDIA-004에서 새 `DRAFT`를 만든다.
 
-#### 진행 상황
+#### 구현 단계
 
-- [x] MEDIA-003에서 후보 선정, 반복 방지와 발행 정책을 확정했다.
-- [x] 키워드 상세 API에 `sourceCrawlRunId`, `snapshotAt`, `explainedAt`을 추가했다.
-- [x] 숏폼 제작 이력 스키마, 도메인, 저장소, 최근 이력 조회와 운영 API 인증 기반을 준비했다.
-- [x] Kotlin 실습을 위한 Controller·DTO·Repository와 정상·중복 실패 테스트를 준비했다.
-- [x] Kotlin `reserveDraft` 실습을 완료하고 리뷰한다.
-- [x] 운영 후보 수집과 Gemini 구조화 편집 계획, 콘텐츠 hash, `DRAFT` 예약과 검토 manifest 생성을 연결했다.
-- [x] Node 중복 정책 실습을 완료하고 전체 미디어 테스트로 판정 우선순위를 검증했다.
-- [x] 후보와 이력을 한 번만 조회하고 Gemini 계획을 반복 비교하는 무예약 dry-run 경로를 추가했다.
-- [x] 근거 없는 주장과 과장 표현을 구분하고 hook 40자 목표·48자 한계를 적용하는 편집 계약 검증을 추가했다.
-- [x] 사용자가 실제 운영 코드의 `shouldRepairEditorialPlan(error)` 재호출 판정을 구현하고 경계값을 보완했다.
-- [x] 복구 가능한 편집 계약 오류만 지연 후 한 번 보정하고 생성 시도 횟수를 dry-run 보고서에 기록한다.
-- [x] 후보 밖 관계 키워드·근거 영상 ID를 구조화된 오류로 기록하고 선택 후보의 허용 ID 안에서 한 번 보정한다.
-- [x] 사용자가 성공 표본 2건 미만은 비교 불가로 판정하는 안정성 순수 함수를 구현하고 반환 경로를 단순화했다.
-- [x] 30~40대를 설명 대상과 트렌드 관측 대상으로 구분하고 선택 키워드가 실제 등장한 세대만 관심 주체로 허용한다.
-- [x] 근거 영상 게시 시점과 생성 시점 차이를 계산하고 `WHY_NOW`에 최근 30일 근거가 없으면 비차단 경고를 기록한다.
-- [x] `eventKey`를 Gemini 응답에서 제거하고 주제·편집 형식·크롤링 실행 ID로 시스템이 결정적으로 생성한다.
-- [x] 이전 자유 문안 접근에서 기존 키워드 설명을 참고 문맥으로 격리하고 두 핵심 이유를 선택 영상 원문에 연결하는 `evidenceClaims`를 추가했다.
-- [x] `1020`·`10~20대` 결합 표현과 내부 순위·점수·연속 노출 주차를 검증하고 위반 시 한 번 보정한다.
-- [x] 이전 manifest v2에 세대별 원본 관측치와 성공한 보정의 최초 오류 진단을 기록했다.
-- [x] 이전 자유 문안 접근에서 순위·점수·순위 변화 값을 Gemini 입력에서 제거하고 근거 영상 ID를 `evidenceClaims`에서 결정적으로 파생했다.
-- [x] 이전 dry-run v2에서 복구 가능한 문안 위반을 수집해 한 번 보정하고 최초·최종 계획과 오류를 기록했다.
-- [x] 실제 dry-run에서 문안 길이 초과와 원문 발췌에 기대어 근거 없는 해석을 생성하는 회귀 사례를 테스트로 고정했다.
-- [x] Gemini 응답을 후보·편집 형식·관계 키워드·영상 원문 발췌 선택으로 축소했다.
-- [x] 정규화 키워드 기반 `topicKey`, 검증된 fact card와 제한 길이 문안을 시스템에서 결정적으로 생성한다.
-- [x] 후보 밖 ID와 존재하지 않는 원문 발췌만 한 번 보정하고 동일 응답은 `REPAIR_NO_EFFECT`로 진단한다.
-- [x] 클릭 유도형 제목·오래된 근거·주제 불일치를 비차단 `reviewWarnings`로 기록한다.
-- [x] dry-run·manifest v3에 선택 결과, fact card, 시스템 문안과 `SELECTION`·`FACT_ASSEMBLY`·`COMPOSITION`·`DUPLICATE_POLICY` 실패 단계를 기록한다.
-- [x] `trend_videos`에 YouTube 설명·태그를 보존하고 보호된 운영 상세 API에서 `channelId`와 함께 제공한다.
-- [x] 1차 Gemini 선택 계약에 통제된 사건 유형, 근거 필드와 근거 역할을 추가했다.
-- [x] 실제 판정에 사용되지 않는 수동 출처 등급 설정은 제거하고 향후 정책 확장을 위한 원본 `channelId`만 유지했다.
-- [x] 검증된 fact card, 허용 엔티티, 금지 주장과 형식 fallback 진단을 담는 Editorial Brief 조립기를 준비했다.
-- [x] 편집 형식별 최소 근거를 판정하고 부족한 형식을 `KEYWORD_PRIMER`로 낮추는 `validateEditorialFormatEligibility()`를 구현했다.
-- [x] 검증된 Editorial Brief 전용 Gemini 작성기와 결과 검증·1회 보정·결정적 fallback을 연결했다.
-- [x] 백엔드 V7과 운영 근거 API를 배포한 뒤 실제 운영 dry-run으로 2단계 생성 결과를 검증했다.
-- [x] 근거 발췌에서 확인되지 않는 관련 키워드를 제거하고 감정 방향을 단정하는 작성 문구를 중립 표현으로 보정한다.
-- [x] 정상 결과의 중간 산출물 중복을 제거하고 이상 진단만 조건부로 남기는 dry-run 보고서 v5를 적용했다.
-- [x] `draft:prepare`로 첫 운영 초안 `DRAFT(id=1)`와 manifest를 예약하고 PRIMARY 키워드 스냅샷까지 운영 API로 대조했다.
-- [x] 첫 manifest를 결정적으로 재생해 `EXACT_CONTENT` 차단, 추가 예약 0회와 추가 manifest 미생성을 확인했다.
-- [x] 일반 재실행에서 별도 후보가 선택될 수 있음을 확인하고 테스트용 두 번째 초안 `id=2`를 이력을 보존한 채 `REJECTED`로 전환했다.
+1. 렌더·검수 계약과 저장 모델을 정의한다.
+   - `shortform_render_artifacts`에 콘텐츠 ID·hash, 렌더 hash, TTS·영상 메타데이터와 생성 시각을 보존한다.
+   - `shortform_review_decisions`에 대상 아티팩트, 결정, 검수자, 사유와 결정 시각을 보존한다.
+   - 같은 렌더 hash의 중복 등록과 현재 아티팩트가 아닌 결과의 승인을 차단한다.
+2. 운영 manifest 입력 어댑터를 구현한다.
+   - `DRAFT`, 예약 ID, manifest·reservation hash 일치와 필수 대본·근거를 검사한다.
+   - 세대, 제목, 요약, 두 이유, 근거와 CTA를 기존 Remotion props에 매핑한다.
+   - 샘플 fixture 렌더 경로의 회귀 동작을 유지한다.
+3. 운영 TTS·렌더 파이프라인을 구현한다.
+   - TTS는 비용이 발생하는 별도 명시 명령으로 유지하고 테스트에서는 가짜 transport를 사용한다.
+   - 렌더는 기존 음성의 대본 hash를 재검사한 뒤 H.264·AAC MP4와 대표 장면을 생성한다.
+   - ffprobe 규격 검사와 파일 hash 계산이 끝난 경우에만 아티팩트를 운영 API에 등록한다.
+4. 사람 승인 게이트를 구현한다.
+   - 렌더 등록 후 콘텐츠를 `REVIEW_REQUIRED`로 전환하고 검수 체크리스트와 파일 경로를 출력한다.
+   - 승인·수정 요청·반려는 명시적 CLI 명령, 검수자와 사유를 필수로 받는다.
+   - 승인 요청의 아티팩트 hash가 최신 렌더와 다르면 상태를 변경하지 않는다.
+   - `NEEDS_REVISION` 재렌더는 이전 아티팩트와 결정을 보존하고 새 렌더 이력을 생성한다.
+5. 첫 운영 초안을 실제 검수한다.
+   - `DRAFT(id=1)`의 TTS 발음, 음량, 장면 전환, 자막, 근거 표시와 CTA를 전체 재생으로 확인한다.
+   - 자동으로 `APPROVED` 처리하지 않고 사용자가 결과를 확인한 뒤 최종 결정을 입력한다.
+   - 실행 절차, 비용 경계, 장애 복구와 MEDIA-006 인계 정보를 문서화한다.
+
+#### 사용자 실습
+
+- Codex는 운영 manifest 입력 타입, 실패 테스트와 호출부를 준비한다.
+- 사용자는 실제 코드의 `createOperationalRenderProps()`를 구현해 manifest의 대본·근거·세대 정보를 `KeywordShortformProps`로 변환한다.
+- 타입 검사와 단위 테스트를 통과한 뒤 Codex가 불변식, 누락 필드와 샘플 렌더 회귀를 리뷰한다.
 
 #### 완료 조건
 
-- 운영 API를 통해 최근 제작 이력을 조회하고 중복 없는 `DRAFT`를 원자적으로 예약할 수 있다.
-- Gemini 선택 결과가 실제 후보와 영상 메타데이터 검사를 통과한 경우에만 시스템 문안과 검토 manifest를 생성한다.
-- 동일 사건, 동일 콘텐츠와 최근 30일 동일 주제의 중복을 정의된 정책대로 차단하거나 보류한다.
-- 실제 외부 API를 호출하지 않는 자동 테스트와 저장소 검증을 통과한다.
+- 첫 운영 manifest로 장면별 WAV, audio manifest, 1080x1920·30fps H.264·AAC MP4와 대표 장면을 생성한다.
+- 원본 콘텐츠 hash, 대본 hash, 음성 설정과 최종 MP4 hash가 하나의 render manifest 및 운영 아티팩트 이력으로 연결된다.
+- 렌더·파일 규격 검증 실패 시 콘텐츠 상태와 운영 아티팩트 이력을 변경하지 않는다.
+- 사람 결정 전에는 `APPROVED`가 될 수 없고 최신 아티팩트가 아닌 결과는 승인할 수 없다.
+- 승인·수정 요청·반려의 검수자, 사유, 대상 아티팩트와 시각이 보존된다.
+- 샘플 렌더 회귀, 외부 API 없는 자동 테스트, 저장소 빠른 검증과 비밀정보 검사를 통과한다.
+
+#### 검증 계획
+
+- 백엔드 도메인 상태 전이, 아티팩트 중복, 최신 hash 승인과 검수 이력 통합 테스트
+- 운영 API 인증, 렌더 등록과 승인·수정 요청·반려 Controller 테스트
+- 운영 manifest 어댑터, TTS 재사용, render manifest hash와 실패 원자성 Node 테스트
+- 미디어 타입 검사와 기존 샘플·narrated 렌더 회귀 테스트
+- 실제 Gemini TTS 호출은 첫 운영 초안 수동 검증에서만 실행
+- 실제 MP4 ffprobe, 대표 장면, 전체 재생과 사람 결정 확인
+- `./dev/verify --quick`, `./dev/check-context`, `./dev/check-secrets --staged`
+
+#### 예상 커밋 단위
+
+1. `feat: 숏폼 렌더 아티팩트와 검수 이력 추가`
+2. `feat: 운영 초안 렌더 입력 변환 추가`
+3. `feat: 운영 TTS와 영상 렌더 파이프라인 추가`
+4. `feat: 숏폼 사람 승인 게이트 추가`
+5. `docs: MEDIA-005 운영 검증 결과 기록`
 
 #### 관련 코드
 
@@ -107,69 +123,14 @@
 - `backend/src/main/kotlin/com/mztrend/service/ShortformContentService.kt`
 - `backend/src/main/resources/db/migration`
 - `media/scripts`
+- `media/src/Root.tsx`
+- `media/src/TrendKeywordShort.tsx`
+- `media/src/types.ts`
 - `docs/media-publishing-policy.md`
-
-#### 검증
-
-- 상태: PASS
-- 통과: 키워드 Controller·QueryRepository, 운영 API 인증·최근 이력 조회 테스트
-- 통과: `ShortformContentServiceTest` 5건과 운영 API `reserveDraft` 1건
-- 통과: 미디어 테스트 111건에서 선택 계약, fact card, 형식 적격성, Brief 전용 작성·보정·fallback과 dry-run v5 보고서를 검증했다.
-- 통과: 후보 밖 ID·원문 불일치의 1회 보정과 `REPAIR_NO_EFFECT`, 일반 HTTP·JSON 오류 비보정을 검증했다.
-- 통과: `WHY_NOW` 최근 근거와 `KEYWORD_PRIMER` 대표 근거 허용을 검증하는 근거 시점 진단 테스트 3건
-- 통과: 시스템 topicKey·eventKey 결정성, manifest v4 세대 관측치와 대본 변경 시 eventKey 유지 테스트
-- 통과: 운영 키워드 상세, YouTube 근거 메타데이터 저장과 기존 공개 API 회귀를 포함한 백엔드 집중 테스트
-- 통과: `editorial-format-eligibility.test.mjs` 6건을 포함한 전체 미디어 테스트
-- 통과: 백엔드 compileKotlin·compileTestKotlin·ktlint
-- 통과: 프론트엔드 typecheck
-- 통과: `./dev/check-context`
-- 통과: `./dev/verify --quick`
-- 확인: 실제 3회 운영 dry-run에서 1회 성공, 후보 밖 `evidenceVideoIds`로 2회 실패했으며 성공 표본 1건만으로 안정성 값이 `true`가 되는 문제를 발견했다.
-- 확인: 후속 실제 3회 운영 dry-run은 모든 응답을 한 번 보정했으나 내부 순위 오류 2건과 이중 근거 ID 불일치 1건으로 모두 실패했다. 입력에서 내부 지표를 제거하고 근거 ID를 claim에서만 파생하며 복구 가능한 위반을 합산하도록 보완했다.
-- 확인: 2026-08-26 실제 3회 운영 dry-run은 summary 길이 초과 2건과 근거 없는 세대 주장 보정 실패 1건으로 모두 실패했다. 모델 문안 생성과 정규식 보정을 제거하고 근거 선택·시스템 문안 조립 구조로 개편했다.
-- 통과: 개편 후 실제 3회 운영 dry-run은 3건 모두 첫 호출에 성공했고 후보·topicKey·eventKey·contentHash가 일치했으며 보정 호출은 없었다.
-- 확인: 동일 dry-run에서 `인턴`과 `WHY_NOW`, 관계 키워드 `한소희`·`최민식`, 최근 예고편 근거를 일관되게 선택했다.
-- 확인: 긴 클릭 유도형 제목 전체를 발췌해 첫 번째 이유가 100자 제한에서 문장 중간에 잘렸고, 시스템 문안이 영상 제목 확인을 반복해 정보 가치와 편집 다양성이 부족했다.
-- 통과: 2026-08-27 실제 운영 dry-run은 `재혼 황후`와 동일 topicKey·eventKey를 3회 유지하고 첫 호출에서 모두 성공했으며 작성 fallback은 없었다.
-- 확인: 같은 dry-run에서 근거 없는 관련 키워드 `스캔들`을 세 번 모두 제거하고, 감정 방향 단정 없이 관심·화제의 중립 문안만 생성했다.
-- 확인: dry-run 보고서 v5는 동일 실행 기준 118,002바이트에서 18,209바이트로 줄고 정상 iteration에서 중간 Brief·writer·manifest 중복을 제거했다.
-- 통과: 2026-08-27 `draft:prepare`로 `재혼 황후`, `WHY_NOW`, crawl run `101`의 첫 운영 초안 `id=1`을 예약했고 manifest hash와 운영 API 저장 hash가 일치했다.
-- 통과: `id=1`의 키워드 스냅샷은 `재혼 황후` PRIMARY 한 건이며 근거 없는 관련 키워드 `스캔들`은 manifest와 DB 예약 데이터에서 제외됐다.
-- 통과: 첫 manifest 결정적 재생은 `EXACT_CONTENT`, 충돌 ID `1`, `reserveDraft()` 0회로 종료됐고 추가 manifest를 만들지 않았다.
-- 확인: 일반 `draft:prepare` 재실행은 생성형 선택 단계에서 별도 후보 `인턴`을 골라 중복이 아닌 새 초안을 만들었다. 테스트 이력 `id=2`는 `REJECTED`로 전환했고 첫 `DRAFT(id=1)`만 후속 제작 대상으로 유지한다.
-- 통과: `./dev/check-secrets --staged`
-
-#### 인계 메모
-
-- Kotlin 실습에서 `DRAFT` 중복 검사, 키워드 불변식 검증, 콘텐츠·키워드 스냅샷 원자적 저장과 DB 경합 예외 변환을 구현했다.
-- `cd backend && ./gradlew test --tests '*ShortformContentServiceTest' --tests '*ShortformContentOperationsControllerTest.reserveDraft returns created draft'` 검증을 통과했다.
-- 사람 승인 상태는 운영 렌더링 이후로 이동하며, MEDIA-005에서 최종 영상 승인·반려·재생성을 구현한다.
-- 운영 후보는 설명·근거 영상·출처 크롤링 회차가 있고 스냅샷이 72시간 이내인 키워드로 제한한다.
-- 첫 번째 Gemini는 후보, 편집 형식, 사건 유형, 관계 키워드와 영상 원문 발췌만 고른다. 두 번째 Gemini는 검증된 Brief만 받아 문안을 작성하고 시스템은 `topicKey`, `eventKey`와 근거 claim을 결정한다.
-- 두 번째 실습으로 동일 hash, 활성 동일 사건, 최근 동일 주제와 허용 순서를 구현했고, 여러 이력이 섞여도 hash 충돌을 우선하는 회귀 테스트를 추가했다.
-- dry-run은 실제 예약과 동일한 후보·Gemini·중복 정책 코드를 사용하지만 `reserveDraft()`는 호출하지 않으며, 반복 결과의 key와 콘텐츠 hash 안정성을 보고서로 남긴다.
-- 중복 정책은 Gemini가 선택한 초안 단위로 판정한다. 명령 자체를 재실행하면 다른 후보가 선택될 수 있으므로 특정 초안의 중복 회귀는 저장된 manifest를 결정적으로 재생해 검증한다.
-- 작성 문안은 공통 길이·fact ID·금지 주장·근거 수치 계약을 검사하고 한 번 보정한다. 실패하면 애플리케이션 템플릿이 결정적 fallback을 생성한다.
-- 사용자 실습 대상이었던 보정 판정은 현재 후보·관계 키워드·영상 ID·원문 발췌 참조 오류만 허용하고 일반 HTTP·JSON·문안 오류는 제외한다.
-- 보정 호출은 허용 ID와 영상 제목·채널명 원문 안에서 잘못된 참조만 한 번 수정한다. 같은 잘못된 선택을 반환하면 추가 호출 없이 `REPAIR_NO_EFFECT`로 종료한다.
-- 2026-08-23 운영 dry-run의 성공 초안은 포켓로그를 선택했지만 근거 없는 `2030 세대` 표현이 포함됐다. 후속 보완에서는 30~40대를 설명 대상과 트렌드 관측 대상으로 구분하고 실제 후보 세대만 관심 주체로 허용한다.
-- 후보 밖 참조 ID 보정에서는 `primaryKeywordId`, `relatedKeywordIds`, `evidenceSelections[].evidenceVideoId`와 `sourceExcerpt`만 허용 목록·원문 안에서 다시 고른다.
-- 시스템 문안은 30~40대를 설명을 읽는 대상으로만 고정해 언급하고 관측된 유행 세대로 단정하지 않으며 내부 순위를 사용하지 않는다.
-- dry-run의 `evidenceDiagnostics`는 근거별 게시 후 경과 일수와 최근 여부를 기록한다. `WHY_NOW`의 30일 기준은 사람 검수를 돕는 경고이며 초안 예약을 자동 차단하지 않는다.
-- 2026-08-24 운영 dry-run은 `FC온라인`을 3회 모두 선택했지만 Gemini가 같은 계기에 서로 다른 `eventKey`를 만들고 직접 영상 메타데이터에 없는 인물·금액·행동과 내부 순위를 대본에 사용했다. 후속 구현은 eventKey 시스템 생성, 원문 발췌 근거 계약, 내부 순위 금지와 성공 보정 진단으로 이 문제를 제한한다.
-- 같은 날 후속 dry-run은 검증을 강화한 대신 첫 위반만 고치는 보정과 별도 근거 ID 필드의 불일치로 3회 모두 실패했다. 내부 순위 신호를 프롬프트에서 제거하고 claim 기반 단일 근거 원천, 복합 위반 보정과 실패 진단을 추가했다.
-- 2026-08-26 dry-run은 검증 규칙을 늘려도 후보 전체를 받은 모델의 자유 문안을 안정화하지 못한다는 점을 확인했다. 현재 구조는 선택 Gemini와 Brief 전용 작성 Gemini를 분리하고 `editorial-fact-card.mjs`, `editorial-writer-validation.mjs`, `editorial-draft-composer.mjs`가 각각 근거 검증, 작성 계약, fallback을 담당한다.
-- 개편 후 `dry-run-2026-08-26T14-32-58.json`은 가용성과 식별자 안정성 목표를 충족했다. 다만 결정적 composer가 긴 원문을 문자 단위로 자르고 모든 근거를 동일 문장으로 재진술하므로 현재 결과는 발행 가능한 대본이 아니라 다음 편집 다양성 개선의 기준선이다.
-- 2단계 구조는 `/api/ops/media/keywords/{id}`, `editorial-contract.mjs`, `editorial-fact-card.mjs`, `editorial-brief.mjs`, `gemini-editorial-writer.mjs`, `editorial-writer-validation.mjs` 순서로 이어진다. 백엔드 V7 배포와 실제 운영 dry-run 검증을 완료했다.
-- 첫 운영 제작 입력은 `media/out/operational-drafts/54d1df6bb910ff3001da66fe1b235133b2672f00a332af8b35d8acd17aa0bc9c.json`이며 생성물 디렉터리는 Git에서 제외한다.
-
-## READY
-
-현재 준비된 작업 없음.
+- `docs/media-tts-spike.md`
 
 ## LATER
 
-- MEDIA-005 숏폼 운영 렌더링과 최종 결과 승인·반려·재생성 게이트
 - MEDIA-006 승인된 숏폼의 YouTube 비공개 업로드
 - MEDIA-007 발행 일정·SNS 확장 자동화
 - Android Chrome 홈 화면 설치와 standalone 실행 호환성 확인
@@ -181,6 +142,16 @@
 - 아키텍처 규칙 자동 검사
 
 ## 최근 완료
+
+### MEDIA-004 운영 후보 자동 선정 및 제작 이력 기반 초안 생성
+
+- 상태: DONE
+- 브랜치: develop
+- 완료일: 2026-08-27
+- 결과: 운영 키워드·제작 이력 수집, Gemini 근거 선택과 Brief 전용 문안 작성, 시스템 topicKey·eventKey, 30일 중복 정책과 원자적 `DRAFT` 예약을 연결했다.
+- 운영 검증: 첫 `DRAFT(id=1)`와 manifest를 예약하고 PRIMARY 키워드 스냅샷·hash를 대조했으며, 결정적 재생에서 `EXACT_CONTENT`와 추가 예약 0회를 확인했다.
+- 운영 메모: 일반 재실행에서 선택된 별도 후보 `id=2`는 `REJECTED`로 보존했고 첫 `DRAFT(id=1)`만 MEDIA-005 입력으로 유지한다.
+- 검증: 미디어 테스트 111건, 타입 검사, 백엔드 ktlint, 프론트 lint·타입 검사, 저장소 빠른 검증과 Gitleaks를 통과했다.
 
 ### MEDIA-003 숏폼 선정·편집·발행 정책 설계
 
@@ -223,12 +194,3 @@
 - 운영 검증: Tag Assistant가 GTM·GA4 태그를 정상 탐지했고 GA4 수집 요청 `204`, Realtime 활성 사용자와 DebugView의 `page_view`, `scroll`, `select_generation`을 확인했다. Preview에서 `select_generation`, `generation_change`, `view_keyword_detail`, `youtube_video_click`의 1회 실행을 확인했다.
 - 후속 메모: 운영 샘플에 관련 키워드가 표시될 때 `related_keyword_click`을 재확인하고, 일반 보고서 누적과 GTM 보조 관리자 추가를 운영 점검으로 남긴다.
 - 검증: 프론트 lint·타입 검사·production build·npm audit·저장소 빠른 검증·Gitleaks를 통과했고 운영 동의 변경과 GA4 Realtime·DebugView·Tag Assistant를 확인했다.
-
-### OBS-001 Vercel Web Analytics 운영 트래픽 측정
-
-- 상태: DONE
-- 브랜치: develop
-- 완료일: 2026-08-07
-- 결과: `@vercel/analytics`를 Next.js 루트 레이아웃에 연결하고 Vercel Web Analytics에서 운영 방문자와 페이지 조회를 수집한다.
-- 운영 메모: SDK의 자동 환경 감지를 사용하며 별도 환경변수나 GitHub Secret은 필요하지 않다. 제품 행동 이벤트는 후속 GA4·GTM 작업에서 다룬다.
-- 검증: 프론트 lint·타입 검사·production build·npm audit·저장소 빠른 검증과 Gitleaks를 통과했다. 운영 배포 후 Analytics 네트워크 요청과 Vercel 대시보드의 방문자·페이지 조회·경로 수집을 확인했다.
