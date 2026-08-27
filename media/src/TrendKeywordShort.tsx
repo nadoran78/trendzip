@@ -332,7 +332,10 @@ function OverviewScene({
               justifyContent: "space-between",
             }}
           >
-            <div style={{ fontSize: 28, fontWeight: 800 }}>{props.generationLabel} SAMPLE</div>
+            <div style={{ fontSize: 28, fontWeight: 800 }}>
+              {props.generationLabel}
+              {props.isSample ? " SAMPLE" : ""}
+            </div>
             <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
               <div style={{ fontSize: 136, lineHeight: 1, fontWeight: 900 }}>{props.rank}</div>
               <div style={{ fontSize: 30, fontWeight: 800 }}>위</div>
