@@ -147,6 +147,8 @@ class YoutubeApiClientTest {
 
         assertEquals("video-1", collectedVideo.youtubeVideoId)
         assertEquals("상세 영상", collectedVideo.title)
+        assertEquals("상세 설명 #아이브", collectedVideo.description)
+        assertContentEquals(listOf("아이브", "IVE", "official"), collectedVideo.tags)
         assertEquals("channel-1", collectedVideo.channelId)
         assertEquals("상세 채널", collectedVideo.channelName)
         assertEquals("Music", collectedVideo.channelCategory)

@@ -105,6 +105,9 @@ class KeywordQueryRepository(
             .select(
                 TREND_VIDEOS.YOUTUBE_VIDEO_ID,
                 TREND_VIDEOS.TITLE,
+                TREND_VIDEOS.DESCRIPTION,
+                TREND_VIDEOS.TAGS,
+                TREND_VIDEOS.CHANNEL_ID,
                 TREND_VIDEOS.CHANNEL_NAME,
                 TREND_VIDEOS.THUMBNAIL_URL,
                 TREND_VIDEOS.VIEW_COUNT,
@@ -141,6 +144,9 @@ class KeywordQueryRepository(
                     badge = record.get(TREND_FEED_ITEMS.BADGE),
                     publishedAt = record.get(TREND_VIDEOS.PUBLISHED_AT),
                     durationSeconds = record.get(TREND_VIDEOS.DURATION_SECONDS),
+                    channelId = record.get(TREND_VIDEOS.CHANNEL_ID),
+                    description = record.get(TREND_VIDEOS.DESCRIPTION),
+                    tags = record.get(TREND_VIDEOS.TAGS)?.toList().orEmpty(),
                 )
             }
 

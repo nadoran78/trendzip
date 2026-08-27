@@ -1,6 +1,7 @@
 package com.mztrend.controller
 
 import com.mztrend.config.CacheNames
+import com.mztrend.config.MediaOperationsApiInterceptor
 import com.mztrend.domain.FeedSection
 import com.mztrend.domain.Generation
 import com.mztrend.domain.RankTrend
@@ -189,6 +190,33 @@ class KeywordControllerTest {
     }
 
     @Test
+    fun `get media keyword detail returns protected evidence metadata`() {
+        insertKeywordExplainFixture()
+
+        mockMvc
+            .perform(
+                get("/api/ops/media/keywords/{id}", 10L)
+                    .header(MediaOperationsApiInterceptor.API_KEY_HEADER, TEST_MEDIA_OPERATIONS_API_KEY),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.keywordId").value(10))
+            .andExpect(jsonPath("$.data.relatedVideos.length()").value(2))
+            .andExpect(jsonPath("$.data.relatedVideos[0].videoId").value("donggung-trailer"))
+            .andExpect(jsonPath("$.data.relatedVideos[0].channelId").value("netflix-korea"))
+            .andExpect(jsonPath("$.data.relatedVideos[0].description").value("동궁 공개일과 출연진을 소개합니다."))
+            .andExpect(jsonPath("$.data.relatedVideos[0].tags[0]").value("동궁"))
+            .andExpect(jsonPath("$.data.relatedVideos[0].tags[1]").value("남주혁"))
+    }
+
+    @Test
+    fun `get media keyword detail requires operations API key`() {
+        mockMvc
+            .perform(get("/api/ops/media/keywords/{id}", 10L))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"))
+    }
+
+    @Test
     fun `getKeywordExplain returns null explain and empty arrays when optional data is missing`() {
         insertKeywordWithoutExplain()
 
@@ -305,6 +333,9 @@ class KeywordControllerTest {
                 TREND_VIDEOS.ID,
                 TREND_VIDEOS.YOUTUBE_VIDEO_ID,
                 TREND_VIDEOS.TITLE,
+                TREND_VIDEOS.DESCRIPTION,
+                TREND_VIDEOS.TAGS,
+                TREND_VIDEOS.CHANNEL_ID,
                 TREND_VIDEOS.CHANNEL_NAME,
                 TREND_VIDEOS.THUMBNAIL_URL,
                 TREND_VIDEOS.VIEW_COUNT,
@@ -314,6 +345,9 @@ class KeywordControllerTest {
                 100L,
                 "donggung-interview",
                 "동궁 배우 인터뷰",
+                "동궁 배우들이 작품의 배경을 설명합니다.",
+                arrayOf("동궁", "인터뷰"),
+                "netflix-korea",
                 "Netflix Korea",
                 "https://img.example/donggung-interview.jpg",
                 200_000L,
@@ -323,6 +357,9 @@ class KeywordControllerTest {
                 101L,
                 "donggung-trailer",
                 "동궁 공식 예고편",
+                "동궁 공개일과 출연진을 소개합니다.",
+                arrayOf("동궁", "남주혁"),
+                "netflix-korea",
                 "Netflix Korea",
                 "https://img.example/donggung-trailer.jpg",
                 500_000L,
@@ -468,5 +505,9 @@ class KeywordControllerTest {
                 20,
                 500L,
             ).execute()
+    }
+
+    private companion object {
+        const val TEST_MEDIA_OPERATIONS_API_KEY = "test-media-operations-key"
     }
 }

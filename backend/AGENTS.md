@@ -243,6 +243,8 @@ CREATE TABLE trend_videos (
     id                         BIGSERIAL PRIMARY KEY,
     youtube_video_id           VARCHAR(50) NOT NULL,
     title                      VARCHAR(300) NOT NULL,
+    description                TEXT,
+    tags                       TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     channel_id                 VARCHAR(100),
     channel_name               VARCHAR(150) NOT NULL,
     channel_category           VARCHAR(50),

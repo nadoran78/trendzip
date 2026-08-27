@@ -12,6 +12,8 @@ fun YoutubeVideoDetail.toCollectedVideo(
     CollectedVideo(
         youtubeVideoId = videoId,
         title = title,
+        description = description,
+        tags = tags,
         channelId = channelId ?: channelDetail?.channelId,
         channelName = channelDetail?.title ?: channelName,
         channelCategory = channelDetail?.primaryTopicCategory,
