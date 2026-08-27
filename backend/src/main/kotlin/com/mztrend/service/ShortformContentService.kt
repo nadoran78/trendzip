@@ -133,6 +133,13 @@ class ShortformContentService(
                 MzTrendException(ErrorCode.NOT_FOUND)
             }
 
+        if (command.status in ARTIFACT_MANAGED_TARGET_STATUSES ||
+            content.status == ShortformContentStatus.REVIEW_REQUIRED &&
+            command.status in REVIEW_DECISION_TARGET_STATUSES
+        ) {
+            throw MzTrendException(ErrorCode.INVALID_STATE_TRANSITION)
+        }
+
         if (!content.canTransitionTo(command.status)) {
             throw MzTrendException(ErrorCode.INVALID_STATE_TRANSITION)
         }
@@ -153,6 +160,19 @@ class ShortformContentService(
     }
 
     companion object {
+        private val ARTIFACT_MANAGED_TARGET_STATUSES =
+            setOf(
+                ShortformContentStatus.RENDERED,
+                ShortformContentStatus.REVIEW_REQUIRED,
+                ShortformContentStatus.APPROVED,
+            )
+        private val REVIEW_DECISION_TARGET_STATUSES =
+            setOf(
+                ShortformContentStatus.APPROVED,
+                ShortformContentStatus.NEEDS_REVISION,
+                ShortformContentStatus.REJECTED,
+            )
+
         val DUPLICATE_BLOCKING_STATUSES =
             setOf(
                 ShortformContentStatus.DRAFT,

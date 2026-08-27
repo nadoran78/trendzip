@@ -32,4 +32,34 @@ CREATE TABLE shortform_content_keyword_snapshots (
     created_at            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- 실제 CHECK, UNIQUE, partial index와 COMMENT 정의는 Flyway V6 migration을 기준으로 확인한다.
+CREATE TABLE shortform_render_artifacts (
+    id                    BIGSERIAL PRIMARY KEY,
+    shortform_content_id  BIGINT NOT NULL,
+    content_hash          VARCHAR(64) NOT NULL,
+    artifact_hash         VARCHAR(64) NOT NULL,
+    source_manifest_hash  VARCHAR(64) NOT NULL,
+    audio_manifest_hash   VARCHAR(64) NOT NULL,
+    render_props_hash     VARCHAR(64) NOT NULL,
+    video_hash            VARCHAR(64) NOT NULL,
+    tts_model             VARCHAR(100) NOT NULL,
+    tts_voice             VARCHAR(100) NOT NULL,
+    duration_millis       BIGINT NOT NULL,
+    width                 INT NOT NULL,
+    height                INT NOT NULL,
+    fps                   INT NOT NULL,
+    video_codec           VARCHAR(30) NOT NULL,
+    audio_codec           VARCHAR(30) NOT NULL,
+    created_at            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE shortform_review_decisions (
+    id                    BIGSERIAL PRIMARY KEY,
+    shortform_content_id  BIGINT NOT NULL,
+    render_artifact_id    BIGINT NOT NULL,
+    decision              VARCHAR(30) NOT NULL,
+    reviewer              VARCHAR(100) NOT NULL,
+    reason                TEXT NOT NULL,
+    created_at            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 실제 CHECK, UNIQUE, partial index와 COMMENT 정의는 Flyway V6·V8 migration을 기준으로 확인한다.
