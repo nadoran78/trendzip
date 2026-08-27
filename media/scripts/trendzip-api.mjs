@@ -80,7 +80,7 @@ export function createTrendzipApiClient({
       return data;
     },
     async getKeywordDetail(keywordId) {
-      const data = await request(`/api/keywords/${keywordId}/explain`);
+      const data = await request(`/api/ops/media/keywords/${keywordId}`, { operations: true });
       if (data.keywordId !== keywordId || typeof data.keyword !== "string") {
         throw new TrendzipApiError("Trendzip keyword detail response has an invalid shape.");
       }

@@ -25,7 +25,10 @@ const candidate = {
     {
       videoId: "video-101",
       title: "메이드 인 코리아 메인 예고편",
+      channelId: "disney-plus-korea",
       channelName: "Disney Plus Korea",
+      description: "메이드 인 코리아의 공개일과 출연진을 소개합니다.",
+      tags: ["메이드 인 코리아", "현빈"],
       viewCount: 100_000,
       publishedAt: "2026-08-20T12:00:00",
     },
@@ -35,11 +38,14 @@ const candidate = {
 const validSelection = {
   primaryKeywordId: 101,
   editorialFormat: "WHY_NOW",
+  eventType: "TRAILER_RELEASE",
   relatedKeywordIds: [102],
   evidenceSelections: [
     {
       evidenceVideoId: "video-101",
+      sourceField: "TITLE",
       sourceExcerpt: "메인 예고편",
+      evidenceRole: "EVENT_TRIGGER",
     },
   ],
 };
@@ -76,9 +82,12 @@ test("prompt asks Gemini only for candidate and evidence selection", () => {
     generatedAt: "2026-08-21T12:00:00",
   });
 
-  assert.match(prompt, /제목, 훅, 요약, 이유, 내레이션, topicKey, eventKey는 시스템이 생성/);
+  assert.match(prompt, /제목, 훅, 요약, 이유와 내레이션은 후속 작성 단계/);
   assert.match(prompt, /contextSummary는 주제 선택 참고 문맥이며 사실 근거가 아니다/);
   assert.match(prompt, /편집 형식 정의: WHY_NOW는 최근 공개·발표 계기/);
+  assert.match(prompt, /사건 유형 정의: TRAILER_RELEASE는 예고편 공개/);
+  assert.match(prompt, /sourceField는 원문을 복사한 위치/);
+  assert.match(prompt, /"description":"메이드 인 코리아의 공개일과 출연진을 소개합니다."/);
   assert.doesNotMatch(prompt, /"rank":1/);
   assert.doesNotMatch(prompt, /"trendScore":1000/);
 });
@@ -142,7 +151,12 @@ test("planner repairs an excerpt absent from selected video metadata", async () 
     {
       ...validSelection,
       evidenceSelections: [
-        { evidenceVideoId: "video-101", sourceExcerpt: "흥행 돌풍" },
+        {
+          evidenceVideoId: "video-101",
+          sourceField: "TITLE",
+          sourceExcerpt: "흥행 돌풍",
+          evidenceRole: "EVENT_TRIGGER",
+        },
       ],
     },
     validSelection,

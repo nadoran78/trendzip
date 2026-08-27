@@ -1,5 +1,7 @@
 import { collectOperationalCandidates } from "./candidate-collector.mjs";
 import { DUPLICATE_POLICY_ACTIONS } from "./duplicate-policy.mjs";
+import { createEditorialBrief } from "./editorial-brief.mjs";
+import { composeEditorialDraft } from "./editorial-draft-composer.mjs";
 import { OPERATIONAL_DRAFT_FAILURE_STAGES } from "./operational-draft-failure.mjs";
 import { createOperationalDraft } from "./operational-draft.mjs";
 import { calculateHistoryFrom, formatSeoulLocalDateTime } from "./operations-time.mjs";
@@ -36,6 +38,7 @@ export async function loadOperationalDraftContext({
 export async function evaluateOperationalDraft({
   context,
   editorialPlanner,
+  editorialWriter = null,
   duplicatePolicy,
 }) {
   const { generatedAt, candidates, recentContents } = context;
@@ -44,18 +47,117 @@ export async function evaluateOperationalDraft({
     recentContents,
     generatedAt,
   });
-  const { plan, selection, factCards, reviewWarnings, selectedCandidate } = planResult;
+  const {
+    plan: plannerFallbackPlan,
+    selection,
+    factCards,
+    reviewWarnings: sourceReviewWarnings,
+    selectedCandidate,
+  } = planResult;
   const generationAttemptCount = planResult.generationAttemptCount ?? 1;
   const repairDiagnostics = planResult.repairDiagnostics ?? null;
+  let editorialBrief;
+  try {
+    editorialBrief = createEditorialBrief({
+      candidate: selectedCandidate,
+      selection,
+      factCards,
+      generatedAt,
+    });
+  } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    normalizedError.failureStage = OPERATIONAL_DRAFT_FAILURE_STAGES.BRIEF_ASSEMBLY;
+    throw normalizedError;
+  }
+
+  const resolvedSelection = {
+    ...selection,
+    editorialFormat: editorialBrief.editorialFormat,
+    relatedKeywordIds: editorialBrief.relatedKeywords.map((keyword) => keyword.keywordId),
+  };
+  let fallbackDraft;
+  try {
+    const plannerRelatedKeywordIds = plannerFallbackPlan?.relatedKeywordIds ?? [];
+    const canReusePlannerFallback =
+      plannerFallbackPlan?.editorialFormat === editorialBrief.editorialFormat &&
+      plannerRelatedKeywordIds.length === resolvedSelection.relatedKeywordIds.length &&
+      plannerRelatedKeywordIds.every(
+        (keywordId, index) => keywordId === resolvedSelection.relatedKeywordIds[index],
+      );
+    fallbackDraft =
+      canReusePlannerFallback
+        ? plannerFallbackPlan
+        : composeEditorialDraft({
+            candidate: selectedCandidate,
+            selection: resolvedSelection,
+            factCards,
+          });
+  } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    normalizedError.failureStage = OPERATIONAL_DRAFT_FAILURE_STAGES.COMPOSITION;
+    throw normalizedError;
+  }
+
+  let plan = fallbackDraft;
+  let writerDraft = null;
+  let writerDiagnostics = {
+    attemptCount: 0,
+    repair: null,
+    fallbackUsed: true,
+    failure: null,
+  };
+  const reviewWarnings = [
+    ...(Array.isArray(sourceReviewWarnings) ? sourceReviewWarnings : []),
+    ...editorialBrief.reviewWarnings,
+  ];
+  if (editorialWriter) {
+    try {
+      const writerResult = await editorialWriter.createDraft({ editorialBrief });
+      plan = writerResult.plan;
+      writerDraft = writerResult.writerDraft;
+      writerDiagnostics = {
+        attemptCount: writerResult.attemptCount,
+        repair: writerResult.repairDiagnostics,
+        fallbackUsed: false,
+        failure: null,
+      };
+    } catch (error) {
+      const diagnostics = error?.writerDiagnostics ?? {};
+      writerDraft = diagnostics.finalDraft ?? diagnostics.initialDraft ?? null;
+      writerDiagnostics = {
+        attemptCount: diagnostics.attemptCount ?? 1,
+        repair: diagnostics.repair ?? null,
+        fallbackUsed: true,
+        failure: {
+          stage: error?.failureStage ?? OPERATIONAL_DRAFT_FAILURE_STAGES.WRITING,
+          name: error instanceof Error ? error.name : "Error",
+          message: error instanceof Error ? error.message : String(error),
+          ...(typeof error?.code === "string" ? { code: error.code } : {}),
+          ...(error?.details && typeof error.details === "object"
+            ? { details: error.details }
+            : {}),
+        },
+      };
+      reviewWarnings.push({
+        code: "EDITORIAL_WRITER_FALLBACK",
+        message: "Gemini writer output was replaced with the deterministic fallback draft.",
+        reason: writerDiagnostics.failure.code ?? writerDiagnostics.failure.stage,
+      });
+    }
+  }
   let draft;
   try {
     draft = createOperationalDraft({
       candidates,
       selectedCandidate,
-      selection,
+      selection: resolvedSelection,
       factCards,
       reviewWarnings,
       plan,
+      editorialBrief,
+      writerDraft,
+      fallbackDraft,
+      writerDiagnostics,
       generatedAt,
     });
   } catch (error) {
@@ -82,7 +184,11 @@ export async function evaluateOperationalDraft({
 
   return {
     plan,
-    selection,
+    editorialBrief,
+    writerDraft,
+    fallbackDraft,
+    writerDiagnostics,
+    selection: resolvedSelection,
     factCards,
     reviewWarnings,
     selectedCandidate,
@@ -97,6 +203,7 @@ export async function prepareOperationalDraft({
   config,
   apiClient,
   editorialPlanner,
+  editorialWriter = null,
   duplicatePolicy,
   now = new Date(),
 }) {
@@ -104,6 +211,7 @@ export async function prepareOperationalDraft({
   const evaluation = await evaluateOperationalDraft({
     context,
     editorialPlanner,
+    editorialWriter,
     duplicatePolicy,
   });
   const { generatedAt, historyFrom, candidates } = context;
@@ -113,6 +221,7 @@ export async function prepareOperationalDraft({
     duplicateDecision,
     generationAttemptCount,
     repairDiagnostics,
+    writerDiagnostics,
   } = evaluation;
 
   if (duplicateDecision.action !== DUPLICATE_POLICY_ACTIONS.ALLOW) {
@@ -122,6 +231,7 @@ export async function prepareOperationalDraft({
       candidateCount: candidates.length,
       generationAttemptCount,
       repairDiagnostics,
+      writerDiagnostics,
       duplicateDecision,
       reservation: null,
       manifest: null,
@@ -135,13 +245,17 @@ export async function prepareOperationalDraft({
     candidateCount: candidates.length,
     generationAttemptCount,
     repairDiagnostics,
+    writerDiagnostics,
     duplicateDecision,
     reservation: reservedContent,
     manifest: {
       ...draft.manifest,
       generationDiagnostics: {
-        attemptCount: generationAttemptCount,
-        repair: repairDiagnostics,
+        selection: {
+          attemptCount: generationAttemptCount,
+          repair: repairDiagnostics,
+        },
+        writing: writerDiagnostics,
       },
       reviewWarnings,
       duplicateDecision,

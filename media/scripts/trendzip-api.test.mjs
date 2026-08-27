@@ -55,6 +55,23 @@ test("shortform history request includes the operations API key", async () => {
   assert.equal(captured.init.headers.get("X-Media-Operations-Key"), "operations-key");
 });
 
+test("media keyword detail request uses the protected operations endpoint", async () => {
+  let captured;
+  const client = createClient(async (url, init) => {
+    captured = { url, init };
+    return jsonResponse({
+      success: true,
+      data: { keywordId: 101, keyword: "메이드 인 코리아" },
+      error: null,
+    });
+  });
+
+  await client.getKeywordDetail(101);
+
+  assert.equal(captured.url.toString(), "https://api.example.com/api/ops/media/keywords/101");
+  assert.equal(captured.init.headers.get("X-Media-Operations-Key"), "operations-key");
+});
+
 test("reserve draft serializes the request body", async () => {
   let captured;
   const client = createClient(async (url, init) => {

@@ -34,6 +34,7 @@ test("composer supports every editorial format with bounded prose", () => {
       selection: {
         primaryKeywordId: 101,
         editorialFormat,
+        eventType: "GENERAL_CONTEXT",
         relatedKeywordIds: [102],
         evidenceSelections: [],
       },
@@ -63,6 +64,7 @@ test("composer truncates long metadata instead of failing the draft", () => {
     selection: {
       primaryKeywordId: 101,
       editorialFormat: "WHY_NOW",
+      eventType: "TRAILER_RELEASE",
       relatedKeywordIds: [],
       evidenceSelections: [],
     },

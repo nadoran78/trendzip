@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { deriveEvidenceVideoIds } from "./editorial-evidence.mjs";
 
-const MANIFEST_SCHEMA_VERSION = 3;
+const MANIFEST_SCHEMA_VERSION = 4;
 const CAMPAIGN_BASE_URL = "https://trendzip.nadoran.com";
 
 function normalizeKeywordWord(word) {
@@ -123,6 +123,15 @@ export function createOperationalDraft({
   factCards,
   reviewWarnings,
   plan,
+  editorialBrief = null,
+  writerDraft = null,
+  fallbackDraft = plan,
+  writerDiagnostics = {
+    attemptCount: 0,
+    repair: null,
+    fallbackUsed: true,
+    failure: null,
+  },
   generatedAt,
 }) {
   if (selectedCandidate.keywordId !== plan.primaryKeywordId) {
@@ -202,6 +211,13 @@ export function createOperationalDraft({
       },
       selection,
       factCards,
+      editorialBrief,
+      writing: {
+        writerDraft,
+        fallbackDraft,
+        fallbackUsed: writerDiagnostics.fallbackUsed,
+        diagnostics: writerDiagnostics,
+      },
       reviewWarnings,
       relatedKeywords,
       evidence,

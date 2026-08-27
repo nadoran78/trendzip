@@ -71,18 +71,28 @@ function editorialPlan(topicKey) {
 const selection = {
   primaryKeywordId: 101,
   editorialFormat: "WHY_NOW",
+  eventType: "TRAILER_RELEASE",
   relatedKeywordIds: [],
   evidenceSelections: [
-    { evidenceVideoId: "video-101", sourceExcerpt: "메인 예고편" },
+    {
+      evidenceVideoId: "video-101",
+      sourceField: "TITLE",
+      sourceExcerpt: "메인 예고편",
+      evidenceRole: "EVENT_TRIGGER",
+    },
   ],
 };
 
 const factCards = [
   {
+    factId: "fact-1",
     videoId: "video-101",
+    channelId: "disney-plus-korea",
     channelName: "Disney Plus Korea",
     title: "메이드 인 코리아 메인 예고편",
+    sourceField: "TITLE",
     sourceExcerpt: "메인 예고편",
+    evidenceRole: "EVENT_TRIGGER",
     publishedAt: "2026-08-20T12:00:00",
   },
 ];
@@ -147,6 +157,19 @@ test("dry run reuses one API context, compares repeated plans, and never reserve
       });
     },
   };
+  let writerCallCount = 0;
+  const editorialWriter = {
+    async createDraft({ editorialBrief }) {
+      writerCallCount += 1;
+      assert.equal(editorialBrief.facts[0].factId, "fact-1");
+      return {
+        plan: editorialPlan("made-in-korea"),
+        writerDraft: { title: "writer draft", iteration: writerCallCount },
+        attemptCount: 1,
+        repairDiagnostics: null,
+      };
+    },
+  };
   const sleepCalls = [];
 
   const report = await runOperationalDraftDryRun({
@@ -159,6 +182,7 @@ test("dry run reuses one API context, compares repeated plans, and never reserve
     },
     apiClient,
     editorialPlanner,
+    editorialWriter,
     duplicatePolicy: () => ({
       action: DUPLICATE_POLICY_ACTIONS.ALLOW,
       reason: DUPLICATE_POLICY_REASONS.NO_DUPLICATE,
@@ -174,17 +198,38 @@ test("dry run reuses one API context, compares repeated plans, and never reserve
     histories: 1,
     reservations: 0,
   });
+  assert.equal(writerCallCount, 3);
   assert.equal(report.mode, "DRY_RUN");
-  assert.equal(report.schemaVersion, 3);
+  assert.equal(report.schemaVersion, 5);
   assert.equal(report.iterations.length, 3);
   assert.equal(report.iterations.every((iteration) => iteration.status === "SUCCESS"), true);
-  assert.equal(report.iterations[0].manifestPreview.status, "DRY_RUN");
-  assert.equal(report.iterations[0].manifestPreview.schemaVersion, 3);
-  assert.deepEqual(report.iterations[0].selection, selection);
-  assert.deepEqual(report.iterations[0].factCards, factCards);
-  assert.equal(report.iterations[0].systemDraft.topicKey, "made-in-korea");
+  assert.deepEqual(report.iterations[0].selection, {
+    primaryKeywordId: 101,
+    primaryKeywordWord: "메이드 인 코리아",
+    sourceGeneration: "TEEN",
+    sourceCrawlRunId: 501,
+    editorialFormat: "WHY_NOW",
+    eventType: "TRAILER_RELEASE",
+    topicKey: "made-in-korea",
+    eventKey: "made-in-korea:why-now:crawl-501",
+    relatedKeywordIds: [],
+    evidenceSelections: selection.evidenceSelections,
+  });
+  assert.equal(report.iterations[0].finalDraft.topicKey, "made-in-korea");
+  assert.deepEqual(report.iterations[0].writerDiagnostics, {
+    attemptCount: 1,
+    fallbackUsed: false,
+  });
   assert.deepEqual(report.iterations[0].reviewWarnings, []);
   assert.equal(report.iterations.every((iteration) => iteration.wouldReserve), true);
+  assert.equal(typeof report.iterations[0].contentHash, "string");
+  assert.equal(Object.hasOwn(report.iterations[0], "factCards"), false);
+  assert.equal(Object.hasOwn(report.iterations[0], "editorialBrief"), false);
+  assert.equal(Object.hasOwn(report.iterations[0], "writerDraft"), false);
+  assert.equal(Object.hasOwn(report.iterations[0], "fallbackDraft"), false);
+  assert.equal(Object.hasOwn(report.iterations[0], "systemDraft"), false);
+  assert.equal(Object.hasOwn(report.iterations[0], "reservationRequest"), false);
+  assert.equal(Object.hasOwn(report.iterations[0], "manifestPreview"), false);
   assert.deepEqual(report.iterations[0].evidenceDiagnostics, {
     requiresRecentEvidence: true,
     recentEvidenceWindowDays: 30,
@@ -208,19 +253,13 @@ test("dry run reuses one API context, compares repeated plans, and never reserve
   assert.equal(report.stability.comparisonEligible, true);
   assert.equal(report.stability.fullySuccessful, true);
   assert.equal(report.stability.repairedCount, 1);
+  assert.equal(report.stability.fallbackCount, 0);
   assert.deepEqual(report.stability.generationAttemptCounts, [1, 1, 2]);
+  assert.deepEqual(report.stability.writerAttemptCounts, [1, 1, 1]);
   assert.deepEqual(report.iterations[2].repairDiagnostics, {
     code: "UNKNOWN_EVIDENCE_VIDEO_ID",
     message: "video reference was repaired",
     details: { field: "evidenceSelections[0].evidenceVideoId" },
-  });
-  assert.deepEqual(report.iterations[2].manifestPreview.generationDiagnostics, {
-    attemptCount: 2,
-    repair: {
-      code: "UNKNOWN_EVIDENCE_VIDEO_ID",
-      message: "video reference was repaired",
-      details: { field: "evidenceSelections[0].evidenceVideoId" },
-    },
   });
   assert.equal(report.stability.stableTopicKey, true);
   assert.equal(report.stability.stableEventKey, true);

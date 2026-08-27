@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-const TEXT_LIMITS = Object.freeze({
+export const EDITORIAL_TEXT_LIMITS = Object.freeze({
   title: 100,
   hook: 48,
   summary: 100,
@@ -42,10 +42,19 @@ function createReasons(factCards) {
   const first = factCards[0];
   const second = factCards[1];
   return [
-    fitText(`'${first.sourceExcerpt}' 표현은 '${first.title}' 영상 정보에서 확인됩니다.`, TEXT_LIMITS.reason),
+    fitText(
+      `'${first.sourceExcerpt}' 표현은 '${first.title}' 영상 정보에서 확인됩니다.`,
+      EDITORIAL_TEXT_LIMITS.reason,
+    ),
     second
-      ? fitText(`'${second.sourceExcerpt}' 표현은 '${second.title}' 영상 정보에서 확인됩니다.`, TEXT_LIMITS.reason)
-      : fitText(`선택한 영상의 게시 채널은 '${first.channelName}'입니다.`, TEXT_LIMITS.reason),
+      ? fitText(
+          `'${second.sourceExcerpt}' 표현은 '${second.title}' 영상 정보에서 확인됩니다.`,
+          EDITORIAL_TEXT_LIMITS.reason,
+        )
+      : fitText(
+          `선택한 영상의 게시 채널은 '${first.channelName}'입니다.`,
+          EDITORIAL_TEXT_LIMITS.reason,
+        ),
   ];
 }
 
@@ -61,11 +70,14 @@ export function composeEditorialDraft({ candidate, selection, factCards }) {
   }
 
   const keyword = candidate.keyword.trim();
-  const title = fitText(TITLE_TEMPLATES[selection.editorialFormat](keyword), TEXT_LIMITS.title);
-  const hook = fitText(`오늘의 키워드, ${keyword}`, TEXT_LIMITS.hook);
+  const title = fitText(
+    TITLE_TEMPLATES[selection.editorialFormat](keyword),
+    EDITORIAL_TEXT_LIMITS.title,
+  );
+  const hook = fitText(`오늘의 키워드, ${keyword}`, EDITORIAL_TEXT_LIMITS.hook);
   const summary = fitText(
     `관련 영상 ${factCards.length}개의 제목과 채널 정보를 기준으로 '${keyword}'의 맥락을 정리했습니다.`,
-    TEXT_LIMITS.summary,
+    EDITORIAL_TEXT_LIMITS.summary,
   );
   const reasons = createReasons(factCards);
   const topicKey = createCanonicalTopicKey(keyword);
@@ -96,17 +108,17 @@ export function composeEditorialDraft({ candidate, selection, factCards }) {
     summary,
     reasons,
     narration: {
-      hook: fitText(`오늘의 키워드는 '${keyword}'입니다.`, TEXT_LIMITS.narration),
+      hook: fitText(`오늘의 키워드는 '${keyword}'입니다.`, EDITORIAL_TEXT_LIMITS.narration),
       overview: fitText(
         `30~40대가 이해하기 쉽게 '${keyword}' 관련 영상 메타데이터를 살펴봅니다.`,
-        TEXT_LIMITS.narration,
+        EDITORIAL_TEXT_LIMITS.narration,
       ),
-      reasons: fitText(reasons.join(" "), TEXT_LIMITS.narration),
+      reasons: fitText(reasons.join(" "), EDITORIAL_TEXT_LIMITS.narration),
       evidence: fitText(
         factCards
           .map((card) => `제목 '${card.title}', 채널 '${card.channelName}'에서 선택 근거를 확인했습니다.`)
           .join(" "),
-        TEXT_LIMITS.narration,
+        EDITORIAL_TEXT_LIMITS.narration,
       ),
       cta: "더 자세한 내용은 트렌드집 프로필 링크에서 확인해 보세요.",
     },

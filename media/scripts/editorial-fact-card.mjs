@@ -1,4 +1,8 @@
 import {
+  EVIDENCE_ROLES,
+  EVIDENCE_SOURCE_FIELDS,
+} from "./editorial-contract.mjs";
+import {
   EDITORIAL_PLAN_VALIDATION_CODES,
   EditorialPlanValidationError,
 } from "./editorial-plan-validation.mjs";
@@ -20,6 +24,37 @@ function requireEvidenceSelection(selection, index) {
   if (typeof selection.sourceExcerpt !== "string" || selection.sourceExcerpt.trim().length === 0) {
     throw new Error(`evidenceSelections[${index}].sourceExcerpt must be a non-empty string.`);
   }
+  if (!EVIDENCE_SOURCE_FIELDS.includes(selection.sourceField)) {
+    throw new Error(`evidenceSelections[${index}].sourceField is not supported.`);
+  }
+  if (!EVIDENCE_ROLES.includes(selection.evidenceRole)) {
+    throw new Error(`evidenceSelections[${index}].evidenceRole is not supported.`);
+  }
+}
+
+function sourceTextsFor(video, sourceField) {
+  switch (sourceField) {
+    case "TITLE":
+      return [video.title];
+    case "DESCRIPTION":
+      return [video.description].filter(Boolean);
+    case "TAG":
+      return Array.isArray(video.tags) ? video.tags : [];
+    case "CHANNEL_NAME":
+      return [video.channelName];
+    default:
+      return [];
+  }
+}
+
+function containsExcerpt(sourceTexts, sourceExcerpt, sourceField) {
+  const normalizedExcerpt = normalizeEvidenceText(sourceExcerpt);
+  return sourceTexts.some((sourceText) => {
+    const normalizedSource = normalizeEvidenceText(sourceText);
+    return sourceField === "TAG"
+      ? normalizedSource === normalizedExcerpt
+      : normalizedSource.includes(normalizedExcerpt);
+  });
 }
 
 export function createEvidenceFactCards(candidate, evidenceSelections) {
@@ -50,9 +85,8 @@ export function createEvidenceFactCards(candidate, evidenceSelections) {
       );
     }
 
-    const normalizedSource = normalizeEvidenceText(`${video.title}\n${video.channelName}`);
-    const normalizedExcerpt = normalizeEvidenceText(selection.sourceExcerpt);
-    if (!normalizedSource.includes(normalizedExcerpt)) {
+    const allowedSourceText = sourceTextsFor(video, selection.sourceField);
+    if (!containsExcerpt(allowedSourceText, selection.sourceExcerpt, selection.sourceField)) {
       throw new EditorialPlanValidationError(
         EDITORIAL_PLAN_VALIDATION_CODES.INVALID_EVIDENCE_EXCERPT,
         `evidenceSelections[${index}].sourceExcerpt is absent from the selected video metadata.`,
@@ -60,7 +94,8 @@ export function createEvidenceFactCards(candidate, evidenceSelections) {
           field: `evidenceSelections[${index}].sourceExcerpt`,
           evidenceVideoId: selection.evidenceVideoId,
           sourceExcerpt: selection.sourceExcerpt,
-          allowedSourceText: [video.title, video.channelName],
+          sourceField: selection.sourceField,
+          allowedSourceText,
         },
       );
     }
@@ -68,10 +103,14 @@ export function createEvidenceFactCards(candidate, evidenceSelections) {
     if (selectedVideoIds.has(video.videoId)) return;
     selectedVideoIds.add(video.videoId);
     factCards.push({
+      factId: `fact-${factCards.length + 1}`,
       videoId: video.videoId,
+      channelId: video.channelId ?? null,
       channelName: video.channelName,
       title: video.title,
+      sourceField: selection.sourceField,
       sourceExcerpt: selection.sourceExcerpt.trim(),
+      evidenceRole: selection.evidenceRole,
       publishedAt: video.publishedAt,
     });
   });

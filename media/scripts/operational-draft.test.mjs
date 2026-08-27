@@ -68,9 +68,15 @@ const plan = {
 const selection = {
   primaryKeywordId: 101,
   editorialFormat: "WHY_NOW",
+  eventType: "TRAILER_RELEASE",
   relatedKeywordIds: [102],
   evidenceSelections: [
-    { evidenceVideoId: "video-101", sourceExcerpt: "메인 예고편" },
+    {
+      evidenceVideoId: "video-101",
+      sourceField: "TITLE",
+      sourceExcerpt: "메인 예고편",
+      evidenceRole: "EVENT_TRIGGER",
+    },
   ],
 };
 
@@ -104,7 +110,7 @@ test("operational draft maps the editorial plan to reservation and review manife
   ]);
   assert.match(draft.reservation.contentHash, /^[0-9a-f]{64}$/);
   assert.equal(draft.manifest.contentHash, draft.reservation.contentHash);
-  assert.equal(draft.manifest.schemaVersion, 3);
+  assert.equal(draft.manifest.schemaVersion, 4);
   assert.deepEqual(
     draft.manifest.source.generationObservations.map(({ generation, keywordId }) => ({
       generation,

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { evaluateDuplicatePolicy } from "./duplicate-policy.mjs";
 import { writeOperationalDryRunReport } from "./draft-manifest-writer.mjs";
 import { createGeminiEditorialPlanner } from "./gemini-editorial-planner.mjs";
+import { createGeminiEditorialWriter } from "./gemini-editorial-writer.mjs";
 import { runOperationalDraftDryRun } from "./operational-dry-run.mjs";
 import { loadOperationalDraftConfig } from "./operations-config.mjs";
 import { createTrendzipApiClient } from "./trendzip-api.mjs";
@@ -25,11 +26,19 @@ const editorialPlanner = createGeminiEditorialPlanner({
   timeoutMs: config.requestTimeoutMs,
   repairDelayMs: config.geminiRepairDelayMs,
 });
+const editorialWriter = createGeminiEditorialWriter({
+  apiKey: config.geminiApiKey,
+  baseUrl: config.geminiBaseUrl,
+  model: config.geminiModel,
+  timeoutMs: config.requestTimeoutMs,
+  repairDelayMs: config.geminiRepairDelayMs,
+});
 
 const report = await runOperationalDraftDryRun({
   config,
   apiClient,
   editorialPlanner,
+  editorialWriter,
   duplicatePolicy: evaluateDuplicatePolicy,
 });
 const outputPath = await writeOperationalDryRunReport({ report, outputDirectory });
@@ -53,11 +62,14 @@ process.stdout.write(
               iteration: iteration.iteration,
               status: iteration.status,
               generationAttemptCount: iteration.generationAttemptCount,
-              repairDiagnostics: iteration.repairDiagnostics,
-              primaryKeywordId: iteration.reservationRequest.primaryKeywordId,
-              primaryKeywordWord: iteration.reservationRequest.primaryKeywordWord,
-              topicKey: iteration.reservationRequest.topicKey,
-              eventKey: iteration.reservationRequest.eventKey,
+              ...(iteration.repairDiagnostics
+                ? { repairDiagnostics: iteration.repairDiagnostics }
+                : {}),
+              writerDiagnostics: iteration.writerDiagnostics,
+              primaryKeywordId: iteration.selection.primaryKeywordId,
+              primaryKeywordWord: iteration.selection.primaryKeywordWord,
+              topicKey: iteration.selection.topicKey,
+              eventKey: iteration.selection.eventKey,
               wouldReserve: iteration.wouldReserve,
               duplicateDecision: iteration.duplicateDecision,
               evidenceDiagnostics: iteration.evidenceDiagnostics,

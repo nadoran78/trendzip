@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { evaluateDuplicatePolicy } from "./duplicate-policy.mjs";
 import { writeOperationalDraftManifest } from "./draft-manifest-writer.mjs";
 import { createGeminiEditorialPlanner } from "./gemini-editorial-planner.mjs";
+import { createGeminiEditorialWriter } from "./gemini-editorial-writer.mjs";
 import { prepareOperationalDraft } from "./operational-draft-runner.mjs";
 import { loadOperationalDraftConfig } from "./operations-config.mjs";
 import { createTrendzipApiClient } from "./trendzip-api.mjs";
@@ -25,11 +26,19 @@ const editorialPlanner = createGeminiEditorialPlanner({
   timeoutMs: config.requestTimeoutMs,
   repairDelayMs: config.geminiRepairDelayMs,
 });
+const editorialWriter = createGeminiEditorialWriter({
+  apiKey: config.geminiApiKey,
+  baseUrl: config.geminiBaseUrl,
+  model: config.geminiModel,
+  timeoutMs: config.requestTimeoutMs,
+  repairDelayMs: config.geminiRepairDelayMs,
+});
 
 const result = await prepareOperationalDraft({
   config,
   apiClient,
   editorialPlanner,
+  editorialWriter,
   duplicatePolicy: evaluateDuplicatePolicy,
 });
 
@@ -46,6 +55,7 @@ if (!result.manifest) {
       {
         shortformContentId: result.reservation.id,
         generationAttemptCount: result.generationAttemptCount,
+        writerDiagnostics: result.writerDiagnostics,
         duplicateDecision: result.duplicateDecision,
         reviewWarnings: result.manifest.reviewWarnings,
         outputPath,

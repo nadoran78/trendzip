@@ -1,9 +1,9 @@
-import { DUPLICATE_POLICY_ACTIONS } from "./duplicate-policy.mjs";
 import { createEvidenceDiagnostics } from "./evidence-diagnostics.mjs";
 import {
   evaluateOperationalDraft,
   loadOperationalDraftContext,
 } from "./operational-draft-runner.mjs";
+import { createDryRunSuccessIteration } from "./operational-dry-run-report.mjs";
 
 function uniqueValues(iterations, selectValue) {
   return [...new Set(iterations.map(selectValue))];
@@ -13,6 +13,10 @@ function generationAttemptCountOf(iteration) {
   return iteration.status === "SUCCESS"
     ? iteration.generationAttemptCount
     : iteration.error.generationAttemptCount;
+}
+
+function writerAttemptCountOf(iteration) {
+  return iteration.status === "SUCCESS" ? iteration.writerDiagnostics.attemptCount : 0;
 }
 
 export function resolveStabilityMetric(successfulCount, uniqueValueCount) {
@@ -30,28 +34,35 @@ export function summarizeDryRunStability(iterations) {
   const successfulIterations = iterations.filter((iteration) => iteration.status === "SUCCESS");
   const primaryKeywordIds = uniqueValues(
     successfulIterations,
-    (iteration) => iteration.reservationRequest.primaryKeywordId,
+    (iteration) => iteration.selection.primaryKeywordId,
   );
   const topicKeys = uniqueValues(
     successfulIterations,
-    (iteration) => iteration.reservationRequest.topicKey,
+    (iteration) => iteration.selection.topicKey,
   );
   const eventKeys = uniqueValues(
     successfulIterations,
-    (iteration) => iteration.reservationRequest.eventKey,
+    (iteration) => iteration.selection.eventKey,
   );
   const contentHashes = uniqueValues(
     successfulIterations,
-    (iteration) => iteration.reservationRequest.contentHash,
+    (iteration) => iteration.contentHash,
   );
   const successfulCount = successfulIterations.length;
   const generationAttemptCounts = iterations.map(generationAttemptCountOf);
+  const writerAttemptCounts = iterations.map(writerAttemptCountOf);
 
   return {
     attemptedCount: iterations.length,
     successfulCount,
     failedCount: iterations.length - successfulCount,
-    repairedCount: generationAttemptCounts.filter((count) => count > 1).length,
+    repairedCount: iterations.filter(
+      (iteration, index) =>
+        generationAttemptCounts[index] > 1 || writerAttemptCounts[index] > 1,
+    ).length,
+    fallbackCount: successfulIterations.filter(
+      (iteration) => iteration.writerDiagnostics.fallbackUsed,
+    ).length,
     comparisonEligible: successfulCount >= 2,
     fullySuccessful: successfulCount === iterations.length,
     stablePrimaryKeyword: resolveStabilityMetric(successfulCount, primaryKeywordIds.length),
@@ -63,6 +74,7 @@ export function summarizeDryRunStability(iterations) {
     eventKeys,
     contentHashes,
     generationAttemptCounts,
+    writerAttemptCounts,
   };
 }
 
@@ -90,6 +102,7 @@ export async function runOperationalDraftDryRun({
   config,
   apiClient,
   editorialPlanner,
+  editorialWriter = null,
   duplicatePolicy,
   now = new Date(),
   sleepImpl = defaultSleep,
@@ -102,47 +115,23 @@ export async function runOperationalDraftDryRun({
       const evaluation = await evaluateOperationalDraft({
         context,
         editorialPlanner,
+        editorialWriter,
         duplicatePolicy,
       });
-      const {
-        selection,
-        factCards,
-        reviewWarnings,
-        plan,
-        draft,
-        duplicateDecision,
-        generationAttemptCount,
-        repairDiagnostics,
-      } = evaluation;
+      const { draft } = evaluation;
       const evidenceDiagnostics = createEvidenceDiagnostics({
         editorialFormat: draft.manifest.editorial.format,
         generatedAt: context.generatedAt,
         evidence: draft.manifest.evidence,
       });
 
-      iterations.push({
-        iteration: index + 1,
-        status: "SUCCESS",
-        generationAttemptCount,
-        repairDiagnostics,
-        selection,
-        factCards,
-        systemDraft: plan,
-        reviewWarnings,
-        wouldReserve: duplicateDecision.action === DUPLICATE_POLICY_ACTIONS.ALLOW,
-        duplicateDecision,
-        evidenceDiagnostics,
-        reservationRequest: draft.reservation,
-        manifestPreview: {
-          ...draft.manifest,
-          status: "DRY_RUN",
-          generationDiagnostics: {
-            attemptCount: generationAttemptCount,
-            repair: repairDiagnostics,
-          },
-          duplicateDecision,
-        },
-      });
+      iterations.push(
+        createDryRunSuccessIteration({
+          iteration: index + 1,
+          evaluation,
+          evidenceDiagnostics,
+        }),
+      );
     } catch (error) {
       iterations.push({
         iteration: index + 1,
@@ -157,7 +146,7 @@ export async function runOperationalDraftDryRun({
   }
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 5,
     mode: "DRY_RUN",
     generatedAt: context.generatedAt,
     historyFrom: context.historyFrom,

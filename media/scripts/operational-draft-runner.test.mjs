@@ -66,18 +66,28 @@ const plan = {
 const selection = {
   primaryKeywordId: 101,
   editorialFormat: "WHY_NOW",
+  eventType: "TRAILER_RELEASE",
   relatedKeywordIds: [],
   evidenceSelections: [
-    { evidenceVideoId: "video-101", sourceExcerpt: "메인 예고편" },
+    {
+      evidenceVideoId: "video-101",
+      sourceField: "TITLE",
+      sourceExcerpt: "메인 예고편",
+      evidenceRole: "EVENT_TRIGGER",
+    },
   ],
 };
 
 const factCards = [
   {
+    factId: "fact-1",
     videoId: "video-101",
+    channelId: "disney-plus-korea",
     channelName: "Disney Plus Korea",
     title: "메이드 인 코리아 메인 예고편",
+    sourceField: "TITLE",
     sourceExcerpt: "메인 예고편",
+    evidenceRole: "EVENT_TRIGGER",
     publishedAt: "2026-08-20T12:00:00",
   },
 ];
@@ -162,13 +172,121 @@ test("operational runner reserves an allowed draft and returns a review manifest
   assert.equal(result.generationAttemptCount, 2);
   assert.equal(result.repairDiagnostics.code, "HOOK_TOO_LONG");
   assert.deepEqual(result.manifest.generationDiagnostics, {
-    attemptCount: 2,
-    repair: {
-      code: "HOOK_TOO_LONG",
-      message: "hook was repaired",
-      details: { field: "hook" },
+    selection: {
+      attemptCount: 2,
+      repair: {
+        code: "HOOK_TOO_LONG",
+        message: "hook was repaired",
+        details: { field: "hook" },
+      },
+    },
+    writing: {
+      attemptCount: 0,
+      repair: null,
+      fallbackUsed: true,
+      failure: null,
     },
   });
+});
+
+test("operational runner removes related keywords absent from selected evidence", async () => {
+  const apiClient = createApiClient();
+  apiClient.getKeywordDetail = async () => ({
+    ...detail,
+    relatedKeywords: [{ id: 102, word: "스캔들", category: "드라마" }],
+  });
+  const relatedSelection = { ...selection, relatedKeywordIds: [102] };
+  const relatedPlan = { ...plan, relatedKeywordIds: [102] };
+
+  const result = await prepareOperationalDraft({
+    config,
+    apiClient,
+    editorialPlanner: {
+      async createPlan(input) {
+        return planResult(input, { plan: relatedPlan, selection: relatedSelection });
+      },
+    },
+    duplicatePolicy: () => ({
+      action: DUPLICATE_POLICY_ACTIONS.ALLOW,
+      reason: DUPLICATE_POLICY_REASONS.NO_DUPLICATE,
+      conflictingContentId: null,
+    }),
+    now: new Date("2026-08-21T03:00:00.000Z"),
+  });
+
+  assert.deepEqual(result.manifest.selection.relatedKeywordIds, []);
+  assert.deepEqual(apiClient.calls.reservedDraft.relatedKeywords, []);
+  assert.equal(result.manifest.reviewWarnings[0].code, "UNSUPPORTED_RELATED_KEYWORD_DROPPED");
+  assert.equal(result.manifest.reviewWarnings[0].keywordWord, "스캔들");
+});
+
+test("operational runner uses the verified brief writer output", async () => {
+  const apiClient = createApiClient();
+  const writerPlan = {
+    ...plan,
+    title: "검증 브리프로 작성한 메이드 인 코리아 초안",
+  };
+  const writerDraft = { title: writerPlan.title, reasons: [] };
+
+  const result = await prepareOperationalDraft({
+    config,
+    apiClient,
+    editorialPlanner: { async createPlan(input) { return planResult(input); } },
+    editorialWriter: {
+      async createDraft({ editorialBrief }) {
+        assert.equal(editorialBrief.keyword, "메이드 인 코리아");
+        assert.equal(editorialBrief.facts[0].factId, "fact-1");
+        return {
+          plan: writerPlan,
+          writerDraft,
+          attemptCount: 2,
+          repairDiagnostics: { code: "EDITORIAL_WRITER_UNKNOWN_FACT_ID" },
+        };
+      },
+    },
+    duplicatePolicy: () => ({
+      action: DUPLICATE_POLICY_ACTIONS.ALLOW,
+      reason: DUPLICATE_POLICY_REASONS.NO_DUPLICATE,
+      conflictingContentId: null,
+    }),
+    now: new Date("2026-08-21T03:00:00.000Z"),
+  });
+
+  assert.equal(apiClient.calls.reservedDraft.title, writerPlan.title);
+  assert.deepEqual(result.manifest.writing.writerDraft, writerDraft);
+  assert.equal(result.manifest.writing.fallbackUsed, false);
+  assert.equal(result.writerDiagnostics.attemptCount, 2);
+});
+
+test("operational runner falls back when the Gemini writer remains invalid", async () => {
+  const apiClient = createApiClient();
+  const writerError = new Error("writer validation failed");
+  writerError.code = "EDITORIAL_WRITER_UNKNOWN_FACT_ID";
+  writerError.failureStage = "WRITER_VALIDATION";
+  writerError.writerDiagnostics = {
+    attemptCount: 2,
+    repair: { code: "EDITORIAL_WRITER_UNKNOWN_FACT_ID" },
+    initialDraft: { title: "invalid" },
+    finalDraft: { title: "still invalid" },
+  };
+
+  const result = await prepareOperationalDraft({
+    config,
+    apiClient,
+    editorialPlanner: { async createPlan(input) { return planResult(input); } },
+    editorialWriter: { async createDraft() { throw writerError; } },
+    duplicatePolicy: () => ({
+      action: DUPLICATE_POLICY_ACTIONS.ALLOW,
+      reason: DUPLICATE_POLICY_REASONS.NO_DUPLICATE,
+      conflictingContentId: null,
+    }),
+    now: new Date("2026-08-21T03:00:00.000Z"),
+  });
+
+  assert.equal(apiClient.calls.reservedDraft.title, plan.title);
+  assert.equal(result.writerDiagnostics.fallbackUsed, true);
+  assert.equal(result.writerDiagnostics.failure.stage, "WRITER_VALIDATION");
+  assert.equal(result.manifest.reviewWarnings.at(-1).code, "EDITORIAL_WRITER_FALLBACK");
 });
 
 test("operational runner does not reserve or expose a manifest when policy holds the draft", async () => {
