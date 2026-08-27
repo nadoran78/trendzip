@@ -25,11 +25,11 @@
 
 ### MEDIA-004 운영 후보 자동 선정 및 제작 이력 기반 초안 생성
 
-- 상태: IN_PROGRESS
+- 상태: REVIEW
 - 브랜치: codex/media-004-operational-draft
 - 시작일: 2026-08-21
 - 마지막 갱신: 2026-08-27
-- 다음 행동: 검토한 운영 초안을 `draft:prepare`로 최초 예약하고 제작 이력이 생긴 상태에서 사건·주제 중복 판정을 확인한다.
+- 다음 행동: MEDIA-004 커밋을 검토해 `develop`에 병합한 뒤 첫 운영 `DRAFT(id=1)`를 MEDIA-005 렌더링 입력으로 사용한다.
 
 #### 목적
 
@@ -89,6 +89,9 @@
 - [x] 백엔드 V7과 운영 근거 API를 배포한 뒤 실제 운영 dry-run으로 2단계 생성 결과를 검증했다.
 - [x] 근거 발췌에서 확인되지 않는 관련 키워드를 제거하고 감정 방향을 단정하는 작성 문구를 중립 표현으로 보정한다.
 - [x] 정상 결과의 중간 산출물 중복을 제거하고 이상 진단만 조건부로 남기는 dry-run 보고서 v5를 적용했다.
+- [x] `draft:prepare`로 첫 운영 초안 `DRAFT(id=1)`와 manifest를 예약하고 PRIMARY 키워드 스냅샷까지 운영 API로 대조했다.
+- [x] 첫 manifest를 결정적으로 재생해 `EXACT_CONTENT` 차단, 추가 예약 0회와 추가 manifest 미생성을 확인했다.
+- [x] 일반 재실행에서 별도 후보가 선택될 수 있음을 확인하고 테스트용 두 번째 초안 `id=2`를 이력을 보존한 채 `REJECTED`로 전환했다.
 
 #### 완료 조건
 
@@ -108,6 +111,7 @@
 
 #### 검증
 
+- 상태: PASS
 - 통과: 키워드 Controller·QueryRepository, 운영 API 인증·최근 이력 조회 테스트
 - 통과: `ShortformContentServiceTest` 5건과 운영 API `reserveDraft` 1건
 - 통과: 미디어 테스트 111건에서 선택 계약, fact card, 형식 적격성, Brief 전용 작성·보정·fallback과 dry-run v5 보고서를 검증했다.
@@ -129,7 +133,11 @@
 - 통과: 2026-08-27 실제 운영 dry-run은 `재혼 황후`와 동일 topicKey·eventKey를 3회 유지하고 첫 호출에서 모두 성공했으며 작성 fallback은 없었다.
 - 확인: 같은 dry-run에서 근거 없는 관련 키워드 `스캔들`을 세 번 모두 제거하고, 감정 방향 단정 없이 관심·화제의 중립 문안만 생성했다.
 - 확인: dry-run 보고서 v5는 동일 실행 기준 118,002바이트에서 18,209바이트로 줄고 정상 iteration에서 중간 Brief·writer·manifest 중복을 제거했다.
-- 예정: `./dev/check-secrets --staged`
+- 통과: 2026-08-27 `draft:prepare`로 `재혼 황후`, `WHY_NOW`, crawl run `101`의 첫 운영 초안 `id=1`을 예약했고 manifest hash와 운영 API 저장 hash가 일치했다.
+- 통과: `id=1`의 키워드 스냅샷은 `재혼 황후` PRIMARY 한 건이며 근거 없는 관련 키워드 `스캔들`은 manifest와 DB 예약 데이터에서 제외됐다.
+- 통과: 첫 manifest 결정적 재생은 `EXACT_CONTENT`, 충돌 ID `1`, `reserveDraft()` 0회로 종료됐고 추가 manifest를 만들지 않았다.
+- 확인: 일반 `draft:prepare` 재실행은 생성형 선택 단계에서 별도 후보 `인턴`을 골라 중복이 아닌 새 초안을 만들었다. 테스트 이력 `id=2`는 `REJECTED`로 전환했고 첫 `DRAFT(id=1)`만 후속 제작 대상으로 유지한다.
+- 통과: `./dev/check-secrets --staged`
 
 #### 인계 메모
 
@@ -140,6 +148,7 @@
 - 첫 번째 Gemini는 후보, 편집 형식, 사건 유형, 관계 키워드와 영상 원문 발췌만 고른다. 두 번째 Gemini는 검증된 Brief만 받아 문안을 작성하고 시스템은 `topicKey`, `eventKey`와 근거 claim을 결정한다.
 - 두 번째 실습으로 동일 hash, 활성 동일 사건, 최근 동일 주제와 허용 순서를 구현했고, 여러 이력이 섞여도 hash 충돌을 우선하는 회귀 테스트를 추가했다.
 - dry-run은 실제 예약과 동일한 후보·Gemini·중복 정책 코드를 사용하지만 `reserveDraft()`는 호출하지 않으며, 반복 결과의 key와 콘텐츠 hash 안정성을 보고서로 남긴다.
+- 중복 정책은 Gemini가 선택한 초안 단위로 판정한다. 명령 자체를 재실행하면 다른 후보가 선택될 수 있으므로 특정 초안의 중복 회귀는 저장된 manifest를 결정적으로 재생해 검증한다.
 - 작성 문안은 공통 길이·fact ID·금지 주장·근거 수치 계약을 검사하고 한 번 보정한다. 실패하면 애플리케이션 템플릿이 결정적 fallback을 생성한다.
 - 사용자 실습 대상이었던 보정 판정은 현재 후보·관계 키워드·영상 ID·원문 발췌 참조 오류만 허용하고 일반 HTTP·JSON·문안 오류는 제외한다.
 - 보정 호출은 허용 ID와 영상 제목·채널명 원문 안에서 잘못된 참조만 한 번 수정한다. 같은 잘못된 선택을 반환하면 추가 호출 없이 `REPAIR_NO_EFFECT`로 종료한다.
@@ -152,6 +161,7 @@
 - 2026-08-26 dry-run은 검증 규칙을 늘려도 후보 전체를 받은 모델의 자유 문안을 안정화하지 못한다는 점을 확인했다. 현재 구조는 선택 Gemini와 Brief 전용 작성 Gemini를 분리하고 `editorial-fact-card.mjs`, `editorial-writer-validation.mjs`, `editorial-draft-composer.mjs`가 각각 근거 검증, 작성 계약, fallback을 담당한다.
 - 개편 후 `dry-run-2026-08-26T14-32-58.json`은 가용성과 식별자 안정성 목표를 충족했다. 다만 결정적 composer가 긴 원문을 문자 단위로 자르고 모든 근거를 동일 문장으로 재진술하므로 현재 결과는 발행 가능한 대본이 아니라 다음 편집 다양성 개선의 기준선이다.
 - 2단계 구조는 `/api/ops/media/keywords/{id}`, `editorial-contract.mjs`, `editorial-fact-card.mjs`, `editorial-brief.mjs`, `gemini-editorial-writer.mjs`, `editorial-writer-validation.mjs` 순서로 이어진다. 백엔드 V7 배포와 실제 운영 dry-run 검증을 완료했다.
+- 첫 운영 제작 입력은 `media/out/operational-drafts/54d1df6bb910ff3001da66fe1b235133b2672f00a332af8b35d8acd17aa0bc9c.json`이며 생성물 디렉터리는 Git에서 제외한다.
 
 ## READY
 
