@@ -44,6 +44,7 @@ const DEFAULT_TIMELINE: NarrationTimeline = {
   ],
   durationInFrames: 1080,
   durationSeconds: 36,
+  playbackRate: 1,
 };
 
 function animatedEntrance(frame: number, fps: number): CSSProperties {
@@ -136,7 +137,11 @@ function NarrationAudioTracks({
 }) {
   return timeline.scenes.map((scene) => (
     <Sequence key={scene.id} from={scene.audioFrom} name={`Narration: ${scene.id}`}>
-      <Html5Audio src={staticFile(audio[scene.id])} />
+      <Html5Audio
+        src={staticFile(audio[scene.id])}
+        playbackRate={timeline.playbackRate}
+        preservePitch
+      />
     </Sequence>
   ));
 }
@@ -200,16 +205,18 @@ function PersistentChrome({ props }: { props: KeywordShortformProps }) {
         <div>
           trend<span style={{ color: COLORS.cyan }}>zip</span>
         </div>
-        <div
-          style={{
-            border: `2px solid ${COLORS.border}`,
-            padding: "10px 16px",
-            color: COLORS.text,
-            backgroundColor: COLORS.surface,
-          }}
-        >
-          {props.sampleLabel}
-        </div>
+        {props.sampleLabel ? (
+          <div
+            style={{
+              border: `2px solid ${COLORS.border}`,
+              padding: "10px 16px",
+              color: COLORS.text,
+              backgroundColor: COLORS.surface,
+            }}
+          >
+            {props.sampleLabel}
+          </div>
+        ) : null}
       </div>
       <div
         style={{
@@ -332,7 +339,10 @@ function OverviewScene({
               justifyContent: "space-between",
             }}
           >
-            <div style={{ fontSize: 28, fontWeight: 800 }}>{props.generationLabel} SAMPLE</div>
+            <div style={{ fontSize: 28, fontWeight: 800 }}>
+              {props.generationLabel}
+              {props.isSample ? " SAMPLE" : ""}
+            </div>
             <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
               <div style={{ fontSize: 136, lineHeight: 1, fontWeight: 900 }}>{props.rank}</div>
               <div style={{ fontSize: 30, fontWeight: 800 }}>위</div>

@@ -1,13 +1,18 @@
 package com.mztrend.controller.ops
 
 import com.mztrend.common.ResponseWrapper
+import com.mztrend.controller.ops.dto.RegisterShortformRenderArtifactRequest
+import com.mztrend.controller.ops.dto.RegisterShortformRenderArtifactResponse
 import com.mztrend.controller.ops.dto.ReserveShortformDraftRequest
+import com.mztrend.controller.ops.dto.ReviewShortformRenderArtifactRequest
+import com.mztrend.controller.ops.dto.ReviewShortformRenderArtifactResponse
 import com.mztrend.controller.ops.dto.ShortformContentListResponse
 import com.mztrend.controller.ops.dto.ShortformContentResponse
 import com.mztrend.controller.ops.dto.UpdateShortformContentStatusRequest
 import com.mztrend.controller.ops.dto.toCommand
 import com.mztrend.controller.ops.dto.toResponse
 import com.mztrend.service.ShortformContentService
+import com.mztrend.service.ShortformRenderArtifactService
 import io.swagger.v3.oas.annotations.Hidden
 import jakarta.validation.Valid
 import org.springframework.format.annotation.DateTimeFormat
@@ -28,6 +33,7 @@ import java.time.LocalDateTime
 @RequestMapping("/api/ops/media/contents")
 class ShortformContentOperationsController(
     private val shortformContentService: ShortformContentService,
+    private val shortformRenderArtifactService: ShortformRenderArtifactService,
 ) {
     @GetMapping
     fun getRecentContents(
@@ -47,6 +53,26 @@ class ShortformContentOperationsController(
         @Valid @RequestBody request: ReserveShortformDraftRequest,
     ): ResponseWrapper<ShortformContentResponse> =
         ResponseWrapper.success(shortformContentService.reserveDraft(request.toCommand()).toResponse())
+
+    @PostMapping("/{id}/render-artifacts")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun registerRenderArtifact(
+        @PathVariable id: Long,
+        @Valid @RequestBody request: RegisterShortformRenderArtifactRequest,
+    ): ResponseWrapper<RegisterShortformRenderArtifactResponse> =
+        ResponseWrapper.success(
+            shortformRenderArtifactService.registerRenderArtifact(id, request.toCommand()).toResponse(),
+        )
+
+    @PostMapping("/{id}/reviews")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun reviewRenderArtifact(
+        @PathVariable id: Long,
+        @Valid @RequestBody request: ReviewShortformRenderArtifactRequest,
+    ): ResponseWrapper<ReviewShortformRenderArtifactResponse> =
+        ResponseWrapper.success(
+            shortformRenderArtifactService.reviewRenderArtifact(id, request.toCommand()).toResponse(),
+        )
 
     @PatchMapping("/{id}")
     fun updateStatus(

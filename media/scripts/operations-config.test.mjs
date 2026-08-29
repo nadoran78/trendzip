@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { loadOperationalDraftConfig } from "./operations-config.mjs";
+import {
+  loadMediaOperationsConfig,
+  loadOperationalDraftConfig,
+} from "./operations-config.mjs";
 
 const requiredEnv = {
   TRENDZIP_API_BASE_URL: "https://api-trendzip.nadoran.com/",
@@ -57,4 +60,15 @@ test("operational draft config accepts repeated dry runs without a wait", () => 
   assert.equal(config.dryRunCount, 3);
   assert.equal(config.dryRunIntervalMs, 0);
   assert.equal(config.geminiRepairDelayMs, 0);
+});
+
+test("media operations config does not require Gemini credentials for review commands", () => {
+  const config = loadMediaOperationsConfig({
+    TRENDZIP_API_BASE_URL: "https://api-trendzip.nadoran.com/",
+    MEDIA_OPERATIONS_API_KEY: "operations-key",
+  });
+
+  assert.equal(config.apiBaseUrl, "https://api-trendzip.nadoran.com");
+  assert.equal(config.mediaOperationsApiKey, "operations-key");
+  assert.equal(config.requestTimeoutMs, 15_000);
 });

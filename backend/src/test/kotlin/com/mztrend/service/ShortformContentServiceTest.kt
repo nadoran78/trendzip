@@ -1,5 +1,6 @@
 package com.mztrend.service
 
+import com.mztrend.domain.ShortformContent
 import com.mztrend.domain.ShortformContentStatus
 import com.mztrend.domain.ShortformEditorialFormat
 import com.mztrend.domain.ShortformKeywordRole
@@ -120,6 +121,45 @@ class ShortformContentServiceTest {
         assertEquals(ErrorCode.INVALID_REQUEST, exception.errorCode)
         assertEquals(0, shortformContentRepository.count())
         assertEquals(0, shortformContentKeywordSnapshotRepository.count())
+    }
+
+    @Test
+    fun `updateStatus cannot approve review required content without review decision`() {
+        val content =
+            shortformContentRepository.saveAndFlush(
+                ShortformContent(
+                    platform = ShortformPlatform.YOUTUBE,
+                    status = ShortformContentStatus.REVIEW_REQUIRED,
+                    primaryKeywordId = 101L,
+                    primaryKeywordWord = "재혼 황후",
+                    sourceGeneration = ShortformSourceGeneration.TWENTY,
+                    editorialFormat = ShortformEditorialFormat.WHY_NOW,
+                    topicKey = "the-remarried-empress",
+                    eventKey = "the-remarried-empress:trailer",
+                    audienceAngle = "공개된 예고편으로 작품 맥락을 설명합니다.",
+                    selectionReason = "공식 영상 근거가 확인되었습니다.",
+                    title = "재혼 황후가 지금 주목받는 이유",
+                    contentHash = "9".repeat(64),
+                    sourceCrawlRunId = 501L,
+                ),
+            )
+
+        val exception =
+            assertFailsWith<MzTrendException> {
+                shortformContentService.updateStatus(
+                    requireNotNull(content.id),
+                    UpdateShortformContentStatusCommand(
+                        status = ShortformContentStatus.APPROVED,
+                        externalContentId = null,
+                    ),
+                )
+            }
+
+        assertEquals(ErrorCode.INVALID_STATE_TRANSITION, exception.errorCode)
+        assertEquals(
+            ShortformContentStatus.REVIEW_REQUIRED,
+            shortformContentRepository.findById(requireNotNull(content.id)).orElseThrow().status,
+        )
     }
 
     private fun command(

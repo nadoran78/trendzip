@@ -31,6 +31,22 @@ test("timeline uses audio duration, padding, and minimum scene frames", () => {
   ]);
   assert.equal(timeline.durationInFrames, 552);
   assert.equal(timeline.durationSeconds, 18.4);
+  assert.equal(timeline.playbackRate, 1);
+});
+
+test("timeline compresses audio, padding, and visual minimums at a faster playback rate", () => {
+  const timeline = calculateSceneTimeline(audioManifest, { ...options, playbackRate: 1.3 });
+
+  assert.equal(timeline.playbackRate, 1.3);
+  assert.deepEqual(timeline.scenes, [
+    { id: "hook", from: 0, audioFrom: 5, durationInFrames: 47 },
+    { id: "overview", from: 47, audioFrom: 52, durationInFrames: 62 },
+    { id: "reasons", from: 109, audioFrom: 114, durationInFrames: 85 },
+    { id: "evidence", from: 194, audioFrom: 199, durationInFrames: 108 },
+    { id: "cta", from: 302, audioFrom: 307, durationInFrames: 131 },
+  ]);
+  assert.equal(timeline.durationInFrames, 433);
+  assert.equal(timeline.durationSeconds, 433 / 30);
 });
 
 test("timeline rounds fractional audio frames up so narration is not clipped", () => {
@@ -66,5 +82,9 @@ test("timeline rejects invalid frame options", () => {
   assert.throws(
     () => calculateSceneTimeline(audioManifest, { ...options, fps: 0 }),
     /options.fps must be an integer greater than or equal to 1/,
+  );
+  assert.throws(
+    () => calculateSceneTimeline(audioManifest, { ...options, playbackRate: 0 }),
+    /options.playbackRate must be a finite number greater than 0/,
   );
 });

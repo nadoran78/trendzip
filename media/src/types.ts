@@ -17,6 +17,7 @@ export type NarrationTimeline = {
   scenes: NarrationSceneTimeline[];
   durationInFrames: number;
   durationSeconds: number;
+  playbackRate: number;
 };
 
 export type NarrationAudio = Record<NarrationSceneId, string>;
@@ -29,7 +30,7 @@ export type Evidence = {
 
 export type KeywordShortformProps = {
   isSample: boolean;
-  sampleLabel: string;
+  sampleLabel?: string | null;
   keyword: string;
   generation: Generation;
   generationLabel: string;

@@ -2,6 +2,7 @@ import { NARRATION_SCENE_IDS } from "./scenes.mjs";
 
 export const DEFAULT_TIMELINE_OPTIONS = Object.freeze({
   fps: 30,
+  playbackRate: 1,
   leadInFrames: 6,
   leadOutFrames: 12,
   minimumSceneFrames: Object.freeze({
@@ -20,6 +21,12 @@ function requirePositiveInteger(value, name, { allowZero = false } = {}) {
   }
 }
 
+function requirePositiveNumber(value, name) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    throw new Error(`${name} must be a finite number greater than 0.`);
+  }
+}
+
 function validateTimelineInput(audioManifest, options) {
   if (!Array.isArray(audioManifest?.scenes)) {
     throw new Error("audioManifest.scenes must be an array.");
@@ -29,6 +36,7 @@ function validateTimelineInput(audioManifest, options) {
   }
 
   requirePositiveInteger(options.fps, "options.fps");
+  requirePositiveNumber(options.playbackRate, "options.playbackRate");
   requirePositiveInteger(options.leadInFrames, "options.leadInFrames", { allowZero: true });
   requirePositiveInteger(options.leadOutFrames, "options.leadOutFrames", { allowZero: true });
 
@@ -51,20 +59,36 @@ export function calculateSceneTimeline(
   audioManifest,
   options = DEFAULT_TIMELINE_OPTIONS,
 ) {
-  validateTimelineInput(audioManifest, options);
+  const normalizedOptions = {
+    ...options,
+    playbackRate: options.playbackRate ?? DEFAULT_TIMELINE_OPTIONS.playbackRate,
+  };
+  validateTimelineInput(audioManifest, normalizedOptions);
 
   const scenes = [];
   let currentFrame = 0;
 
   audioManifest.scenes.forEach((scene) => {
-    const narrationFrames = Math.ceil((scene.durationMs / 1_000) * options.fps);
-    const totalNarrationFrames = options.leadInFrames + narrationFrames + options.leadOutFrames;
-    const durationInFrames = Math.max(options.minimumSceneFrames[scene.id], totalNarrationFrames);
+    // The visual sequence uses the same compressed clock as the audio playback.
+    const narrationFrames = Math.ceil(
+      ((scene.durationMs / 1_000) * normalizedOptions.fps) / normalizedOptions.playbackRate,
+    );
+    const leadInFrames = Math.ceil(
+      normalizedOptions.leadInFrames / normalizedOptions.playbackRate,
+    );
+    const leadOutFrames = Math.ceil(
+      normalizedOptions.leadOutFrames / normalizedOptions.playbackRate,
+    );
+    const minimumSceneFrames = Math.ceil(
+      normalizedOptions.minimumSceneFrames[scene.id] / normalizedOptions.playbackRate,
+    );
+    const totalNarrationFrames = leadInFrames + narrationFrames + leadOutFrames;
+    const durationInFrames = Math.max(minimumSceneFrames, totalNarrationFrames);
 
     scenes.push({
       id: scene.id,
       from: currentFrame,
-      audioFrom: currentFrame + options.leadInFrames,
+      audioFrom: currentFrame + leadInFrames,
       durationInFrames,
     });
 
@@ -74,6 +98,7 @@ export function calculateSceneTimeline(
   return {
     scenes,
     durationInFrames: currentFrame,
-    durationSeconds: currentFrame / options.fps,
+    durationSeconds: currentFrame / normalizedOptions.fps,
+    playbackRate: normalizedOptions.playbackRate,
   };
 }
