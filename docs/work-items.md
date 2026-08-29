@@ -23,144 +23,7 @@
 
 ## ACTIVE
 
-### MEDIA-005 운영 숏폼 렌더링 및 사람 승인 게이트
-
-- 상태: REVIEW
-- 브랜치: codex/media-005-render-review-gate
-- 시작일: 2026-08-27
-- 마지막 갱신: 2026-08-29
-- 다음 행동: 최신 `1.3x` `PUBLIC_CANDIDATE` MP4(`media/out/operational-renders/1/2026-08-29T06-18-51-883Z-public/`)를 전체 재생한 뒤 `./scripts/ops/review-shortform.sh`로 등록과 명시적인 검수 결정을 기록한다.
-
-#### 목적
-
-- MEDIA-004가 예약한 운영 `DRAFT`를 실제 한국어 음성, 세로형 MP4와 검수용 대표 장면으로 변환한다.
-- 렌더 결과를 원본 콘텐츠 hash와 결합해 기록하고, 사람이 확인한 동일 아티팩트만 승인·반려·재생성할 수 있게 한다.
-
-#### 범위
-
-- manifest v4의 예약 ID, 콘텐츠 hash, 대본, 근거와 경고를 검증하는 운영 렌더 입력 계약을 추가한다.
-- 운영 manifest를 기존 `KeywordShortformProps`로 변환하고 샘플 전용 fixture와 운영 입력 경계를 분리한다.
-- 기존 Gemini TTS, audio manifest, timeline과 Remotion 렌더 코드를 임의의 운영 초안에도 재사용할 수 있게 모듈화한다.
-- 실행마다 격리된 출력 디렉터리에 WAV, audio manifest, MP4, 대표 장면과 render manifest를 생성한다.
-- MP4 hash, 원본 콘텐츠 hash, TTS 모델·음성, 음성 manifest hash, 영상 규격과 생성 시각을 렌더 아티팩트로 기록한다.
-- 렌더 아티팩트와 사람 검수 결정을 보존하는 Flyway 스키마, 도메인, 저장소와 보호된 운영 API를 추가한다.
-- 검증된 렌더를 `REVIEW_REQUIRED`로 전환하고 `APPROVED`, `NEEDS_REVISION`, `REJECTED` 결정을 검수자·사유·아티팩트 hash와 함께 기록하는 CLI를 추가한다.
-- 초안 준비·TTS·렌더링과 검수 후 등록·결정을 각각 한 명령으로 실행하는 운영 셸 진입점을 추가한다.
-- 첫 운영 초안 `DRAFT(id=1)`를 사용해 실제 TTS·`1.3x` 렌더·대표 장면 생성과 수동 전체 재생 검수를 진행한다.
-
-#### 제외 범위
-
-- YouTube 비공개 업로드, 예약 공개와 다른 SNS 배포
-- 사람 승인을 대신하는 자동 품질 판정
-- 운영자용 웹 관리 화면
-- 권리를 확보하지 않은 YouTube 영상·썸네일·방송·영화 클립과 외부 음원 사용
-- 대본 내용 수정과 새 콘텐츠 hash 생성. 문안 변경이 필요하면 기존 초안을 반려하고 MEDIA-004에서 새 `DRAFT`를 만든다.
-
-#### 구현 단계
-
-1. 렌더·검수 계약과 저장 모델을 정의한다.
-   - `shortform_render_artifacts`에 콘텐츠 ID·hash, 렌더 hash, TTS·영상 메타데이터와 생성 시각을 보존한다.
-   - `shortform_review_decisions`에 대상 아티팩트, 결정, 검수자, 사유와 결정 시각을 보존한다.
-   - 같은 렌더 hash의 중복 등록과 현재 아티팩트가 아닌 결과의 승인을 차단한다.
-2. 운영 manifest 입력 어댑터를 구현한다.
-   - `DRAFT`, 예약 ID, manifest·reservation hash 일치와 필수 대본·근거를 검사한다.
-   - 세대, 제목, 요약, 두 이유, 근거와 CTA를 기존 Remotion props에 매핑한다.
-   - 샘플 fixture 렌더 경로의 회귀 동작을 유지한다.
-3. 운영 TTS·렌더 파이프라인을 구현한다.
-   - TTS는 비용이 발생하는 별도 명시 명령으로 유지하고 테스트에서는 가짜 transport를 사용한다.
-   - 렌더는 기존 음성의 대본 hash를 재검사한 뒤 H.264·AAC MP4와 대표 장면을 생성한다.
-   - ffprobe 규격 검사와 파일 hash 계산이 끝난 경우에만 아티팩트를 운영 API에 등록한다.
-4. 사람 승인 게이트를 구현한다.
-   - 렌더 등록 후 콘텐츠를 `REVIEW_REQUIRED`로 전환하고 검수 체크리스트와 파일 경로를 출력한다.
-   - 승인·수정 요청·반려는 명시적 CLI 명령, 검수자와 사유를 필수로 받는다.
-   - 승인 요청의 아티팩트 hash가 최신 렌더와 다르면 상태를 변경하지 않는다.
-   - `NEEDS_REVISION` 재렌더는 이전 아티팩트와 결정을 보존하고 새 렌더 이력을 생성한다.
-5. 첫 운영 초안을 실제 검수한다.
-   - 생성 스크립트는 DRAFT 준비·TTS·렌더까지만 실행하고 등록이나 승인을 자동화하지 않는다.
-   - 검수 스크립트는 결정 문자열 재입력 뒤에만 등록·결정을 실행하고 중간 실패 재시도를 지원한다.
-   - `DRAFT(id=1)`의 TTS 발음, 음량, 장면 전환, 자막, 근거 표시와 CTA를 전체 재생으로 확인한다.
-   - 자동으로 `APPROVED` 처리하지 않고 사용자가 결과를 확인한 뒤 최종 결정을 입력한다.
-   - 실행 절차, 비용 경계, 장애 복구와 MEDIA-006 인계 정보를 문서화한다.
-
-#### 사용자 실습
-
-- 최초 계획에서는 사용자가 `createOperationalRenderProps()`를 구현할 예정이었다.
-- 사용자의 명시적 요청에 따라 Codex가 이 실습 범위까지 구현하고, manifest의 대본·근거·세대 정보 매핑과 실패 계약을 테스트했다.
-- 운영 props에서는 샘플·검수 배지를 제거해 처음부터 공개 후보 영상 하나를 만들고, 기존 샘플 렌더의 `SAMPLE` 표기는 유지했다.
-- 공개 후보는 TTS·자막·장면 전환을 `1.3x`로 동기화하며, 기존 WAV를 재사용한 새 실행도 같은 정책을 적용한다.
-
-#### 완료 조건
-
-- 첫 운영 manifest로 장면별 WAV, audio manifest, 1080x1920·30fps H.264·AAC MP4와 대표 장면을 생성한다.
-- 원본 콘텐츠 hash, 대본 hash, 음성 설정과 최종 MP4 hash가 하나의 render manifest 및 운영 아티팩트 이력으로 연결된다.
-- 렌더·파일 규격 검증 실패 시 콘텐츠 상태와 운영 아티팩트 이력을 변경하지 않는다.
-- 사람 결정 전에는 `APPROVED`가 될 수 없고 최신 아티팩트가 아닌 결과는 승인할 수 없다.
-- 승인·수정 요청·반려의 검수자, 사유, 대상 아티팩트와 시각이 보존된다.
-- 샘플 렌더 회귀, 외부 API 없는 자동 테스트, 저장소 빠른 검증과 비밀정보 검사를 통과한다.
-
-#### 검증 계획
-
-- 백엔드 도메인 상태 전이, 아티팩트 중복, 최신 hash 승인과 검수 이력 통합 테스트
-- 운영 API 인증, 렌더 등록과 승인·수정 요청·반려 Controller 테스트
-- 운영 manifest 어댑터, TTS 재사용, render manifest hash와 실패 원자성 Node 테스트
-- 미디어 타입 검사와 기존 샘플·narrated 렌더 회귀 테스트
-- 실제 Gemini TTS 호출은 첫 운영 초안 수동 검증에서만 실행
-- 실제 MP4 ffprobe, 대표 장면, 전체 재생과 사람 결정 확인
-- `./dev/verify --quick`, `./dev/check-context`, `./dev/check-secrets --staged`
-
-#### 예상 커밋 단위
-
-1. `feat: 숏폼 렌더 아티팩트와 검수 이력 추가`
-2. `feat: 운영 초안 렌더 입력 변환 추가`
-3. `feat: 운영 TTS와 영상 렌더 파이프라인 추가`
-4. `feat: 숏폼 사람 승인 게이트 추가`
-5. `docs: MEDIA-005 운영 검증 결과 기록`
-6. `feat: 숏폼 생성과 검수 운영 스크립트 추가`
-
-#### 관련 코드
-
-- `backend/src/main/kotlin/com/mztrend/controller/ops`
-- `backend/src/main/kotlin/com/mztrend/domain/ShortformContent.kt`
-- `backend/src/main/kotlin/com/mztrend/service/ShortformContentService.kt`
-- `backend/src/main/resources/db/migration`
-- `media/scripts`
-- `scripts/ops/generate-shortform.sh`
-- `scripts/ops/review-shortform.sh`
-- `media/src/Root.tsx`
-- `media/src/TrendKeywordShort.tsx`
-- `media/src/types.ts`
-- `docs/media-publishing-policy.md`
-- `docs/media-tts-spike.md`
-
-#### 진행 상황
-
-- 렌더 아티팩트·검수 결정 이력, 상태 전이와 보호된 운영 API를 V8 migration과 함께 구현했다.
-- 운영 manifest v4를 Remotion props로 변환하고 공통 TTS, 격리된 실행 디렉터리, MP4·대표 장면·render manifest 생성을 구현했다.
-- 등록과 검수 CLI는 원본 manifest, WAV, props, MP4, 대표 장면과 영상 메타데이터 hash를 다시 검증한 뒤에만 운영 API를 호출한다.
-- 첫 `DRAFT(id=1)`로 실제 Gemini TTS와 51.179초 H.264·AAC 영상을 생성했다. 초기 내부 표기 영상은 보존하고, 기존 WAV를 재사용해 워터마크 없는 공개 후보를 별도 실행 디렉터리에 다시 렌더링했다.
-- 공개 후보 타임라인은 `1.3x` 재생 속도를 manifest identity에 포함해 음성·자막·장면 전환을 함께 압축한다. 기존 `1.0x` 공개 후보는 등록하지 않고 새 실행 경로의 결과만 검수한다.
-- 운영 DB에 V8 migration과 렌더·검수 API를 배포했다. 아티팩트 등록과 사람 결정은 아직 실행하지 않았다.
-- 새 DRAFT 준비부터 TTS·렌더까지 실행하는 생성 스크립트와, 전체 검수 뒤 등록·결정을 수행하는 대화형 검수 스크립트를 추가했다.
-- 운영 렌더는 `PUBLIC_CANDIDATE` 프로필만 허용하며 검수 상태를 MP4 오버레이 대신 render manifest와 운영 API에 남긴다. 이전 워터마크 포함 검수본은 등록하지 않고 새 공개 후보를 생성한다.
-- 새 공개 후보 아티팩트 hash는 `81cb6f7ff9294674fd286ace6872e3d4926e01efb0ee118c667823e8da44f435`이며, `sampleLabel: null`과 1080x1920·30fps·H.264·AAC를 검증하고 첫 대표 장면에서 내부 표기가 없음을 확인했다.
-- `1.3x` 속도 정책을 적용해 기존 WAV로 새 공개 후보를 렌더했다. 새 실행은 1,186프레임(39.533초), `sampleLabel: null`, render manifest v3이며 아티팩트 hash는 `ee290c3864954447484aaf3003c0bb014ad50966e19571547306fe02e9ebe678`이다.
-
-#### 검증
-
-- 상태: PASS
-- 백엔드 렌더·검수 서비스 및 Controller 테스트 16건과 전체 `test`, `ktlintCheck`를 통과했다.
-- 미디어 테스트 137건과 TypeScript 검사를 통과했다.
-- 실제 `1.3x` 운영 render manifest의 모든 파일 hash와 1080x1920·30fps·H.264·AAC·39.595초 규격을 재검증했다.
-- 기존 무음 샘플을 다시 렌더해 1080x1920·30fps·36초·H.264·yuv420p·무음 규격을 확인했다.
-- 전체 Git 이력 비밀정보 검사, `./dev/verify --quick`과 `./dev/check-context --strict`를 통과했다.
-
-#### 인계 메모
-
-- 첫 워터마크 포함 검수본은 `media/out/operational-renders/1/2026-08-27T13-25-35-473Z/`에 있으며 Git에는 포함하지 않는다. 이 결과물은 공개 후보·등록 대상으로 사용하지 않는다.
-- 이전 `1.0x` 공개 후보는 `media/out/operational-renders/1/2026-08-29T05-49-36-784Z-public/`에 보존하며 등록하지 않는다. 현재 `1.3x` 공개 후보는 `media/out/operational-renders/1/2026-08-29T06-18-51-883Z-public/`에 있으며 `.latest-run`은 이 경로를 가리킨다.
-- 운영 백엔드 배포를 완료했다. 사용자가 MP4 전체의 발음·음량·자막 싱크·장면 전환과 근거를 확인한 뒤 `./scripts/ops/review-shortform.sh <run-directory>`를 실행한다.
-- 검수 스크립트는 아티팩트 등록과 결정을 순서대로 처리하며 등록 후 검수 실패 시 같은 명령으로 검수 단계부터 재개한다. 개별 `draft:register`, `draft:review` 명령은 장애 확인용으로 유지한다.
-- 코드와 자동 검증은 완료됐지만 사람 승인을 자동화하지 않는 것이 이 작업의 핵심 불변식이므로, 사용자 결정 전까지 `REVIEW`로 유지한다.
+현재 활성 작업 없음.
 
 ## READY
 
@@ -168,8 +31,8 @@
 
 ## LATER
 
-- MEDIA-006 승인된 숏폼의 YouTube 수동 업로드·공개 운영 검증과 발행 이력 연결
-- MEDIA-007 YouTube 업로드·발행 일정·SNS 확장 자동화
+- 후속 메모: 사람 승인 이후 YouTube와 SNS 쇼츠 업로드를 자동화할지 운영 데이터가 더 쌓인 뒤 검토한다.
+- 후속 메모: 내레이션·자막·장면 구성 등 쇼츠 영상 품질 개선 방향을 실제 게시 결과를 바탕으로 정리한다.
 - Android Chrome 홈 화면 설치와 standalone 실행 호환성 확인
 - 프론트엔드 이전 production deployment 수동 롤백 workflow
 - 운영 API 노출 정책 강화: 운영 Swagger/OpenAPI 비활성화, Cloudflare rate limit 적용, 프론트 배포 도메인 기반 CORS 제한
@@ -179,6 +42,16 @@
 - 아키텍처 규칙 자동 검사
 
 ## 최근 완료
+
+### MEDIA-005 운영 숏폼 렌더링 및 사람 승인 게이트
+
+- 상태: DONE
+- 브랜치: `codex/media-005-render-review-gate`
+- 완료일: 2026-08-29
+- 결과: 운영 manifest를 실제 Gemini TTS와 워터마크 없는 `1.3x` `PUBLIC_CANDIDATE` MP4로 렌더링하고, 파일 hash·영상 규격을 검증한 뒤 최신 아티팩트만 검수할 수 있는 등록·결정 게이트를 구현했다.
+- 운영 검증: 사용자가 최신 공개 후보를 전체 재생 검수하고 명시적으로 승인한 뒤 YouTube에 수동 게시했다.
+- 운영 메모: 첫 공개 후보의 운영 등록·승인·게시 검증이 끝났으므로 `MEDIA-006`은 별도 작업으로 만들지 않는다. 향후 자동 업로드와 영상 품질 개선은 장기 운영 메모로만 관리한다.
+- 검증: 백엔드 렌더·검수 테스트 16건, 미디어 테스트 137건, TypeScript 검사, `./dev/verify --quick`, `./dev/check-context --strict`, Gitleaks를 통과했다.
 
 ### MEDIA-004 운영 후보 자동 선정 및 제작 이력 기반 초안 생성
 
