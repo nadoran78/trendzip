@@ -52,6 +52,7 @@
 
 - `develop`을 `main`에 병합한 뒤 앱인토스 출시 준비 작업을 등록하고 전용 브랜치를 만들었다.
 - 최신 공식 요구사항과 현재 Next.js·Vercel·Cloudflare Access 구성을 대조해 출시 아키텍처와 콘솔·코드·검증 로드맵을 `docs/ops/appintoss-deployment.md`에 정리했다.
+- 외부 앱·브라우저 이동은 심사 리스크가 있어 제외하고, 앱인토스에서 예외적으로 허용하는 YouTube 공식 iframe 재생 어댑터를 적용하기로 했다.
 - 앱인토스 전용 WebView 프로젝트와 Vercel BFF는 아직 구현하지 않았다.
 
 #### 완료 조건

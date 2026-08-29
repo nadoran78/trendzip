@@ -27,6 +27,9 @@ Trendzip의 공개 웹 서비스를 유지하면서, 토스 앱 안에서 실행
 - 기존 Spring Boot API의 Cloudflare Access 보호는 유지한다.
 - 앱인토스 번들은 Vercel의 서버 전용 환경변수와 Cloudflare Access Client Secret을 읽지 않는다.
 - 앱인토스 클라이언트가 호출하는 BFF는 `GET` 기반의 공개 읽기 전용 엔드포인트만 제공한다.
+- 앱인토스 안에서는 YouTube 앱·브라우저로 이동하지 않고, 영상 선택 시 전용 화면 또는 바텀시트에서 YouTube 공식 iframe을 재생한다.
+- 일반 iframe은 사용하지 않으며, 앱인토스가 예외로 허용한 YouTube 공식 iframe만 영상 재생 목적으로 사용한다.
+- YouTube iframe 로드·재생에 실패하면 출처와 오류 안내만 표시하고 외부 URL 열기로 자동 전환하지 않는다.
 - 첫 제출에서는 PWA 서비스 워커와 GTM·GA4를 앱인토스 번들에서 비활성화한다. 출시 후 필요성이 확인되면 별도 작업으로 도입한다.
 
 ## 운영자 결정 필요
@@ -84,26 +87,30 @@ https://<appName>.private-apps.tossmini.com
 ### 4. 앱인토스 런타임 적응
 
 - SDK 초기화, Safe Area, 로딩·오류 화면과 뒤로 가기 동작을 구현한다.
-- YouTube 영상 이동은 웹의 새 탭 의존 대신 앱인토스 외부 URL 열기 API로 감싼다.
+- 피드 목록은 썸네일·제목·채널·키워드만 표시하고, 카드 선택 시 앱 내부의 전용 영상 재생 화면 또는 바텀시트를 연다.
+- 재생 화면은 검증된 `videoId`로 만든 `https://www.youtube.com/embed/<videoId>`만 iframe `src`로 사용한다. 피드 목록에서 여러 iframe을 동시에 로드하지 않는다.
+- YouTube iframe 재생 실패, 네트워크 차단 또는 재생 불가 영상은 오류 안내와 영상 메타데이터만 표시한다. YouTube 앱·브라우저·새 탭으로 보내는 fallback은 만들지 않는다.
+- 앱인토스 외부 URL 열기는 이번 출시 범위에서 사용하지 않는다. 개인정보처리방침 등 필수 외부 이동이 필요해지면 심사 전 채널톡의 서면 확인을 받고 별도 작업으로 추가한다.
 - 앱인토스에서는 PWA 설치 유도와 서비스 워커를 제외한다.
 - 첫 제출에는 GTM·GA4 스크립트를 끄고, 기존 동의 UI가 앱 화면을 방해하지 않는지 점검한다.
 - 토스 디자인 가이드와 실제 390px 모바일 화면을 비교해 터치 영역·여백·내비게이션을 조정한다.
 
 ### 사용자 실습
 
-`openExternalUrl(url)` 런타임 어댑터를 구현한다. 브라우저 구현은 기존 외부 링크 이동을 유지하고, 앱인토스 구현은 SDK의 외부 URL 열기 API를 사용한다. 두 구현을 동일 인터페이스로 감싸고 단위 테스트로 선택 조건을 검증한다.
+`YoutubePlaybackAdapter`를 구현한다. 공개 웹 구현은 기존 YouTube 링크 이동을 유지하되, 앱인토스 구현은 검증된 `videoId`에서 iframe embed URL과 내부 재생 상태만 만든다. 허용하지 않는 host·형식의 URL, 재생 실패와 닫기 동작을 단위 테스트로 검증한다.
 
 ## 검증 및 심사 게이트
 
 ### 로컬·Mock 검증
 
-- WebView SDK Mock 환경에서 랜딩, 세대 전환, 피드, 랭킹, 키워드 상세와 외부 URL 이동을 확인한다.
+- WebView SDK Mock 환경에서 랜딩, 세대 전환, 피드, 랭킹, 키워드 상세와 내부 YouTube 재생 화면 열기·닫기를 확인한다.
+- iframe `src`가 YouTube embed URL만 사용하며, 앱인토스 경로에서 `target="_blank"`, `window.open`, SDK `openURL` 호출이 없는지 검사한다.
 - BFF의 허용·비허용 Origin, 비밀정보 미노출, 백엔드 Access 헤더 전달, 오류·timeout을 테스트한다.
 - 기존 공개 웹의 Next.js 빌드와 사용자 흐름이 회귀하지 않는지 확인한다.
 
 ### 샌드박스·QR 검증
 
-- iOS·Android 샌드박스 앱에서 네트워크, 폰트, Safe Area, 뒤로 가기와 YouTube 이동을 확인한다.
+- iOS·Android 샌드박스 앱에서 네트워크, 폰트, Safe Area, 뒤로 가기와 YouTube iframe 재생·닫기를 확인한다.
 - `.ait` 파일을 콘솔에 업로드하고 QR 코드로 실제 토스 앱에서 같은 흐름을 확인한다.
 - QR 테스트 Origin의 CORS와 실제 출시 Origin의 CORS를 각각 확인한다.
 - 앱인토스 WebView에서 `localStorage`·IndexedDB를 새로 사용한다면 QR 테스트와 출시 환경의 저장소가 공유되지 않는 점을 고려한다.
@@ -111,7 +118,8 @@ https://<appName>.private-apps.tossmini.com
 ### 심사 제출
 
 - 앱 정보·노출 정보·서류를 콘솔 정보와 대조한다.
-- iframe 사용 여부, 개인정보처리방침 접근성, 외부 URL 동작, 오류 화면과 고객 문의 경로를 확인한다.
+- YouTube 공식 iframe만 사용하는지, 개인정보처리방침 접근성, 재생 오류 화면과 고객 문의 경로를 확인한다.
+- 외부 앱·브라우저 이동을 새로 추가하지 않는다. 불가피한 외부 이동 요구가 생기면 구현 전에 앱인토스 채널톡으로 심사 허용 여부를 확인한다.
 - 기능·디자인·보안 검수에 필요한 테스트 계정이나 재현 절차가 있으면 제출 메모에 포함한다.
 - 심사 승인 후 콘솔에서 출시하고 초기 오류·BFF 요청량·사용자 흐름을 관찰한다.
 
@@ -127,6 +135,8 @@ https://<appName>.private-apps.tossmini.com
 - [앱인토스 시작하기](https://developers-apps-in-toss.toss.im/bedrock/intro.html)
 - [서비스 오픈 프로세스](https://developers-apps-in-toss.toss.im/intro/onboarding-process.html)
 - [토스앱 테스트하기](https://developers-apps-in-toss.toss.im/development/test/toss.html)
+- [YouTube iframe 예외 공식 답변](https://techchat-apps-in-toss.toss.im/t/iframe/4098)
+- [외부 브라우저 이동 관련 공식 답변](https://techchat-apps-in-toss.toss.im/t/webview/3914)
 - [WebView SDK 3.x Origin과 CORS 공지](https://techchat-apps-in-toss.toss.im/t/webview-storage-cors/4673)
 - [저장소 사용 가이드](https://developers-apps-in-toss.toss.im/bedrock/reference/framework/%EC%A0%80%EC%9E%A5%EC%86%8C/Storage.html)
 
