@@ -44,6 +44,7 @@ const DEFAULT_TIMELINE: NarrationTimeline = {
   ],
   durationInFrames: 1080,
   durationSeconds: 36,
+  playbackRate: 1,
 };
 
 function animatedEntrance(frame: number, fps: number): CSSProperties {
@@ -136,7 +137,11 @@ function NarrationAudioTracks({
 }) {
   return timeline.scenes.map((scene) => (
     <Sequence key={scene.id} from={scene.audioFrom} name={`Narration: ${scene.id}`}>
-      <Html5Audio src={staticFile(audio[scene.id])} />
+      <Html5Audio
+        src={staticFile(audio[scene.id])}
+        playbackRate={timeline.playbackRate}
+        preservePitch
+      />
     </Sequence>
   ));
 }

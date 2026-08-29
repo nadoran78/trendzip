@@ -29,7 +29,7 @@
 - 브랜치: codex/media-005-render-review-gate
 - 시작일: 2026-08-27
 - 마지막 갱신: 2026-08-29
-- 다음 행동: 최신 `PUBLIC_CANDIDATE` MP4(`media/out/operational-renders/1/2026-08-29T05-49-36-784Z-public/`)를 전체 재생한 뒤 `./scripts/ops/review-shortform.sh`로 등록과 명시적인 검수 결정을 기록한다.
+- 다음 행동: 최신 `1.3x` `PUBLIC_CANDIDATE` MP4(`media/out/operational-renders/1/2026-08-29T06-18-51-883Z-public/`)를 전체 재생한 뒤 `./scripts/ops/review-shortform.sh`로 등록과 명시적인 검수 결정을 기록한다.
 
 #### 목적
 
@@ -46,7 +46,7 @@
 - 렌더 아티팩트와 사람 검수 결정을 보존하는 Flyway 스키마, 도메인, 저장소와 보호된 운영 API를 추가한다.
 - 검증된 렌더를 `REVIEW_REQUIRED`로 전환하고 `APPROVED`, `NEEDS_REVISION`, `REJECTED` 결정을 검수자·사유·아티팩트 hash와 함께 기록하는 CLI를 추가한다.
 - 초안 준비·TTS·렌더링과 검수 후 등록·결정을 각각 한 명령으로 실행하는 운영 셸 진입점을 추가한다.
-- 첫 운영 초안 `DRAFT(id=1)`를 사용해 실제 TTS·렌더·대표 장면 생성과 수동 전체 재생 검수를 진행한다.
+- 첫 운영 초안 `DRAFT(id=1)`를 사용해 실제 TTS·`1.3x` 렌더·대표 장면 생성과 수동 전체 재생 검수를 진행한다.
 
 #### 제외 범위
 
@@ -87,6 +87,7 @@
 - 최초 계획에서는 사용자가 `createOperationalRenderProps()`를 구현할 예정이었다.
 - 사용자의 명시적 요청에 따라 Codex가 이 실습 범위까지 구현하고, manifest의 대본·근거·세대 정보 매핑과 실패 계약을 테스트했다.
 - 운영 props에서는 샘플·검수 배지를 제거해 처음부터 공개 후보 영상 하나를 만들고, 기존 샘플 렌더의 `SAMPLE` 표기는 유지했다.
+- 공개 후보는 TTS·자막·장면 전환을 `1.3x`로 동기화하며, 기존 WAV를 재사용한 새 실행도 같은 정책을 적용한다.
 
 #### 완료 조건
 
@@ -137,24 +138,26 @@
 - 운영 manifest v4를 Remotion props로 변환하고 공통 TTS, 격리된 실행 디렉터리, MP4·대표 장면·render manifest 생성을 구현했다.
 - 등록과 검수 CLI는 원본 manifest, WAV, props, MP4, 대표 장면과 영상 메타데이터 hash를 다시 검증한 뒤에만 운영 API를 호출한다.
 - 첫 `DRAFT(id=1)`로 실제 Gemini TTS와 51.179초 H.264·AAC 영상을 생성했다. 초기 내부 표기 영상은 보존하고, 기존 WAV를 재사용해 워터마크 없는 공개 후보를 별도 실행 디렉터리에 다시 렌더링했다.
+- 공개 후보 타임라인은 `1.3x` 재생 속도를 manifest identity에 포함해 음성·자막·장면 전환을 함께 압축한다. 기존 `1.0x` 공개 후보는 등록하지 않고 새 실행 경로의 결과만 검수한다.
 - 운영 DB에 V8 migration과 렌더·검수 API를 배포했다. 아티팩트 등록과 사람 결정은 아직 실행하지 않았다.
 - 새 DRAFT 준비부터 TTS·렌더까지 실행하는 생성 스크립트와, 전체 검수 뒤 등록·결정을 수행하는 대화형 검수 스크립트를 추가했다.
 - 운영 렌더는 `PUBLIC_CANDIDATE` 프로필만 허용하며 검수 상태를 MP4 오버레이 대신 render manifest와 운영 API에 남긴다. 이전 워터마크 포함 검수본은 등록하지 않고 새 공개 후보를 생성한다.
 - 새 공개 후보 아티팩트 hash는 `81cb6f7ff9294674fd286ace6872e3d4926e01efb0ee118c667823e8da44f435`이며, `sampleLabel: null`과 1080x1920·30fps·H.264·AAC를 검증하고 첫 대표 장면에서 내부 표기가 없음을 확인했다.
+- `1.3x` 속도 정책을 적용해 기존 WAV로 새 공개 후보를 렌더했다. 새 실행은 1,186프레임(39.533초), `sampleLabel: null`, render manifest v3이며 아티팩트 hash는 `ee290c3864954447484aaf3003c0bb014ad50966e19571547306fe02e9ebe678`이다.
 
 #### 검증
 
 - 상태: PASS
 - 백엔드 렌더·검수 서비스 및 Controller 테스트 16건과 전체 `test`, `ktlintCheck`를 통과했다.
-- 미디어 테스트 132건과 TypeScript 검사를 통과했다.
-- 실제 운영 render manifest의 모든 파일 hash와 1080x1920·30fps·H.264·AAC 규격을 재검증했다.
+- 미디어 테스트 137건과 TypeScript 검사를 통과했다.
+- 실제 `1.3x` 운영 render manifest의 모든 파일 hash와 1080x1920·30fps·H.264·AAC·39.595초 규격을 재검증했다.
 - 기존 무음 샘플을 다시 렌더해 1080x1920·30fps·36초·H.264·yuv420p·무음 규격을 확인했다.
 - 전체 Git 이력 비밀정보 검사, `./dev/verify --quick`과 `./dev/check-context --strict`를 통과했다.
 
 #### 인계 메모
 
 - 첫 워터마크 포함 검수본은 `media/out/operational-renders/1/2026-08-27T13-25-35-473Z/`에 있으며 Git에는 포함하지 않는다. 이 결과물은 공개 후보·등록 대상으로 사용하지 않는다.
-- 현재 공개 후보는 `media/out/operational-renders/1/2026-08-29T05-49-36-784Z-public/`에 있으며 Git에는 포함하지 않는다. `.latest-run`은 이 경로를 가리킨다.
+- 이전 `1.0x` 공개 후보는 `media/out/operational-renders/1/2026-08-29T05-49-36-784Z-public/`에 보존하며 등록하지 않는다. 현재 `1.3x` 공개 후보는 `media/out/operational-renders/1/2026-08-29T06-18-51-883Z-public/`에 있으며 `.latest-run`은 이 경로를 가리킨다.
 - 운영 백엔드 배포를 완료했다. 사용자가 MP4 전체의 발음·음량·자막 싱크·장면 전환과 근거를 확인한 뒤 `./scripts/ops/review-shortform.sh <run-directory>`를 실행한다.
 - 검수 스크립트는 아티팩트 등록과 결정을 순서대로 처리하며 등록 후 검수 실패 시 같은 명령으로 검수 단계부터 재개한다. 개별 `draft:register`, `draft:review` 명령은 장애 확인용으로 유지한다.
 - 코드와 자동 검증은 완료됐지만 사람 승인을 자동화하지 않는 것이 이 작업의 핵심 불변식이므로, 사용자 결정 전까지 `REVIEW`로 유지한다.

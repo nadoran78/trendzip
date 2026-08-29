@@ -132,7 +132,7 @@ MEDIA_DRY_RUN_COUNT=3 npm run draft:dry-run
 
 ## 운영 TTS·렌더·사람 검수
 
-MEDIA-005는 예약된 manifest v4 하나를 불변 입력으로 사용한다. TTS는 Gemini 비용이 발생하므로 명시적으로 실행하고, 기본 출력 디렉터리는 콘텐츠 ID와 실행 시각으로 격리한다. 운영 렌더는 처음부터 워터마크 없는 `PUBLIC_CANDIDATE` 공개 후보 영상 하나를 만든다. 사람 검수 상태는 MP4 화면이 아니라 render manifest와 운영 API의 등록·결정 이력으로만 관리한다.
+MEDIA-005는 예약된 manifest v4 하나를 불변 입력으로 사용한다. TTS는 Gemini 비용이 발생하므로 명시적으로 실행하고, 기본 출력 디렉터리는 콘텐츠 ID와 실행 시각으로 격리한다. 운영 렌더는 처음부터 워터마크 없는 `PUBLIC_CANDIDATE` 공개 후보 영상 하나를 만든다. 공개 후보는 음성·자막·장면 전환을 함께 `1.3x`로 렌더하고, 샘플과 일반 narrated 렌더는 `1.0x`를 유지한다. 사람 검수 상태는 MP4 화면이 아니라 render manifest와 운영 API의 등록·결정 이력으로만 관리한다.
 
 저장소 루트에서는 아래 운영 스크립트로 초안 준비부터 렌더링까지 한 번에 실행할 수 있다.
 
@@ -175,19 +175,19 @@ npm run render:operational -- out/operational-renders/<content-id>/<run-director
 
 - `video.mp4`: 1080x1920, 30fps, H.264·AAC 공개 후보 영상
 - `stills/*.png`: 장면별 대표 프레임 다섯 개
-- `render-props.json`: 실제 음성 길이로 계산한 Remotion 입력
-- `render-manifest.json`: `PUBLIC_CANDIDATE` 프로필, 원본, 음성, props, MP4, 대표 장면 hash와 TTS·영상 규격
+- `render-props.json`: 실제 음성 길이와 `1.3x` 재생 속도로 계산한 Remotion 입력
+- `render-manifest.json`: `PUBLIC_CANDIDATE` 프로필, 재생 속도, 원본, 음성, props, MP4, 대표 장면 hash와 TTS·영상 규격
 
 렌더 중 실패하면 임시 MP4, 대표 장면과 props를 제거한다. 완성된 `render-manifest.json`이 있는 실행은 덮어쓰지 않는다. 일반적으로 파일을 바꿔 재렌더하려면 새 실행 디렉터리를 만들고 TTS부터 다시 생성한다.
 
-이전 버전에서 내부 검수 문구가 포함된 **미등록·미검수** 실행은, Gemini를 다시 호출하지 않고 기존 WAV와 원본 manifest만 복제해 새 공개 후보로 렌더링할 수 있다. 원본 실행은 보존하고 새 실행 디렉터리에만 `PUBLIC_CANDIDATE` 결과를 만든다.
+이전 버전에서 내부 검수 문구가 포함되었거나 `1.3x` 이전 속도로 생성된 **미등록·미검수** 실행은, Gemini를 다시 호출하지 않고 기존 WAV와 원본 manifest만 복제해 새 공개 후보로 렌더링할 수 있다. 원본 실행은 보존하고 새 실행 디렉터리에만 `PUBLIC_CANDIDATE` 결과를 만든다.
 
 ```bash
 npm run render:public-candidate -- \
   out/operational-renders/<content-id>/<legacy-run-directory>
 ```
 
-성공하면 새 실행 경로를 `.latest-run`에도 기록하므로, 이후 `./scripts/ops/review-shortform.sh`는 이 공개 후보를 기본 대상으로 사용한다. 등록 또는 검수 결정이 이미 기록된 실행은 이 명령으로 복제할 수 없다. 해당 결과는 불변 이력으로 보존하고, 수정이 필요하면 새 `DRAFT`에서 다시 시작한다.
+성공하면 새 실행 경로를 `.latest-run`에도 기록하므로, 이후 `./scripts/ops/review-shortform.sh`는 이 `1.3x` 공개 후보를 기본 대상으로 사용한다. 등록 또는 검수 결정이 이미 기록된 실행은 이 명령으로 복제할 수 없다. 해당 결과는 불변 이력으로 보존하고, 수정이 필요하면 새 `DRAFT`에서 다시 시작한다.
 
 운영 백엔드에 V8 migration이 배포된 뒤 공개 후보를 등록할 수 있다. 등록 명령은 `PUBLIC_CANDIDATE` 프로필, 모든 파일 hash와 ffprobe 메타데이터를 다시 확인한 후 API를 호출하며 콘텐츠를 `REVIEW_REQUIRED`로 전환한다. 이전 `운영 검수본` 오버레이가 포함된 render manifest는 등록 대상이 아니다.
 
@@ -195,7 +195,7 @@ npm run render:public-candidate -- \
 npm run draft:register -- out/operational-renders/<content-id>/<run-directory>
 ```
 
-개별 CLI를 직접 사용할 때도 `video.mp4` 전체와 대표 장면을 먼저 확인한다. 발음·속도·음량, 장면 전환·자막 싱크·겹침, 두 이유와 근거, CTA와 AI 제작 보조 공개를 모두 확인하기 전에는 등록과 결정을 기록하지 않는다.
+개별 CLI를 직접 사용할 때도 `video.mp4` 전체와 대표 장면을 먼저 확인한다. `1.3x` 음성의 발음·속도·음량, 장면 전환·자막 싱크·겹침, 두 이유와 근거, CTA와 AI 제작 보조 공개를 모두 확인하기 전에는 등록과 결정을 기록하지 않는다.
 
 ```bash
 npm run draft:review -- out/operational-renders/<content-id>/<run-directory> \

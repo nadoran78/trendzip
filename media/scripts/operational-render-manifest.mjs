@@ -7,9 +7,13 @@ import {
   createOperationalRenderProps,
   validateOperationalRenderManifest,
 } from "./operational-render-input.mjs";
+import {
+  OPERATIONAL_PUBLIC_CANDIDATE_PLAYBACK_RATE,
+  OPERATIONAL_RENDER_PROFILE,
+} from "./operational-render-profile.mjs";
 
-const RENDER_MANIFEST_SCHEMA_VERSION = 2;
-export const OPERATIONAL_RENDER_PROFILE = "PUBLIC_CANDIDATE";
+const RENDER_MANIFEST_SCHEMA_VERSION = 3;
+export { OPERATIONAL_RENDER_PROFILE };
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
 export function sha256File(path) {
@@ -47,6 +51,7 @@ function createArtifactIdentity(manifest) {
     renderProfile: manifest.renderProfile,
     shortformContentId: manifest.shortformContentId,
     contentHash: manifest.contentHash,
+    playbackRate: manifest.playbackRate,
     hashes: manifest.hashes,
     tts: manifest.tts,
     video: manifest.video,
@@ -69,6 +74,11 @@ function assertRenderPropsMatchSource(sourceManifest, renderProps) {
   }
   if (!renderProps.timeline || !renderProps.narrationAudio) {
     throw new Error("render props must contain a narration timeline and audio paths.");
+  }
+  if (renderProps.timeline.playbackRate !== OPERATIONAL_PUBLIC_CANDIDATE_PLAYBACK_RATE) {
+    throw new Error(
+      `public candidate render props must use ${OPERATIONAL_PUBLIC_CANDIDATE_PLAYBACK_RATE}x playback.`,
+    );
   }
 }
 
@@ -129,6 +139,7 @@ export function createOperationalRenderManifest({
     createdAt,
     shortformContentId: sourceManifest.reservation.shortformContentId,
     contentHash: sourceManifest.contentHash,
+    playbackRate: renderProps.timeline.playbackRate,
     artifactHash: null,
     files,
     hashes: {
@@ -171,6 +182,11 @@ export function validateOperationalRenderManifestFile(runDir, { verifyFiles = tr
   }
   if (manifest.renderProfile !== OPERATIONAL_RENDER_PROFILE) {
     throw new Error(`render manifest renderProfile must be ${OPERATIONAL_RENDER_PROFILE}.`);
+  }
+  if (manifest.playbackRate !== OPERATIONAL_PUBLIC_CANDIDATE_PLAYBACK_RATE) {
+    throw new Error(
+      `render manifest playbackRate must be ${OPERATIONAL_PUBLIC_CANDIDATE_PLAYBACK_RATE}.`,
+    );
   }
   if (!Number.isInteger(manifest.shortformContentId) || manifest.shortformContentId < 1) {
     throw new Error("render manifest shortformContentId must be a positive integer.");

@@ -8,6 +8,10 @@ import { createAudioManifest } from "./audio-manifest.mjs";
 import { createNarratedRenderProps } from "./narrated-props.mjs";
 import { createOperationalRenderProps } from "./operational-render-input.mjs";
 import {
+  OPERATIONAL_PUBLIC_CANDIDATE_PLAYBACK_RATE,
+  OPERATIONAL_PUBLIC_CANDIDATE_TIMELINE_OPTIONS,
+} from "./operational-render-profile.mjs";
+import {
   createOperationalRenderManifest,
   OPERATIONAL_RENDER_PROFILE,
   validateOperationalRenderManifestFile,
@@ -74,6 +78,7 @@ function prepareRunDirectory() {
     manifest: audioManifest,
     audioDir: resolve(runDir, "tts"),
     audioPublicPath: "tts",
+    timelineOptions: OPERATIONAL_PUBLIC_CANDIDATE_TIMELINE_OPTIONS,
   });
   writeFileSync(resolve(runDir, "render-props.json"), JSON.stringify(renderProps));
   writeFileSync(resolve(runDir, "video.mp4"), Buffer.alloc(10_000, 1));
@@ -105,8 +110,33 @@ test("render manifest binds source, audio, props, video, and still hashes", () =
     const validated = validateOperationalRenderManifestFile(runDir);
     assert.match(validated.manifest.artifactHash, /^[0-9a-f]{64}$/);
     assert.equal(validated.manifest.renderProfile, OPERATIONAL_RENDER_PROFILE);
+    assert.equal(validated.manifest.playbackRate, OPERATIONAL_PUBLIC_CANDIDATE_PLAYBACK_RATE);
     assert.equal(validated.manifest.shortformContentId, 1);
     assert.equal(validated.manifest.tts.voice, "test-voice");
+  } finally {
+    rmSync(runDir, { recursive: true, force: true });
+  }
+});
+
+test("render manifest rejects public candidate props rendered at the normal speed", () => {
+  const runDir = prepareRunDirectory();
+  try {
+    const manifest = createOperationalRenderManifest({
+      runDir,
+      videoMetadata,
+      stillFiles: ["stills/01-hook.png"],
+    });
+    writeOperationalRenderManifest(resolve(runDir, "render-manifest.json"), manifest);
+
+    const renderPropsPath = resolve(runDir, "render-props.json");
+    const renderProps = JSON.parse(readFileSync(renderPropsPath, "utf8"));
+    renderProps.timeline.playbackRate = 1;
+    writeFileSync(renderPropsPath, JSON.stringify(renderProps));
+
+    assert.throws(
+      () => validateOperationalRenderManifestFile(runDir, { verifyFiles: false }),
+      /must use 1.3x playback/,
+    );
   } finally {
     rmSync(runDir, { recursive: true, force: true });
   }

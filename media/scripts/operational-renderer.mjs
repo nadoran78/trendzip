@@ -17,6 +17,7 @@ import {
   createOperationalRenderProps,
   validateOperationalRenderManifest,
 } from "./operational-render-input.mjs";
+import { OPERATIONAL_PUBLIC_CANDIDATE_TIMELINE_OPTIONS } from "./operational-render-profile.mjs";
 import {
   createOperationalRenderManifest,
   writeOperationalRenderManifest,
@@ -132,6 +133,7 @@ export function renderOperationalTtsRun(runDirectory) {
     manifest: audioManifest,
     audioDir: resolve(runDir, "tts"),
     audioPublicPath: "tts",
+    timelineOptions: OPERATIONAL_PUBLIC_CANDIDATE_TIMELINE_OPTIONS,
   });
 
   const renderPropsPath = resolve(runDir, "render-props.json");

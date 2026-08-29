@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { createAudioManifest } from "../scripts/audio-manifest.mjs";
 import { createNarratedRenderProps } from "../scripts/narrated-props.mjs";
 import { createOperationalRenderProps } from "../scripts/operational-render-input.mjs";
+import { OPERATIONAL_PUBLIC_CANDIDATE_TIMELINE_OPTIONS } from "../scripts/operational-render-profile.mjs";
 import {
   createOperationalRenderManifest,
   writeOperationalRenderManifest,
@@ -80,6 +81,7 @@ export function createTestOperationalRenderRun() {
     manifest: audioManifest,
     audioDir: resolve(runDir, "tts"),
     audioPublicPath: "tts",
+    timelineOptions: OPERATIONAL_PUBLIC_CANDIDATE_TIMELINE_OPTIONS,
   });
   writeFileSync(resolve(runDir, "render-props.json"), JSON.stringify(renderProps));
   writeFileSync(resolve(runDir, "video.mp4"), Buffer.alloc(10_000, 1));
