@@ -29,7 +29,7 @@
 - 브랜치: codex/appintoss-001-launch-preparation
 - 시작일: 2026-08-29
 - 마지막 갱신: 2026-08-29
-- 다음 행동: 앱인토스의 현재 출시·SDK 요구사항과 Trendzip의 Next.js·Vercel·Cloudflare Access 구성을 대조해 연동·검증·심사 준비 계획을 확정한다.
+- 다음 행동: 앱인토스 콘솔에서 비게임 미니앱을 생성하고 `appName`을 확정한 뒤, WebView 프로젝트와 Vercel BFF 구현 계획을 시작한다.
 
 #### 목적
 
@@ -51,7 +51,8 @@
 #### 진행 상황
 
 - `develop`을 `main`에 병합한 뒤 앱인토스 출시 준비 작업을 등록하고 전용 브랜치를 만들었다.
-- 앱인토스의 최신 공식 요구사항과 현재 서비스 구성을 아직 조사하지 않았으므로, 코드 변경은 시작하지 않았다.
+- 최신 공식 요구사항과 현재 Next.js·Vercel·Cloudflare Access 구성을 대조해 출시 아키텍처와 콘솔·코드·검증 로드맵을 `docs/ops/appintoss-deployment.md`에 정리했다.
+- 앱인토스 전용 WebView 프로젝트와 Vercel BFF는 아직 구현하지 않았다.
 
 #### 완료 조건
 
@@ -65,11 +66,12 @@
 - `frontend/src/lib/api-client.ts`
 - `frontend/vercel.json`
 - `docs/ops/frontend-deployment.md`
+- `docs/ops/appintoss-deployment.md`
 
 #### 검증
 
-- 상태: 진행 중
-- 작업 등록 후 `./dev/check-context`를 통과해야 한다.
+- 상태: 로드맵 문서화 완료, 구현 대기
+- `./dev/check-context`, `git diff --check`, staged Gitleaks 검사를 통과해야 한다.
 
 #### 인계 메모
 
