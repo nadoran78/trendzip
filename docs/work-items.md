@@ -28,8 +28,8 @@
 - 상태: REVIEW
 - 브랜치: codex/media-005-render-review-gate
 - 시작일: 2026-08-27
-- 마지막 갱신: 2026-08-27
-- 다음 행동: 첫 검수본을 운영 API에 등록하고, 사용자가 MP4 전체를 재생해 명시적인 검수 결정을 기록한다.
+- 마지막 갱신: 2026-08-28
+- 다음 행동: 사용자가 첫 MP4 전체를 재생한 뒤 `./scripts/ops/review-shortform.sh`로 등록과 명시적인 검수 결정을 기록한다.
 
 #### 목적
 
@@ -45,6 +45,7 @@
 - MP4 hash, 원본 콘텐츠 hash, TTS 모델·음성, 음성 manifest hash, 영상 규격과 생성 시각을 렌더 아티팩트로 기록한다.
 - 렌더 아티팩트와 사람 검수 결정을 보존하는 Flyway 스키마, 도메인, 저장소와 보호된 운영 API를 추가한다.
 - 검증된 렌더를 `REVIEW_REQUIRED`로 전환하고 `APPROVED`, `NEEDS_REVISION`, `REJECTED` 결정을 검수자·사유·아티팩트 hash와 함께 기록하는 CLI를 추가한다.
+- 초안 준비·TTS·렌더링과 검수 후 등록·결정을 각각 한 명령으로 실행하는 운영 셸 진입점을 추가한다.
 - 첫 운영 초안 `DRAFT(id=1)`를 사용해 실제 TTS·렌더·대표 장면 생성과 수동 전체 재생 검수를 진행한다.
 
 #### 제외 범위
@@ -75,6 +76,8 @@
    - 승인 요청의 아티팩트 hash가 최신 렌더와 다르면 상태를 변경하지 않는다.
    - `NEEDS_REVISION` 재렌더는 이전 아티팩트와 결정을 보존하고 새 렌더 이력을 생성한다.
 5. 첫 운영 초안을 실제 검수한다.
+   - 생성 스크립트는 DRAFT 준비·TTS·렌더까지만 실행하고 등록이나 승인을 자동화하지 않는다.
+   - 검수 스크립트는 결정 문자열 재입력 뒤에만 등록·결정을 실행하고 중간 실패 재시도를 지원한다.
    - `DRAFT(id=1)`의 TTS 발음, 음량, 장면 전환, 자막, 근거 표시와 CTA를 전체 재생으로 확인한다.
    - 자동으로 `APPROVED` 처리하지 않고 사용자가 결과를 확인한 뒤 최종 결정을 입력한다.
    - 실행 절차, 비용 경계, 장애 복구와 MEDIA-006 인계 정보를 문서화한다.
@@ -111,6 +114,7 @@
 3. `feat: 운영 TTS와 영상 렌더 파이프라인 추가`
 4. `feat: 숏폼 사람 승인 게이트 추가`
 5. `docs: MEDIA-005 운영 검증 결과 기록`
+6. `feat: 숏폼 생성과 검수 운영 스크립트 추가`
 
 #### 관련 코드
 
@@ -119,6 +123,8 @@
 - `backend/src/main/kotlin/com/mztrend/service/ShortformContentService.kt`
 - `backend/src/main/resources/db/migration`
 - `media/scripts`
+- `scripts/ops/generate-shortform.sh`
+- `scripts/ops/review-shortform.sh`
 - `media/src/Root.tsx`
 - `media/src/TrendKeywordShort.tsx`
 - `media/src/types.ts`
@@ -132,12 +138,13 @@
 - 등록과 검수 CLI는 원본 manifest, WAV, props, MP4, 대표 장면과 영상 메타데이터 hash를 다시 검증한 뒤에만 운영 API를 호출한다.
 - 첫 `DRAFT(id=1)`로 실제 Gemini TTS와 51.179초 H.264·AAC 검수본을 생성했다. 대표 장면 다섯 개에서 텍스트 잘림과 요소 겹침이 없음을 확인했다.
 - 운영 DB에 V8 migration과 렌더·검수 API를 배포했다. 아티팩트 등록과 사람 결정은 아직 실행하지 않았다.
+- 새 DRAFT 준비부터 TTS·렌더까지 실행하는 생성 스크립트와, 전체 검수 뒤 등록·결정을 수행하는 대화형 검수 스크립트를 추가했다.
 
 #### 검증
 
 - 상태: PASS
 - 백엔드 렌더·검수 서비스 및 Controller 테스트 16건과 전체 `test`, `ktlintCheck`를 통과했다.
-- 미디어 테스트 125건과 TypeScript 검사를 통과했다.
+- 미디어 테스트 132건과 TypeScript 검사를 통과했다.
 - 실제 운영 render manifest의 모든 파일 hash와 1080x1920·30fps·H.264·AAC 규격을 재검증했다.
 - 기존 무음 샘플을 다시 렌더해 1080x1920·30fps·36초·H.264·yuv420p·무음 규격을 확인했다.
 - 전체 Git 이력 비밀정보 검사, `./dev/verify --quick`과 `./dev/check-context --strict`를 통과했다.
@@ -146,8 +153,8 @@
 
 - 첫 검수본은 `media/out/operational-renders/1/2026-08-27T13-25-35-473Z/`에 있으며 Git에는 포함하지 않는다.
 - 아티팩트 hash는 `68ea7e23fdec28e528c2530b55ce2e0878bceb662433d1bdbf6d6fe3aa6cd7a0`이다.
-- 운영 백엔드 배포를 완료했다. 다음으로 `npm run draft:register -- <run-directory>`를 실행해 등록하며, 등록 전에는 검수 결정 명령을 실행할 수 없다.
-- 사용자가 MP4 전체의 발음·음량·자막 싱크·장면 전환과 근거를 확인한 뒤에만 `npm run draft:review -- <run-directory> --decision=... --reviewer=... --reason="..."`를 실행한다.
+- 운영 백엔드 배포를 완료했다. 사용자가 MP4 전체의 발음·음량·자막 싱크·장면 전환과 근거를 확인한 뒤 `./scripts/ops/review-shortform.sh <run-directory>`를 실행한다.
+- 검수 스크립트는 아티팩트 등록과 결정을 순서대로 처리하며 등록 후 검수 실패 시 같은 명령으로 검수 단계부터 재개한다. 개별 `draft:register`, `draft:review` 명령은 장애 확인용으로 유지한다.
 - 코드와 자동 검증은 완료됐지만 사람 승인을 자동화하지 않는 것이 이 작업의 핵심 불변식이므로, 사용자 결정 전까지 `REVIEW`로 유지한다.
 
 ## READY
@@ -156,8 +163,8 @@
 
 ## LATER
 
-- MEDIA-006 승인된 숏폼의 YouTube 비공개 업로드
-- MEDIA-007 발행 일정·SNS 확장 자동화
+- MEDIA-006 승인된 숏폼의 YouTube 수동 업로드·공개 운영 검증과 발행 이력 연결
+- MEDIA-007 YouTube 업로드·발행 일정·SNS 확장 자동화
 - Android Chrome 홈 화면 설치와 standalone 실행 호환성 확인
 - 프론트엔드 이전 production deployment 수동 롤백 workflow
 - 운영 API 노출 정책 강화: 운영 Swagger/OpenAPI 비활성화, Cloudflare rate limit 적용, 프론트 배포 도메인 기반 CORS 제한

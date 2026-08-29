@@ -221,9 +221,10 @@ GitHub Actions는 pull request와 `develop` push에서 Gitleaks 검사를 먼저
 다음 우선순위는 다음과 같습니다.
 
 1. 첫 운영 숏폼 검수본의 운영 등록과 사람 승인
-2. 승인된 숏폼의 YouTube 비공개 업로드 자동화
-3. OpenAPI 기반 frontend 타입 계약 자동화
-4. 핵심 사용자 흐름 E2E 테스트
+2. 승인된 숏폼의 YouTube 수동 업로드·공개 운영 검증
+3. 검증된 업로드·발행 흐름 자동화
+4. OpenAPI 기반 frontend 타입 계약 자동화
+5. 핵심 사용자 흐름 E2E 테스트
 
 세부 구현 현황과 알려진 제약은 [`docs/project-status.md`](docs/project-status.md)에서 관리합니다.
 

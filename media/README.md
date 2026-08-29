@@ -134,6 +134,31 @@ MEDIA_DRY_RUN_COUNT=3 npm run draft:dry-run
 
 MEDIA-005는 예약된 manifest v4 하나를 불변 입력으로 사용한다. TTS는 Gemini 비용이 발생하므로 명시적으로 실행하고, 기본 출력 디렉터리는 콘텐츠 ID와 실행 시각으로 격리한다.
 
+저장소 루트에서는 아래 운영 스크립트로 초안 준비부터 렌더링까지 한 번에 실행할 수 있다.
+
+```bash
+# 새 후보를 선정해 DRAFT 예약부터 시작
+./scripts/ops/generate-shortform.sh
+
+# 이미 예약된 DRAFT manifest를 사용
+./scripts/ops/generate-shortform.sh media/out/operational-drafts/<content-hash>.json
+```
+
+생성 스크립트는 `draft:prepare -> tts:operational -> render:operational`만 실행한다. 운영 API 등록과 사람 승인은 실행하지 않으며, 성공한 마지막 실행 경로를 Git에서 제외된 `media/out/operational-renders/.latest-run`에 기록한다. `draft:prepare`가 `HOLD` 또는 `BLOCK`이면 비용이 발생하는 TTS 전에 종료한다.
+
+출력된 `video.mp4` 전체와 대표 장면을 확인한 뒤 아래 명령으로 등록과 검수 결정을 연속해서 기록한다. 실행 경로를 생략하면 `.latest-run`의 최근 검수본을 사용한다.
+
+```bash
+./scripts/ops/review-shortform.sh
+
+# 또는 특정 실행 결과 지정
+./scripts/ops/review-shortform.sh media/out/operational-renders/<content-id>/<run-directory>
+```
+
+검수 스크립트는 결정, 검수자와 사유를 입력받고 선택한 결정 문자열을 다시 입력해야만 등록을 시작한다. 등록 성공 후 검수 API가 실패한 경우 같은 명령을 다시 실행하면 이미 완료된 등록을 건너뛰고 검수부터 재개한다. 이미 결정된 아티팩트는 중복 등록하거나 다시 검수하지 않는다. `APPROVED` 결과는 운영자가 YouTube Studio에서 수동으로 업로드·공개하며, 업로드 자동화는 실제 운영 검증 뒤 후속 작업으로 진행한다.
+
+아래 개별 명령은 장애 확인이나 특정 단계 재실행에 사용한다.
+
 ```bash
 npm run tts:operational -- out/operational-drafts/<content-hash>.json
 ```
@@ -155,13 +180,13 @@ npm run render:operational -- out/operational-renders/<content-id>/<run-director
 
 렌더 중 실패하면 임시 MP4, 대표 장면과 props를 제거한다. 완성된 `render-manifest.json`이 있는 실행은 덮어쓰지 않는다. 파일을 바꿔 재렌더하려면 새 실행 디렉터리를 만들고 TTS부터 다시 생성한다.
 
-운영 백엔드에 V8 migration이 배포된 뒤 검수 대상을 등록한다. 등록 명령은 모든 파일 hash와 ffprobe 메타데이터를 다시 확인한 후 API를 호출하며 콘텐츠를 `REVIEW_REQUIRED`로 전환한다.
+운영 백엔드에 V8 migration이 배포된 뒤 검수 대상을 등록할 수 있다. 등록 명령은 모든 파일 hash와 ffprobe 메타데이터를 다시 확인한 후 API를 호출하며 콘텐츠를 `REVIEW_REQUIRED`로 전환한다.
 
 ```bash
 npm run draft:register -- out/operational-renders/<content-id>/<run-directory>
 ```
 
-등록 후에는 `video.mp4` 전체와 대표 장면을 사람이 확인한다. 발음·속도·음량, 장면 전환·자막 싱크·겹침, 두 이유와 근거, CTA와 AI 제작 보조 공개를 모두 확인하기 전에는 결정을 기록하지 않는다.
+개별 CLI를 직접 사용할 때도 `video.mp4` 전체와 대표 장면을 먼저 확인한다. 발음·속도·음량, 장면 전환·자막 싱크·겹침, 두 이유와 근거, CTA와 AI 제작 보조 공개를 모두 확인하기 전에는 등록과 결정을 기록하지 않는다.
 
 ```bash
 npm run draft:review -- out/operational-renders/<content-id>/<run-directory> \
