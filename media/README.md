@@ -132,7 +132,7 @@ MEDIA_DRY_RUN_COUNT=3 npm run draft:dry-run
 
 ## 운영 TTS·렌더·사람 검수
 
-MEDIA-005는 예약된 manifest v4 하나를 불변 입력으로 사용한다. TTS는 Gemini 비용이 발생하므로 명시적으로 실행하고, 기본 출력 디렉터리는 콘텐츠 ID와 실행 시각으로 격리한다.
+MEDIA-005는 예약된 manifest v4 하나를 불변 입력으로 사용한다. TTS는 Gemini 비용이 발생하므로 명시적으로 실행하고, 기본 출력 디렉터리는 콘텐츠 ID와 실행 시각으로 격리한다. 운영 렌더는 처음부터 워터마크 없는 `PUBLIC_CANDIDATE` 공개 후보 영상 하나를 만든다. 사람 검수 상태는 MP4 화면이 아니라 render manifest와 운영 API의 등록·결정 이력으로만 관리한다.
 
 저장소 루트에서는 아래 운영 스크립트로 초안 준비부터 렌더링까지 한 번에 실행할 수 있다.
 
@@ -146,7 +146,7 @@ MEDIA-005는 예약된 manifest v4 하나를 불변 입력으로 사용한다. T
 
 생성 스크립트는 `draft:prepare -> tts:operational -> render:operational`만 실행한다. 운영 API 등록과 사람 승인은 실행하지 않으며, 성공한 마지막 실행 경로를 Git에서 제외된 `media/out/operational-renders/.latest-run`에 기록한다. `draft:prepare`가 `HOLD` 또는 `BLOCK`이면 비용이 발생하는 TTS 전에 종료한다.
 
-출력된 `video.mp4` 전체와 대표 장면을 확인한 뒤 아래 명령으로 등록과 검수 결정을 연속해서 기록한다. 실행 경로를 생략하면 `.latest-run`의 최근 검수본을 사용한다.
+출력된 `video.mp4` 전체와 대표 장면을 확인한 뒤 아래 명령으로 등록과 검수 결정을 연속해서 기록한다. 실행 경로를 생략하면 `.latest-run`의 최근 공개 후보 실행을 사용한다.
 
 ```bash
 ./scripts/ops/review-shortform.sh
@@ -155,7 +155,7 @@ MEDIA-005는 예약된 manifest v4 하나를 불변 입력으로 사용한다. T
 ./scripts/ops/review-shortform.sh media/out/operational-renders/<content-id>/<run-directory>
 ```
 
-검수 스크립트는 결정, 검수자와 사유를 입력받고 선택한 결정 문자열을 다시 입력해야만 등록을 시작한다. 등록 성공 후 검수 API가 실패한 경우 같은 명령을 다시 실행하면 이미 완료된 등록을 건너뛰고 검수부터 재개한다. 이미 결정된 아티팩트는 중복 등록하거나 다시 검수하지 않는다. `APPROVED` 결과는 운영자가 YouTube Studio에서 수동으로 업로드·공개하며, 업로드 자동화는 실제 운영 검증 뒤 후속 작업으로 진행한다.
+검수 스크립트는 결정, 검수자와 사유를 입력받고 선택한 결정 문자열을 다시 입력해야만 등록을 시작한다. 등록 성공 후 검수 API가 실패한 경우 같은 명령을 다시 실행하면 이미 완료된 등록을 건너뛰고 검수부터 재개한다. 이미 결정된 아티팩트는 중복 등록하거나 다시 검수하지 않는다. `APPROVED` 결과는 검수한 동일 MP4를 운영자가 YouTube Studio에서 비공개 업로드한 뒤 수동 공개한다. 이 모듈에는 업로드 명령이 없으므로, 업로드 자동화는 실제 운영 검증 뒤 후속 작업으로 진행한다.
 
 아래 개별 명령은 장애 확인이나 특정 단계 재실행에 사용한다.
 
@@ -173,14 +173,23 @@ npm run render:operational -- out/operational-renders/<content-id>/<run-director
 
 렌더가 성공하면 다음 결과가 같은 실행 디렉터리에 남는다.
 
-- `video.mp4`: 1080x1920, 30fps, H.264·AAC 검수본
+- `video.mp4`: 1080x1920, 30fps, H.264·AAC 공개 후보 영상
 - `stills/*.png`: 장면별 대표 프레임 다섯 개
 - `render-props.json`: 실제 음성 길이로 계산한 Remotion 입력
-- `render-manifest.json`: 원본, 음성, props, MP4, 대표 장면 hash와 TTS·영상 규격
+- `render-manifest.json`: `PUBLIC_CANDIDATE` 프로필, 원본, 음성, props, MP4, 대표 장면 hash와 TTS·영상 규격
 
-렌더 중 실패하면 임시 MP4, 대표 장면과 props를 제거한다. 완성된 `render-manifest.json`이 있는 실행은 덮어쓰지 않는다. 파일을 바꿔 재렌더하려면 새 실행 디렉터리를 만들고 TTS부터 다시 생성한다.
+렌더 중 실패하면 임시 MP4, 대표 장면과 props를 제거한다. 완성된 `render-manifest.json`이 있는 실행은 덮어쓰지 않는다. 일반적으로 파일을 바꿔 재렌더하려면 새 실행 디렉터리를 만들고 TTS부터 다시 생성한다.
 
-운영 백엔드에 V8 migration이 배포된 뒤 검수 대상을 등록할 수 있다. 등록 명령은 모든 파일 hash와 ffprobe 메타데이터를 다시 확인한 후 API를 호출하며 콘텐츠를 `REVIEW_REQUIRED`로 전환한다.
+이전 버전에서 내부 검수 문구가 포함된 **미등록·미검수** 실행은, Gemini를 다시 호출하지 않고 기존 WAV와 원본 manifest만 복제해 새 공개 후보로 렌더링할 수 있다. 원본 실행은 보존하고 새 실행 디렉터리에만 `PUBLIC_CANDIDATE` 결과를 만든다.
+
+```bash
+npm run render:public-candidate -- \
+  out/operational-renders/<content-id>/<legacy-run-directory>
+```
+
+성공하면 새 실행 경로를 `.latest-run`에도 기록하므로, 이후 `./scripts/ops/review-shortform.sh`는 이 공개 후보를 기본 대상으로 사용한다. 등록 또는 검수 결정이 이미 기록된 실행은 이 명령으로 복제할 수 없다. 해당 결과는 불변 이력으로 보존하고, 수정이 필요하면 새 `DRAFT`에서 다시 시작한다.
+
+운영 백엔드에 V8 migration이 배포된 뒤 공개 후보를 등록할 수 있다. 등록 명령은 `PUBLIC_CANDIDATE` 프로필, 모든 파일 hash와 ffprobe 메타데이터를 다시 확인한 후 API를 호출하며 콘텐츠를 `REVIEW_REQUIRED`로 전환한다. 이전 `운영 검수본` 오버레이가 포함된 render manifest는 등록 대상이 아니다.
 
 ```bash
 npm run draft:register -- out/operational-renders/<content-id>/<run-directory>

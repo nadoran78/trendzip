@@ -19,6 +19,7 @@
     "render:sample": "node scripts/render.mjs",
     "render:narrated": "node scripts/render-narrated.mjs",
     "render:operational": "node scripts/render-operational-draft.mjs",
+    "render:public-candidate": "node scripts/rerender-public-candidate.mjs",
     "stills:sample": "node scripts/render-stills.mjs",
     "stills:narrated": "node scripts/render-narrated-stills.mjs",
     "validate:sample": "node scripts/validate-output.mjs out/made-in-korea.mp4 fixtures/made-in-korea.sample.json",

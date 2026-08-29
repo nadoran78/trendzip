@@ -29,7 +29,7 @@ export type Evidence = {
 
 export type KeywordShortformProps = {
   isSample: boolean;
-  sampleLabel: string;
+  sampleLabel?: string | null;
   keyword: string;
   generation: Generation;
   generationLabel: string;

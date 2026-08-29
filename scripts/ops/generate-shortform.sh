@@ -126,7 +126,7 @@ trap 'rm -f "$latest_run_tmp"' EXIT
 printf '%s\n' "$run_dir" > "$latest_run_tmp"
 mv "$latest_run_tmp" "$LATEST_RUN_FILE"
 
-printf '\nShort-form review video is ready.\n'
+printf '\nShort-form public candidate video is ready.\n'
 printf 'Run directory: %s\n' "$run_dir"
 printf 'Video: %s\n' "$run_dir/video.mp4"
 printf 'Review the full video before recording a decision.\n'

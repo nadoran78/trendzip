@@ -57,7 +57,7 @@ test("operational manifest maps draft copy and evidence to Remotion props", () =
   const props = createOperationalRenderProps(manifest());
 
   assert.equal(props.isSample, false);
-  assert.equal(props.sampleLabel, "운영 검수본");
+  assert.equal(props.sampleLabel, null);
   assert.equal(props.keyword, "재혼 황후");
   assert.equal(props.generation, "TEEN");
   assert.equal(props.generationLabel, "10대");

@@ -200,16 +200,18 @@ function PersistentChrome({ props }: { props: KeywordShortformProps }) {
         <div>
           trend<span style={{ color: COLORS.cyan }}>zip</span>
         </div>
-        <div
-          style={{
-            border: `2px solid ${COLORS.border}`,
-            padding: "10px 16px",
-            color: COLORS.text,
-            backgroundColor: COLORS.surface,
-          }}
-        >
-          {props.sampleLabel}
-        </div>
+        {props.sampleLabel ? (
+          <div
+            style={{
+              border: `2px solid ${COLORS.border}`,
+              padding: "10px 16px",
+              color: COLORS.text,
+              backgroundColor: COLORS.surface,
+            }}
+          >
+            {props.sampleLabel}
+          </div>
+        ) : null}
       </div>
       <div
         style={{

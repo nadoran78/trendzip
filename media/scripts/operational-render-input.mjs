@@ -138,7 +138,7 @@ export function createOperationalRenderProps(manifest) {
 
   return {
     isSample: false,
-    sampleLabel: "운영 검수본",
+    sampleLabel: null,
     keyword: manifest.source.keyword,
     generation: manifest.source.generation,
     generationLabel: GENERATION_LABELS.get(manifest.source.generation),

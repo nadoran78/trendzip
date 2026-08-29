@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
@@ -9,6 +9,7 @@ import { createNarratedRenderProps } from "./narrated-props.mjs";
 import { createOperationalRenderProps } from "./operational-render-input.mjs";
 import {
   createOperationalRenderManifest,
+  OPERATIONAL_RENDER_PROFILE,
   validateOperationalRenderManifestFile,
   writeOperationalRenderManifest,
 } from "./operational-render-manifest.mjs";
@@ -103,8 +104,33 @@ test("render manifest binds source, audio, props, video, and still hashes", () =
 
     const validated = validateOperationalRenderManifestFile(runDir);
     assert.match(validated.manifest.artifactHash, /^[0-9a-f]{64}$/);
+    assert.equal(validated.manifest.renderProfile, OPERATIONAL_RENDER_PROFILE);
     assert.equal(validated.manifest.shortformContentId, 1);
     assert.equal(validated.manifest.tts.voice, "test-voice");
+  } finally {
+    rmSync(runDir, { recursive: true, force: true });
+  }
+});
+
+test("render manifest rejects a non-null internal label in public candidate props", () => {
+  const runDir = prepareRunDirectory();
+  try {
+    const manifest = createOperationalRenderManifest({
+      runDir,
+      videoMetadata,
+      stillFiles: ["stills/01-hook.png"],
+    });
+    writeOperationalRenderManifest(resolve(runDir, "render-manifest.json"), manifest);
+
+    const renderPropsPath = resolve(runDir, "render-props.json");
+    const renderProps = JSON.parse(readFileSync(renderPropsPath, "utf8"));
+    renderProps.sampleLabel = "운영 검수본";
+    writeFileSync(renderPropsPath, JSON.stringify(renderProps));
+
+    assert.throws(
+      () => validateOperationalRenderManifestFile(runDir, { verifyFiles: false }),
+      /must set sampleLabel to null/,
+    );
   } finally {
     rmSync(runDir, { recursive: true, force: true });
   }

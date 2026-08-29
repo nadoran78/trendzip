@@ -8,7 +8,8 @@ import {
   validateOperationalRenderManifest,
 } from "./operational-render-input.mjs";
 
-const RENDER_MANIFEST_SCHEMA_VERSION = 1;
+const RENDER_MANIFEST_SCHEMA_VERSION = 2;
+export const OPERATIONAL_RENDER_PROFILE = "PUBLIC_CANDIDATE";
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
 export function sha256File(path) {
@@ -43,6 +44,7 @@ function requireHash(value, name) {
 
 function createArtifactIdentity(manifest) {
   return {
+    renderProfile: manifest.renderProfile,
     shortformContentId: manifest.shortformContentId,
     contentHash: manifest.contentHash,
     hashes: manifest.hashes,
@@ -52,6 +54,13 @@ function createArtifactIdentity(manifest) {
 }
 
 function assertRenderPropsMatchSource(sourceManifest, renderProps) {
+  if (renderProps.isSample !== false) {
+    throw new Error("operational render props must not be a sample.");
+  }
+  if (renderProps.sampleLabel !== null) {
+    throw new Error("public candidate render props must set sampleLabel to null.");
+  }
+
   const expectedProps = createOperationalRenderProps(sourceManifest);
   for (const [key, expectedValue] of Object.entries(expectedProps)) {
     if (JSON.stringify(renderProps[key]) !== JSON.stringify(expectedValue)) {
@@ -116,6 +125,7 @@ export function createOperationalRenderManifest({
   const manifest = {
     schemaVersion: RENDER_MANIFEST_SCHEMA_VERSION,
     status: "LOCAL_RENDERED",
+    renderProfile: OPERATIONAL_RENDER_PROFILE,
     createdAt,
     shortformContentId: sourceManifest.reservation.shortformContentId,
     contentHash: sourceManifest.contentHash,
@@ -158,6 +168,9 @@ export function validateOperationalRenderManifestFile(runDir, { verifyFiles = tr
   }
   if (manifest.status !== "LOCAL_RENDERED") {
     throw new Error("render manifest status must be LOCAL_RENDERED.");
+  }
+  if (manifest.renderProfile !== OPERATIONAL_RENDER_PROFILE) {
+    throw new Error(`render manifest renderProfile must be ${OPERATIONAL_RENDER_PROFILE}.`);
   }
   if (!Number.isInteger(manifest.shortformContentId) || manifest.shortformContentId < 1) {
     throw new Error("render manifest shortformContentId must be a positive integer.");
