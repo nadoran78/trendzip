@@ -26,7 +26,7 @@
 ### APPINTOSS-001 앱인토스 출시 준비
 
 - 상태: IN_PROGRESS
-- 브랜치: `codex/appintoss-001-launch-preparation`
+- 브랜치: codex/appintoss-001-launch-preparation
 - 시작일: 2026-08-29
 - 마지막 갱신: 2026-08-29
 - 다음 행동: 앱인토스의 현재 출시·SDK 요구사항과 Trendzip의 Next.js·Vercel·Cloudflare Access 구성을 대조해 연동·검증·심사 준비 계획을 확정한다.
@@ -48,11 +48,33 @@
 - 기존 백엔드·Vercel·Cloudflare 인프라의 전면 교체
 - 앱인토스 심사 결과가 확인되기 전의 기능 확장
 
+#### 진행 상황
+
+- `develop`을 `main`에 병합한 뒤 앱인토스 출시 준비 작업을 등록하고 전용 브랜치를 만들었다.
+- 앱인토스의 최신 공식 요구사항과 현재 서비스 구성을 아직 조사하지 않았으므로, 코드 변경은 시작하지 않았다.
+
 #### 완료 조건
 
 - 운영자 설정, 코드 구현, 테스트·심사 준비 항목이 구분된 실행 계획이 있다.
 - 앱인토스 실행 환경에서 필요한 도메인·인증·API 접근 방식의 결정과 검증 방법이 문서화돼 있다.
 - 후속 구현 작업이 독립적인 커밋 단위로 나뉘어 있다.
+
+#### 관련 코드
+
+- `frontend/src/app/layout.tsx`
+- `frontend/src/lib/api-client.ts`
+- `frontend/vercel.json`
+- `docs/ops/frontend-deployment.md`
+
+#### 검증
+
+- 상태: 진행 중
+- 작업 등록 후 `./dev/check-context`를 통과해야 한다.
+
+#### 인계 메모
+
+- 앱인토스의 공식 문서와 콘솔 요구사항은 시간에 따라 바뀔 수 있으므로, 구현 계획 수립 단계에서 최신 공식 자료를 다시 확인한다.
+- 출시 준비의 운영자 설정과 코드 변경은 별도 작업계획에서 명확히 나눈다.
 
 ## READY
 
