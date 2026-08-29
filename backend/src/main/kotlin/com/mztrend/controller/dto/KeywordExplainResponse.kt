@@ -3,6 +3,7 @@ package com.mztrend.controller.dto
 import com.mztrend.domain.Generation
 import com.mztrend.domain.RankTrend
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 data class KeywordExplainResponse(
     val keywordId: Long,
@@ -14,6 +15,9 @@ data class KeywordExplainResponse(
     val rankTrend: RankTrend?,
     val rankDelta: Int?,
     val explain: String?,
+    val sourceCrawlRunId: Long?,
+    val snapshotAt: LocalDateTime?,
+    val explainedAt: LocalDateTime?,
     val relatedVideos: List<FeedVideoResponse>,
     val trendGraph: List<TrendGraphPointResponse>,
     val relatedKeywords: List<KeywordSummaryResponse>,

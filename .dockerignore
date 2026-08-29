@@ -30,5 +30,10 @@ frontend/.next
 frontend/dist
 frontend/coverage
 
+# Media spike dependencies and rendered output
+media/node_modules
+media/out
+media/.remotion
+
 # Design / local tooling noise
 .DS_Store

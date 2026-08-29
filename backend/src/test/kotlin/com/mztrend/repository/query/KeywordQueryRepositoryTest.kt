@@ -129,7 +129,13 @@ class KeywordQueryRepositoryTest {
             .update(KEYWORDS)
             .set(KEYWORDS.CURRENT_RANK, 7)
             .set(KEYWORDS.TREND_SCORE, 7_000_000L)
+            .set(KEYWORDS.EXPLAINED_AT, LocalDateTime.of(2026, 7, 26, 3, 6))
             .where(KEYWORDS.ID.eq(2L))
+            .execute()
+        dsl
+            .update(TREND_LOGS)
+            .set(TREND_LOGS.RECORDED_AT, LocalDateTime.of(2026, 7, 26, 3, 5))
+            .where(TREND_LOGS.ID.eq(1001L))
             .execute()
         dsl
             .update(TREND_CRAWL_RUNS)
@@ -154,6 +160,9 @@ class KeywordQueryRepositoryTest {
         assertEquals(1_200_000L, result.trendScore)
         assertEquals(RankTrend.UP, result.rankTrend)
         assertEquals(4, result.rankDelta)
+        assertEquals(101L, result.sourceCrawlRunId)
+        assertEquals(LocalDateTime.of(2026, 7, 26, 3, 5), result.snapshotAt)
+        assertEquals(LocalDateTime.of(2026, 7, 26, 3, 6), result.explainedAt)
     }
 
     @Test
@@ -162,6 +171,8 @@ class KeywordQueryRepositoryTest {
 
         assertNull(result.rank)
         assertNull(result.trendScore)
+        assertNull(result.sourceCrawlRunId)
+        assertNull(result.snapshotAt)
     }
 
     @Test

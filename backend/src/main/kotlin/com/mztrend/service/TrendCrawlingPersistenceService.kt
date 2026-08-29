@@ -160,6 +160,8 @@ class TrendCrawlingPersistenceService(
 
     private fun TrendVideo.applyCollectedVideo(collectedVideo: CollectedVideo): TrendVideo {
         title = collectedVideo.title
+        description = collectedVideo.description ?: description
+        tags = collectedVideo.tags.takeIf { it.isNotEmpty() }?.toTypedArray() ?: tags
         channelId = collectedVideo.channelId ?: channelId
         channelName = collectedVideo.channelName
         channelCategory = collectedVideo.channelCategory ?: channelCategory
@@ -177,6 +179,8 @@ class TrendCrawlingPersistenceService(
         TrendVideo(
             youtubeVideoId = youtubeVideoId,
             title = title,
+            description = description,
+            tags = tags.toTypedArray(),
             channelId = channelId,
             channelName = channelName,
             channelCategory = channelCategory,

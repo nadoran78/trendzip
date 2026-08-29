@@ -1,0 +1,38 @@
+{
+  "isSample": true,
+  "sampleLabel": "기술 검증용 SAMPLE",
+  "keyword": "메이드 인 코리아",
+  "generation": "TWENTY",
+  "generationLabel": "20대",
+  "rank": 3,
+  "rankTrend": "NEW",
+  "category": "시리즈",
+  "hook": "‘코리아’가 아니라\n작품명 전체가 포인트",
+  "summary": "디즈니+가 공개한 6부작 범죄 스릴러 시리즈로, 현빈과 정우성이 출연합니다.",
+  "reasons": [
+    "공식 작품 페이지와 메인 예고편이 같은 작품명을 반복해 핵심 맥락을 형성합니다.",
+    "Trendzip은 문맥 없는 ‘코리아’ 대신 ‘메이드 인 코리아’를 하나의 키워드로 다룹니다."
+  ],
+  "narration": {
+    "hook": "오늘의 키워드는 코리아가 아니라, 작품명 전체인 메이드 인 코리아입니다.",
+    "overview": "메이드 인 코리아는 디즈니 플러스가 공개한 여섯 부작 범죄 스릴러 시리즈로, 현빈과 정우성이 출연합니다.",
+    "reasons": "공식 작품 페이지와 메인 예고편이 같은 작품명을 반복해 핵심 맥락을 만들었습니다. 그래서 트렌드집은 문맥 없는 코리아 대신 메이드 인 코리아를 하나의 키워드로 다룹니다.",
+    "evidence": "디즈니 플러스 공식 작품 페이지와 디즈니 플러스 코리아의 메인 예고편에서 작품명과 공개 정보를 함께 확인했습니다.",
+    "cta": "다음 키워드가 왜 뜨는지 궁금하다면, 트렌드집 프로필 링크에서 확인해 보세요."
+  },
+  "evidence": [
+    {
+      "publisher": "Disney+",
+      "title": "메이드 인 코리아 공식 작품 페이지",
+      "url": "https://www.disneyplus.com/ko-kr/browse/entity-5acf7909-5d2f-494e-91a9-2fe0555c220f"
+    },
+    {
+      "publisher": "Disney Plus Korea",
+      "title": "메이드 인 코리아 메인 예고편",
+      "url": "https://www.youtube.com/watch?v=FojHz9RM008"
+    }
+  ],
+  "ctaUrl": "https://trendzip.nadoran.com/?utm_source=youtube&utm_medium=shorts&utm_campaign=media_spike&utm_content=made_in_korea",
+  "recordedAt": "2026-08-18",
+  "durationSeconds": 36
+}

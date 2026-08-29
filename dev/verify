@@ -6,6 +6,7 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="$PROJECT_ROOT/backend"
 FRONTEND_DIR="$PROJECT_ROOT/frontend"
+MEDIA_DIR="$PROJECT_ROOT/media"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
 MODE=quick
 
@@ -51,6 +52,12 @@ check_frontend_dependencies() {
     fi
 }
 
+check_media_dependencies() {
+    if [[ ! -x "$MEDIA_DIR/node_modules/.bin/tsc" ]]; then
+        fail "Media dependencies are missing. Run 'cd media && npm install'."
+    fi
+}
+
 run_context_and_diff_checks() {
     step "Checking project context"
     if [[ "${CI:-}" == true ]]; then
@@ -78,6 +85,20 @@ run_frontend_fast_checks() {
     )
 }
 
+run_media_fast_checks() {
+    step "Running media typecheck"
+    (
+        cd "$MEDIA_DIR"
+        npm run typecheck
+    )
+
+    step "Running media tests"
+    (
+        cd "$MEDIA_DIR"
+        npm test
+    )
+}
+
 run_quick_verification() {
     step "Running backend ktlint"
     (
@@ -86,6 +107,7 @@ run_quick_verification() {
     )
 
     run_frontend_fast_checks
+    run_media_fast_checks
 }
 
 ensure_test_database() {
@@ -116,6 +138,7 @@ run_full_verification() {
     )
 
     run_frontend_fast_checks
+    run_media_fast_checks
 
     step "Running frontend production build"
     (
@@ -153,6 +176,7 @@ require_command git
 require_command npm
 [[ -x "$BACKEND_DIR/gradlew" ]] || fail "Backend Gradle wrapper is not executable."
 check_frontend_dependencies
+check_media_dependencies
 
 if [[ "$MODE" == full ]]; then
     require_command docker

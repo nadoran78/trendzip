@@ -48,6 +48,8 @@ data class CollectedKeywordEvidenceVideo(
 data class CollectedVideo(
     val youtubeVideoId: String,
     val title: String,
+    val description: String? = null,
+    val tags: List<String> = emptyList(),
     val channelId: String? = null,
     val channelName: String,
     val channelCategory: String? = null,

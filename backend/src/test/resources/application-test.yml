@@ -8,6 +8,8 @@ spring:
     type: simple
 
 app:
+  media-operations:
+    api-key: test-media-operations-key
   crawling-scheduler:
     enabled: false
     run-on-startup: false

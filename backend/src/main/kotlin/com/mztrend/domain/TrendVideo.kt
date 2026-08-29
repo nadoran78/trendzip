@@ -8,6 +8,8 @@ import jakarta.persistence.Id
 import jakarta.persistence.PrePersist
 import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.time.LocalDateTime
 
 @Entity
@@ -17,6 +19,11 @@ class TrendVideo(
     var youtubeVideoId: String = "",
     @Column(nullable = false, length = 300)
     var title: String = "",
+    @Column(columnDefinition = "text")
+    var description: String? = null,
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(nullable = false, columnDefinition = "text[]")
+    var tags: Array<String> = emptyArray(),
     @Column(name = "channel_id", length = 100)
     var channelId: String? = null,
     @Column(name = "channel_name", nullable = false, length = 150)

@@ -69,6 +69,9 @@ export type KeywordExplainResponse = {
   rankTrend: RankTrend | null;
   rankDelta: number | null;
   explain: string | null;
+  sourceCrawlRunId: number | null;
+  snapshotAt: string | null;
+  explainedAt: string | null;
   relatedVideos: FeedVideo[];
   trendGraph: TrendGraphPoint[];
   relatedKeywords: KeywordSummary[];

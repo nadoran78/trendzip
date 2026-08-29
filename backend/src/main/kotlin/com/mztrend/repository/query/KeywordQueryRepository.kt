@@ -69,6 +69,9 @@ class KeywordQueryRepository(
                 KEYWORDS.RANK_TREND,
                 KEYWORDS.RANK_DELTA,
                 KEYWORDS.EXPLAIN,
+                TREND_LOGS.CRAWL_RUN_ID,
+                TREND_LOGS.RECORDED_AT,
+                KEYWORDS.EXPLAINED_AT,
             ).from(KEYWORDS)
             .leftJoin(TREND_LOGS)
             .on(
@@ -87,6 +90,9 @@ class KeywordQueryRepository(
                     rankTrend = record.get(KEYWORDS.RANK_TREND)?.let(RankTrend::valueOf),
                     rankDelta = record.get(KEYWORDS.RANK_DELTA),
                     explain = record.get(KEYWORDS.EXPLAIN),
+                    sourceCrawlRunId = record.get(TREND_LOGS.CRAWL_RUN_ID),
+                    snapshotAt = record.get(TREND_LOGS.RECORDED_AT),
+                    explainedAt = record.get(KEYWORDS.EXPLAINED_AT),
                 )
             }
     }
@@ -99,6 +105,9 @@ class KeywordQueryRepository(
             .select(
                 TREND_VIDEOS.YOUTUBE_VIDEO_ID,
                 TREND_VIDEOS.TITLE,
+                TREND_VIDEOS.DESCRIPTION,
+                TREND_VIDEOS.TAGS,
+                TREND_VIDEOS.CHANNEL_ID,
                 TREND_VIDEOS.CHANNEL_NAME,
                 TREND_VIDEOS.THUMBNAIL_URL,
                 TREND_VIDEOS.VIEW_COUNT,
@@ -135,6 +144,9 @@ class KeywordQueryRepository(
                     badge = record.get(TREND_FEED_ITEMS.BADGE),
                     publishedAt = record.get(TREND_VIDEOS.PUBLISHED_AT),
                     durationSeconds = record.get(TREND_VIDEOS.DURATION_SECONDS),
+                    channelId = record.get(TREND_VIDEOS.CHANNEL_ID),
+                    description = record.get(TREND_VIDEOS.DESCRIPTION),
+                    tags = record.get(TREND_VIDEOS.TAGS)?.toList().orEmpty(),
                 )
             }
 

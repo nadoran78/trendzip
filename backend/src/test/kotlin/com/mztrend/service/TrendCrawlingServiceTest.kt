@@ -35,6 +35,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.test.context.ActiveProfiles
 import java.time.LocalDateTime
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -159,6 +160,8 @@ class TrendCrawlingServiceTest {
         val firstVideo = trendVideoRepository.findByYoutubeVideoId("video-1")
         assertNotNull(firstVideo)
         assertEquals("첫 번째 영상 수정", firstVideo.title)
+        assertEquals("첫 번째 영상 설명", firstVideo.description)
+        assertContentEquals(arrayOf("기존 키워드", "신규 키워드"), firstVideo.tags)
         assertEquals("channel-1", firstVideo.channelId)
         assertEquals("음악", firstVideo.channelCategory)
         assertEquals(1_000_000L, firstVideo.channelSubscriberCount)
@@ -492,6 +495,8 @@ class TrendCrawlingServiceTest {
                     CollectedVideo(
                         youtubeVideoId = "video-1",
                         title = "첫 번째 영상",
+                        description = "첫 번째 영상 설명",
+                        tags = listOf("기존 키워드", "신규 키워드"),
                         channelId = "channel-1",
                         channelName = "트렌드 채널",
                         channelCategory = "음악",

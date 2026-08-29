@@ -15,4 +15,7 @@ data class FeedVideoQueryResult(
     val badge: String?,
     val publishedAt: LocalDateTime?,
     val durationSeconds: Int?,
+    val channelId: String? = null,
+    val description: String? = null,
+    val tags: List<String> = emptyList(),
 )

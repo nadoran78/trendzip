@@ -2,6 +2,8 @@ CREATE TABLE IF NOT EXISTS trend_videos (
     id                         BIGSERIAL PRIMARY KEY,
     youtube_video_id           VARCHAR(50) NOT NULL,
     title                      VARCHAR(300) NOT NULL,
+    description                TEXT,
+    tags                       TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     channel_id                 VARCHAR(100),
     channel_name               VARCHAR(150) NOT NULL,
     channel_category           VARCHAR(50),
@@ -27,6 +29,8 @@ CREATE INDEX IF NOT EXISTS idx_trend_videos_view_count
 COMMENT ON COLUMN trend_videos.id IS '트렌드 영상 고유 ID';
 COMMENT ON COLUMN trend_videos.youtube_video_id IS 'YouTube 영상 ID';
 COMMENT ON COLUMN trend_videos.title IS '영상 제목';
+COMMENT ON COLUMN trend_videos.description IS 'YouTube 영상 설명';
+COMMENT ON COLUMN trend_videos.tags IS 'YouTube 영상 태그 목록';
 COMMENT ON COLUMN trend_videos.channel_id IS 'YouTube 채널 ID';
 COMMENT ON COLUMN trend_videos.channel_name IS '채널명';
 COMMENT ON COLUMN trend_videos.channel_category IS '채널 또는 영상의 표시용 카테고리';

@@ -43,3 +43,7 @@ node_modules/
 .vercel/
 dist/
 coverage/
+
+# Programmatic media output
+media/out/
+media/.remotion/
