@@ -29,6 +29,7 @@ Trendzip의 공개 웹 서비스를 유지하면서, 토스 앱 안에서 실행
 - 앱인토스 클라이언트가 호출하는 Cloudflare Worker BFF는 `GET` 기반의 공개 읽기 전용 엔드포인트만 제공한다.
 - Worker만 Cloudflare Access Client ID·Secret을 Worker Secret으로 보관해 보호된 Spring Boot API를 호출한다. API URL, 허용 Origin 목록과 캐시 TTL은 비밀정보가 아닌 Worker 구성으로 관리한다.
 - 앱인토스 Worker는 자체 Custom Domain의 유일한 원점으로 공개한다. 사용량 한도나 Worker 오류가 나도 이 호스트가 Spring Boot API로 우회하지 않도록 구성한다.
+- 운영 Worker는 `workers_dev = false`로 자동 `*.workers.dev` 주소를 비활성화하고, `app-api-trendzip.nadoran.com`만 공개한다. 로컬 개발은 `wrangler dev`로 실행한다.
 - 앱인토스 안에서는 YouTube 앱·브라우저로 이동하지 않고, 영상 선택 시 전용 화면 또는 바텀시트에서 YouTube 공식 iframe을 재생한다.
 - 일반 iframe은 사용하지 않으며, 앱인토스가 예외로 허용한 YouTube 공식 iframe만 영상 재생 목적으로 사용한다.
 - YouTube iframe 로드·재생에 실패하면 출처와 오류 안내만 표시하고 외부 URL 열기로 자동 전환하지 않는다.
@@ -39,7 +40,7 @@ Trendzip의 공개 웹 서비스를 유지하면서, 토스 앱 안에서 실행
 | 항목 | 결정 기준 | 상태 |
 |---|---|---|
 | `appName` | kebab-case, 앱인토스 콘솔에 등록한 이름과 SDK 설정·CORS Origin이 일치해야 함 | 미정 |
-| Worker 이름·Custom Domain | 예: `trendzip-appintoss-bff`, `app-api-trendzip.nadoran.com`; 기존 Tunnel API 호스트와 분리 | 미정 |
+| Worker 이름·Custom Domain | 예: `trendzip-appintoss-bff`, `app-api-trendzip.nadoran.com`; 기존 Tunnel API 호스트와 분리하고 운영 `workers.dev`는 비활성화 | 미정 |
 | Worker 요금제·사용량 경보 | 초기 Workers Free 일 10만 요청·10ms CPU 한도를 관찰하고, 초과 위험 시 Workers Paid 전환 | 미정 |
 | 표시 이름·아이콘·기본 색상 | 콘솔 앱 정보와 WebView 번들 설정이 일치해야 함 | 미정 |
 | 카테고리·서비스 소개·검색 키워드 | 비게임 서비스로서 실제 기능을 과장하지 않음 | 미정 |
@@ -70,7 +71,8 @@ Trendzip의 공개 웹 서비스를 유지하면서, 토스 앱 안에서 실행
 ### 2. Cloudflare Worker BFF 추가
 
 - `workers/appintoss-bff/`에 TypeScript Worker와 Wrangler 구성을 추가한다. 기존 Next.js에는 앱인토스 전용 Route Handler를 추가하지 않는다.
-- Worker Custom Domain `app-api-trendzip.nadoran.com`을 앱인토스 전용 공개 API 호스트로 사용한다. `workers.dev` 주소는 개발 확인에만 쓰고 production 엔드포인트로 사용하지 않는다.
+- `wrangler dev`와 Git에서 제외한 `.dev.vars`로 로컬 Worker를 실행한다. 로컬 실행 주소와 배포된 Worker 주소를 혼용하지 않는다.
+- Worker Custom Domain `app-api-trendzip.nadoran.com`을 앱인토스 전용 공개 API 호스트로 사용한다. 운영 설정에는 `workers_dev = false`를 명시해 자동 `*.workers.dev` 주소를 비활성화한다.
 - Worker가 `API_BASE_URL`, `CLOUDFLARE_ACCESS_CLIENT_ID`, `CLOUDFLARE_ACCESS_CLIENT_SECRET`으로 보호된 Spring Boot API를 호출한다. Access Client ID·Secret은 Wrangler 설정·소스가 아닌 Worker Secret으로만 등록한다.
 - 응답 DTO는 앱에 필요한 읽기 모델만 노출하고, 쓰기·운영 API·Swagger 경로는 노출하지 않는다.
 - 허용한 경로·메서드만 프록시하고, 타임아웃, 오류 응답, cache key 정규화, 짧은 CDN 캐시와 요청 단위 rate limit을 적용한다.
@@ -117,6 +119,7 @@ https://<appName>.private-apps.tossmini.com
 - iframe `src`가 YouTube embed URL만 사용하며, 앱인토스 경로에서 `target="_blank"`, `window.open`, SDK `openURL` 호출이 없는지 검사한다.
 - Worker의 허용·비허용 Origin, 허용하지 않은 경로·메서드, 비밀정보 미노출, 백엔드 Access 헤더 전달, cache key, 오류·timeout을 테스트한다.
 - `wrangler dev`의 로컬 `.dev.vars`와 배포 Worker Secret을 분리하고, 실제 Secret 값 없이도 타입 검사·단위 테스트가 가능한지 확인한다.
+- 배포 Worker에는 `*.workers.dev` 주소가 노출되지 않고 Custom Domain만 응답하는지 확인한다.
 - 기존 공개 웹의 Next.js 빌드와 사용자 흐름이 회귀하지 않는지 확인한다.
 
 ### 샌드박스·QR 검증
