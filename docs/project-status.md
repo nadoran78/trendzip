@@ -1,12 +1,12 @@
 # 프로젝트 현재 상태
 
-- 마지막 갱신: 2026-08-29
+- 마지막 갱신: 2026-08-30
 - 현재 단계: 핵심 사용자 흐름 공개 배포 및 채널 확장 준비
-- 현재 집중 영역: 앱인토스 출시 요구사항과 연동 방식 확정
+- 현재 집중 영역: Cloudflare Worker BFF 기반 앱인토스 출시 준비
 
 ## 한 줄 상태
 
-백엔드의 트렌드 수집·저장·조회 API와 주요 화면이 공개됐고 Vercel Analytics와 GA4/GTM 운영 검증을 완료했다. 첫 승인 쇼츠를 YouTube에 수동 게시했으며, 다음으로 앱인토스 출시 요구사항과 연동 방식을 확정한다.
+백엔드의 트렌드 수집·저장·조회 API와 주요 화면이 공개됐고 Vercel Analytics와 GA4/GTM 운영 검증을 완료했다. 첫 승인 쇼츠를 YouTube에 수동 게시했으며, 앱인토스 전용 요청은 Cloudflare Worker BFF를 통해 보호된 Spring Boot API를 조회하도록 연동 방식을 확정했다.
 
 ## 구현 현황
 
@@ -70,6 +70,7 @@
 - 구현됨: `main`에서 수동 실행하는 GitHub Actions 프론트엔드 production 배포와 Git 자동 배포 비활성화
 - 구현됨: 특정 Vercel Service Token만 허용하는 Cloudflare Access 기반 운영 API 보호
 - 일부 구현됨: 맥미니 수동 배포 절차는 있으나 자동 배포 workflow는 없음
+- 설계됨: 앱인토스 전용 Cloudflare Worker BFF가 Worker Secret으로 Cloudflare Access를 통과하고, Vercel을 경유하지 않는 읽기 전용 API 경로
 
 ### 테스트 및 자동화
 
