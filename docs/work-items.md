@@ -29,7 +29,7 @@
 - 브랜치: codex/appintoss-001-launch-preparation
 - 시작일: 2026-08-29
 - 마지막 갱신: 2026-08-30
-- 다음 행동: 앱인토스 콘솔에서 비게임 미니앱을 생성하고 `appName`·지원 SDK·분석 API를 확정한 뒤, YouTube iframe 선행 검증을 시작한다.
+- 다음 행동: SDK 3.x 기반 최소 WebView 프로젝트를 만들고, AIT Devtools에서 YouTube iframe 선행 검증을 시작한다.
 
 #### 목적
 
@@ -42,6 +42,7 @@
 - 현재 Next.js PWA, Vercel 배포, Cloudflare Access로 보호한 운영 API가 앱인토스 환경에서 동작하는 조건을 점검한다.
 - 필요한 앱인토스 설정과 코드 변경을 작업 단위로 나누고, 로컬·운영 검증과 심사 제출 기준을 정의한다.
 - 앱인토스 콘솔·SDK·Cloudflare Worker의 분석 책임을 분리하고, 광고 도입 판단에 필요한 4주 관찰 기준을 정의한다.
+- WebView SDK 3.x 전환 공지와 새 서비스·QR CORS Origin을 반영해 출시 전 검증 경계를 고정한다.
 
 #### 제외 범위
 
@@ -57,6 +58,7 @@
 - 앱인토스 요청은 Vercel을 경유하지 않고 Cloudflare Worker BFF가 Cloudflare Access Secret으로 보호된 Spring Boot API를 호출하도록 연동 방식을 확정했다.
 - YouTube iframe 선행 검증, Worker upstream 헤더 allowlist·토큰 분리, 캐시와 CORS 결합 규칙, Workers Free 한도 오류 처리 기준을 로드맵에 반영했다.
 - 앱인토스 콘솔을 사용자 지표 기준으로, SDK 이벤트를 최소 행동 분석으로, Worker Metrics를 운영 관측으로 분리하고 4주 광고 판단 기준을 `docs/ops/appintoss-analytics.md`에 정리했다.
+- 앱인토스 콘솔에서 비게임 미니앱 `trendzip`을 생성했다. 2026-08-18 SDK 3.x 전환 공지를 기준으로 SDK 3.x, AIT Devtools, 새 서비스·QR CORS Origin을 출시 문서에 반영했다.
 - 앱인토스 전용 WebView 프로젝트와 Cloudflare Worker BFF는 아직 구현하지 않았다.
 
 #### 완료 조건

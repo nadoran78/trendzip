@@ -22,7 +22,7 @@ Trendzip의 공개 웹 서비스를 유지하면서, 토스 앱 안에서 실행
 
 ## 확정 사항
 
-- 구현 방식은 기존 React·웹 경험을 가장 빠르게 재사용할 수 있는 앱인토스 WebView SDK 기반으로 한다. 구현 직전에 앱인토스 콘솔과 공식 문서에서 지원 패키지·버전을 다시 확정한다.
+- 구현 방식은 기존 React·웹 경험을 가장 빠르게 재사용할 수 있는 앱인토스 WebView SDK 3.x 기반으로 한다. 2026년 9월 14일까지 WebView 프로젝트는 SDK 3.x 전환이 필요하며, 3.x 번들을 출시한 뒤에는 SDK 2.x로 롤백할 수 없다.
 - 첫 출시에는 토스 로그인, 결제, 푸시와 앱인토스 서버 API를 도입하지 않는다. 광고 수익화는 앱인토스 콘솔 정책을 확인한 뒤 별도 작업으로 결정한다.
 - 기존 Spring Boot API의 Cloudflare Access 보호는 유지한다.
 - 앱인토스 번들은 Vercel·Cloudflare의 서버 전용 환경변수와 Cloudflare Access Client Secret을 읽지 않는다.
@@ -39,40 +39,40 @@ Trendzip의 공개 웹 서비스를 유지하면서, 토스 앱 안에서 실행
 
 | 항목 | 결정 기준 | 상태 |
 |---|---|---|
-| `appName` | kebab-case, 앱인토스 콘솔에 등록한 이름과 SDK 설정·CORS Origin이 일치해야 함 | 미정 |
-| SDK·분석 API 버전 | 콘솔 등록 뒤 현재 지원되는 WebView SDK, 분석 API와 최소 지원 토스 앱 버전을 구현 직전에 확인 | 미정 |
+| `appName` | kebab-case, 앱인토스 콘솔에 등록한 이름과 SDK 설정·CORS Origin이 일치해야 함 | 확정 (`trendzip`) |
+| SDK·분석 API 버전 | WebView SDK 3.x를 사용하고, 설정 파일명·프로퍼티와 분석 API의 세부 계약은 구현 직전에 SDK 3.x 공식 가이드로 확인 | SDK 3.x 확정 |
 | Worker 이름·Custom Domain | 예: `trendzip-appintoss-bff`, `app-api-trendzip.nadoran.com`; 기존 Tunnel API 호스트와 분리하고 운영 `workers.dev`는 비활성화 | 미정 |
 | Worker 요금제·사용량 경보 | 초기 Workers Free 일 10만 요청·10ms CPU 한도를 관찰하고, 초과 위험 시 Workers Paid 전환 | 미정 |
 | 광고 검토 시점 | 라이브 출시 후 4주간 DAU·리텐션·핵심 행동과 Worker 안정성을 확인한 뒤 별도 광고 작업 시작 여부 결정 | 미정 |
 | 표시 이름·아이콘·기본 색상 | 콘솔 앱 정보와 WebView 번들 설정이 일치해야 함 | 미정 |
 | 카테고리·서비스 소개·검색 키워드 | 비게임 서비스로서 실제 기능을 과장하지 않음 | 미정 |
 | 고객 문의 채널·개인정보처리방침 | 콘솔 제출 정보와 공개 웹에서 접근 가능한 문서가 일치해야 함 | 미정 |
-| 출시 시점 | 샌드박스·QR 테스트와 심사 체크리스트를 통과한 뒤 결정 | 미정 |
+| 출시 시점 | AIT Devtools·QR 테스트·실제 토스 앱 검증과 심사 체크리스트를 통과한 뒤 결정 | 미정 |
 
 앱인토스 서버 API를 새로 사용할 때만 mTLS 인증서, 서버 방화벽과 토스 API 연동을 별도 설계한다. 현재 읽기 전용 트렌드 조회 MVP에는 포함하지 않는다.
 
 ## 콘솔 준비 체크리스트
 
-1. 앱인토스 콘솔에서 비게임 미니앱을 생성하고 `appName`을 확정한다.
+1. 앱인토스 콘솔에서 비게임 미니앱 `trendzip`과 `appName`을 확정한다.
 2. 앱 이름, 아이콘, 기본 색상, 서비스 소개, 카테고리, 고객 문의 채널과 개인정보처리방침 URL을 등록한다.
-3. iOS·Android 앱인토스 샌드박스 앱과 실제 토스 앱 테스트 수단을 준비한다.
-4. 현재 지원되는 WebView SDK·분석 API 요구사항과 콘솔의 배포·심사 항목을 다시 확인한다.
+3. 로컬 브라우저용 AIT Devtools와 실제 토스 앱 QR 테스트 수단을 준비한다.
+4. WebView SDK 3.x의 설정 파일명·프로퍼티, 분석 API 요구사항과 콘솔의 배포·심사 항목을 다시 확인한다.
 5. 앱 번들 업로드 뒤 발급되는 QR 테스트 경로로 실제 토스 앱을 검증한다.
 
-샌드박스 테스트는 심사 요청 전에 필수다. QR 테스트 Origin과 실제 출시 Origin은 다르므로 두 환경을 모두 검증한다.
+AIT Devtools·QR 테스트와 실제 출시 환경은 서로 다른 실행 환경이다. QR 테스트 Origin과 실제 출시 Origin도 다르므로 각각 검증한다.
 
 ## 코드 구현 로드맵
 
-### 1. SDK 호환성과 YouTube iframe 선행 검증
+### 1. SDK 3.x와 YouTube iframe 선행 검증
 
-- `appName`을 확정한 뒤 현재 지원되는 WebView SDK와 분석 API를 확인한다. 이 확인 전에는 문서의 SDK 버전 표기를 구현 근거로 사용하지 않는다.
-- 최소 `.ait` 앱에서 YouTube 공식 iframe 하나를 앱 내부에 재생한다. iOS·Android 샌드박스에서 재생, 닫기, 오류 화면과 외부 앱·브라우저 미이동을 확인한다.
+- SDK 3.x로 생성한 최소 `.ait` 앱에서 YouTube 공식 iframe 하나를 앱 내부에 재생한다. SDK 3.x에서 변경된 설정 파일명·프로퍼티는 공식 가이드를 기준으로 적용한다.
+- AIT Devtools 로컬 브라우저에서 재생, 닫기, 오류 화면과 외부 앱·브라우저 미이동을 먼저 확인한다. 이후 iOS·Android 실제 토스 앱의 QR 테스트에서 같은 흐름을 확인한다.
 - iframe 재생이 실패하면 Worker BFF·피드 화면 이식을 진행하지 않고 앱인토스 채널톡 확인 또는 기능 범위 변경을 결정한다.
 
 ### 2. 앱인토스 전용 WebView 프로젝트 초기화
 
 - 저장소에 `apps-in-toss/` 프로젝트를 추가한다.
-- 선행 검증에서 확인한 WebView SDK와 공식 빌드·패키징 구성을 적용한다.
+- WebView SDK 3.x와 공식 빌드·패키징 구성을 적용한다.
 - `appName`, 표시 이름, 아이콘, 기본 색상은 콘솔 정보와 같은 값으로 설정한다.
 - 기존 화면을 무리하게 Next.js 서버 컴포넌트로 재사용하지 않고, 랜딩·피드·랭킹·키워드 상세의 데이터 계약과 표시 컴포넌트부터 단계적으로 옮긴다.
 
@@ -89,11 +89,11 @@ Trendzip의 공개 웹 서비스를 유지하면서, 토스 앱 안에서 실행
 
 ### 4. CORS와 보안 경계 적용
 
-`appName` 확정 후 Cloudflare Worker BFF의 허용 Origin을 아래 두 개로 제한한다.
+확정된 `appName=trendzip` 기준으로 Cloudflare Worker BFF의 운영 허용 Origin을 아래 두 개로 제한한다.
 
 ```text
-https://<appName>.apps.tossmini.com
-https://<appName>.private-apps.tossmini.com
+https://trendzip.web.tossmini.com
+https://trendzip.private-web.tossmini.com
 ```
 
 - `Access-Control-Allow-Origin`은 요청 Origin을 정확히 검증한 뒤에만 반환한다. `Origin`이 없거나 허용 목록 밖이면 CORS 헤더를 추가하지 않는다.
@@ -101,6 +101,7 @@ https://<appName>.private-apps.tossmini.com
 - Cloudflare Access Service Token, Gemini·YouTube·DB 비밀정보, Vercel 환경변수는 앱 번들과 `.ait` 파일에 포함하지 않는다. Worker Secret은 Cloudflare Dashboard·Wrangler Secret 명령으로만 등록한다.
 - 앱인토스 WebView는 보호된 Spring Boot API를 직접 호출하지 않는다.
 - 캐시는 허용된 공개 `GET`의 성공 payload만 저장한다. CORS 헤더는 캐시 조회 뒤 응답 직전에 붙이고, 이 방식을 쓰지 않을 때만 `Vary: Origin`을 설정한다. 오류·비허용 Origin·향후 인증 응답은 캐시하지 않는다.
+- 로컬 AIT Devtools 검증은 운영 Worker Origin 목록을 `localhost`로 넓히지 않는다. 로컬 Worker와 앱의 개발 환경을 별도로 실행하고, 운영 Worker에는 위 두 토스 Origin만 유지한다.
 
 ### 5. 앱인토스 트래픽과 행동 분석 적용
 
@@ -124,21 +125,21 @@ https://<appName>.private-apps.tossmini.com
 
 ### 로컬·Mock 검증
 
-- WebView SDK Mock 환경에서 랜딩, 세대 전환, 피드, 랭킹, 키워드 상세와 내부 YouTube 재생 화면 열기·닫기를 확인한다.
+- SDK 3.x AIT Devtools 환경에서 랜딩, 세대 전환, 피드, 랭킹, 키워드 상세와 내부 YouTube 재생 화면 열기·닫기를 확인한다.
 - iframe `src`가 YouTube embed URL만 사용하며, 앱인토스 경로에서 `target="_blank"`, `window.open`, SDK `openURL` 호출이 없는지 검사한다.
 - Worker의 허용·비허용 Origin, 허용하지 않은 경로·메서드, 비밀정보 미노출, 새 upstream 헤더 구성, 캐시·CORS 순서, 오류·timeout을 테스트한다.
 - `wrangler dev`의 로컬 `.dev.vars`와 배포 Worker Secret을 분리하고, 실제 Secret 값 없이도 타입 검사·단위 테스트가 가능한지 확인한다.
 - 배포 Worker에는 `*.workers.dev` 주소가 노출되지 않고 Custom Domain만 응답하는지 확인한다.
 - 기존 공개 웹의 Next.js 빌드와 사용자 흐름이 회귀하지 않는지 확인한다.
 
-### 샌드박스·QR 검증
+### QR·실제 토스 앱 검증
 
-- iOS·Android 샌드박스 앱에서 네트워크, 폰트, Safe Area, 뒤로 가기와 YouTube iframe 재생·닫기를 확인한다.
+- iOS·Android 실제 토스 앱에서 네트워크, 폰트, Safe Area, 뒤로 가기와 YouTube iframe 재생·닫기를 확인한다.
 - `.ait` 파일을 콘솔에 업로드하고 QR 코드로 실제 토스 앱에서 같은 흐름을 확인한다.
-- QR 테스트 Origin의 CORS와 실제 출시 Origin의 CORS를 각각 확인하고, Worker 요청이 Vercel이 아닌 Custom Domain으로만 향하는지 확인한다.
+- QR 테스트 Origin `https://trendzip.private-web.tossmini.com`의 CORS와 실제 출시 Origin `https://trendzip.web.tossmini.com`의 CORS를 각각 확인하고, Worker 요청이 Vercel이 아닌 Custom Domain으로만 향하는지 확인한다.
 - Cloudflare Worker 로그에서 API 오류·cache status·사용량을 확인하고, 사용량 한도 상황에서도 보호된 API가 직접 노출되지 않는지 확인한다. Workers Free 한도 초과는 앱이 통제한 오류가 아닐 수 있음을 운영 절차에 기록한다.
 - 앱인토스 WebView에서 `localStorage`·IndexedDB를 새로 사용한다면 QR 테스트와 출시 환경의 저장소가 공유되지 않는 점을 고려한다.
-- 앱인토스 콘솔·SDK 분석은 샌드박스와 QR 환경에서 집계되지 않을 수 있으므로, 라이브 출시 다음 날부터 실제 지표·이벤트 수집을 확인한다.
+- 앱인토스 콘솔·SDK 분석은 AIT Devtools와 QR 환경에서 집계되지 않을 수 있으므로, 라이브 출시 다음 날부터 실제 지표·이벤트 수집을 확인한다.
 
 ### 심사 제출
 
@@ -152,6 +153,7 @@ https://<appName>.private-apps.tossmini.com
 
 - 첫 출시에서는 공개 웹과 앱인토스 앱의 화면·데이터 오류를 분리해 관찰한다.
 - 앱인토스 SDK 버전과 Origin 정책이 변경될 때마다 CORS·저장소·Worker BFF 호출을 재검증한다.
+- SDK 3.x는 출시 뒤 SDK 2.x로 롤백할 수 없으므로, AIT Devtools·QR·실제 토스 앱의 검증을 모두 통과하기 전에는 출시하지 않는다.
 - Workers Free 한도, Worker 로그와 cache hit을 운영 지표로 확인하고, 일 10만 요청·요청당 CPU 10ms 한도에 근접하거나 더 강한 rate limit이 필요하면 Workers Paid 전환을 검토한다. 이는 앱인토스 콘솔의 DAU·리텐션과 별도로 해석한다.
 - 라이브 출시 후 4주간 앱인토스 콘솔의 DAU·리텐션·세션·유입경로와 최소 행동 이벤트를 주간 점검표로 기록한다. 광고 도입 전에는 `docs/ops/appintoss-analytics.md`의 결정 기준을 검토한다.
 - 토스 로그인·결제·광고·푸시·서버 API는 실제 제품 필요성이 생긴 뒤 개별 작업으로 추가한다.
@@ -160,6 +162,7 @@ https://<appName>.private-apps.tossmini.com
 ## 공식 자료
 
 - [앱인토스 시작하기](https://developers-apps-in-toss.toss.im/bedrock/intro.html)
+- 앱인토스 콘솔 공지: WebView 프로젝트 SDK 3.x 업데이트 안내 (2026-08-18, 전환 마감 2026-09-14)
 - [서비스 오픈 프로세스](https://developers-apps-in-toss.toss.im/intro/onboarding-process.html)
 - [토스앱 테스트하기](https://developers-apps-in-toss.toss.im/development/test/toss.html)
 - [YouTube iframe 예외 공식 답변](https://techchat-apps-in-toss.toss.im/t/iframe/4098)

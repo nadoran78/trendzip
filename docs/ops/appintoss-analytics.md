@@ -16,13 +16,13 @@ Worker 요청 수는 캐시, 재시도와 자동 호출을 포함할 수 있으�
 
 ## 데이터 수집 한계
 
-- 앱인토스 콘솔의 DAU·리텐션·유입경로는 실제 라이브 출시 후 수집한다. 샌드박스·QR 테스트 데이터는 광고 판단에 사용하지 않는다.
-- SDK 이벤트도 실제 출시 다음 날부터 콘솔에서 확인하는 것을 기준으로 한다. SDK·분석 API의 정확한 지원 버전은 구현 직전에 공식 문서와 콘솔에서 다시 확인한다.
+- 앱인토스 콘솔의 DAU·리텐션·유입경로는 실제 라이브 출시 후 수집한다. AIT Devtools·QR 테스트 데이터는 광고 판단에 사용하지 않는다.
+- SDK 이벤트도 실제 출시 다음 날부터 콘솔에서 확인하는 것을 기준으로 한다. WebView SDK 3.x와 분석 API의 세부 호출 계약은 구현 직전에 SDK 3.x 공식 가이드와 콘솔에서 다시 확인한다.
 - Cloudflare Worker Metrics는 배포 직후부터 운영 상태를 확인하는 용도이며, 개인별 행동·리텐션을 제공하지 않는다.
 
 ## 최소 이벤트 계약
 
-초기 이벤트는 아래 다섯 개를 넘기지 않는다. 이벤트 API의 정확한 호출 방식은 채택하는 WebView SDK 버전에 맞춘다.
+초기 이벤트는 아래 다섯 개를 넘기지 않는다. 이벤트 API의 정확한 호출 방식은 WebView SDK 3.x 기준으로 구현한다.
 
 | 이벤트 | 발생 조건 | 허용 파라미터 | 해석 제한 |
 |---|---|---|---|
@@ -73,6 +73,7 @@ Worker 요청 수는 캐시, 재시도와 자동 호출을 포함할 수 있으�
 - [앱인토스 이벤트 로깅](https://developers-apps-in-toss.toss.im/analytics/logging.html)
 - [앱인토스 핵심 지표](https://developers-apps-in-toss.toss.im/analytics/conversion-metrics.html)
 - [앱인토스 인앱 광고 분석](https://developers-apps-in-toss.toss.im/ads/intro.html)
+- 앱인토스 콘솔 공지: WebView 프로젝트 SDK 3.x 업데이트 안내 (2026-08-18, 전환 마감 2026-09-14)
 - [Cloudflare Workers Metrics](https://developers.cloudflare.com/workers/observability/metrics-and-analytics/)
 
 공식 자료 확인일: 2026-08-30. SDK·콘솔 분석·광고 정책은 구현과 출시 직전에 다시 확인한다.
