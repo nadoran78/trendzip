@@ -29,7 +29,7 @@
 - 브랜치: codex/appintoss-001-launch-preparation
 - 시작일: 2026-08-29
 - 마지막 갱신: 2026-08-30
-- 다음 행동: 앱인토스 콘솔에서 비게임 미니앱을 생성하고 `appName`을 확정한 뒤, Cloudflare Worker BFF와 WebView 프로젝트 구현 계획을 시작한다.
+- 다음 행동: 앱인토스 콘솔에서 비게임 미니앱을 생성하고 `appName`·지원 SDK·분석 API를 확정한 뒤, YouTube iframe 선행 검증을 시작한다.
 
 #### 목적
 
@@ -41,10 +41,11 @@
 - 앱인토스의 앱 등록, 배포 경로, 필수 메타데이터, SDK·웹뷰 요구사항을 확인한다.
 - 현재 Next.js PWA, Vercel 배포, Cloudflare Access로 보호한 운영 API가 앱인토스 환경에서 동작하는 조건을 점검한다.
 - 필요한 앱인토스 설정과 코드 변경을 작업 단위로 나누고, 로컬·운영 검증과 심사 제출 기준을 정의한다.
+- 앱인토스 콘솔·SDK·Cloudflare Worker의 분석 책임을 분리하고, 광고 도입 판단에 필요한 4주 관찰 기준을 정의한다.
 
 #### 제외 범위
 
-- 토스 로그인·결제·광고 등 출시 준비와 직접 관련 없는 토스 기능 도입
+- 토스 로그인·결제·광고 SDK·광고 배치 등 출시 준비와 직접 관련 없는 토스 기능 구현
 - 기존 백엔드·Vercel·Cloudflare 인프라의 전면 교체
 - 앱인토스 심사 결과가 확인되기 전의 기능 확장
 
@@ -54,12 +55,15 @@
 - 최신 공식 요구사항과 현재 Next.js·Vercel·Cloudflare Access 구성을 대조해 출시 아키텍처와 콘솔·코드·검증 로드맵을 `docs/ops/appintoss-deployment.md`에 정리했다.
 - 외부 앱·브라우저 이동은 심사 리스크가 있어 제외하고, 앱인토스에서 예외적으로 허용하는 YouTube 공식 iframe 재생 어댑터를 적용하기로 했다.
 - 앱인토스 요청은 Vercel을 경유하지 않고 Cloudflare Worker BFF가 Cloudflare Access Secret으로 보호된 Spring Boot API를 호출하도록 연동 방식을 확정했다.
+- YouTube iframe 선행 검증, Worker upstream 헤더 allowlist·토큰 분리, 캐시와 CORS 결합 규칙, Workers Free 한도 오류 처리 기준을 로드맵에 반영했다.
+- 앱인토스 콘솔을 사용자 지표 기준으로, SDK 이벤트를 최소 행동 분석으로, Worker Metrics를 운영 관측으로 분리하고 4주 광고 판단 기준을 `docs/ops/appintoss-analytics.md`에 정리했다.
 - 앱인토스 전용 WebView 프로젝트와 Cloudflare Worker BFF는 아직 구현하지 않았다.
 
 #### 완료 조건
 
 - 운영자 설정, 코드 구현, 테스트·심사 준비 항목이 구분된 실행 계획이 있다.
 - 앱인토스 실행 환경에서 필요한 도메인·인증·API 접근 방식의 결정과 검증 방법이 문서화돼 있다.
+- 광고 도입 여부를 판단할 사용자·행동·운영 지표와 관찰 기간이 문서화돼 있다.
 - 후속 구현 작업이 독립적인 커밋 단위로 나뉘어 있다.
 
 #### 관련 코드
@@ -69,6 +73,7 @@
 - `frontend/vercel.json`
 - `docs/ops/frontend-deployment.md`
 - `docs/ops/appintoss-deployment.md`
+- `docs/ops/appintoss-analytics.md`
 
 #### 검증
 
