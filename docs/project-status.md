@@ -41,6 +41,13 @@
 - 구현·검증됨: GA4/GTM 운영 태그와 Consent Mode v2를 게시하고 Realtime·DebugView·Tag Assistant에서 페이지 조회, 주요 행동 이벤트와 동의 변경을 확인함
 - 미구현: Android Chrome 홈 화면 설치 확인과 프론트엔드 자동 테스트
 
+### 앱인토스
+
+- 구현됨: `apps-in-toss/` 독립 React/Vite WebView SDK `3.1.1` 프로젝트, AIT Devtools 연결과 `.ait` 번들 생성
+- 구현됨: 정적 검증용 YouTube 공식 iframe 화면, video ID 형식 제한, 로드 timeout·재시도 상태와 외부 브라우저 미이동 처리
+- 검증됨: 테스트 번들 `20260830-2`에서 `webView.allowsInlineMediaPlayback=true` 적용 뒤 iOS 토스 앱의 인라인 재생, 전체화면 `X` 복귀, 미니앱 뒤로 가기와 Safe Area를 확인했다.
+- 확인 필요: YouTube 공식 iframe의 내장 `YouTube에서 보기` 동작은 앱 코드의 외부 이동이 아니지만 YouTube 앱을 열 수 있다. 첫 심사 전 앱인토스 채널톡으로 심사 허용 여부를 확인한다.
+
 ### 콘텐츠 유통
 
 - 구현·검증됨: 운영 데이터와 분리한 고정 fixture, Remotion 기반 9:16 무음 샘플과 ffprobe 출력 규격 검사

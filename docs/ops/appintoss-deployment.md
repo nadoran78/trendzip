@@ -30,7 +30,7 @@ Trendzip의 공개 웹 서비스를 유지하면서, 토스 앱 안에서 실행
 - Worker만 Cloudflare Access Client ID·Secret을 Worker Secret으로 보관해 보호된 Spring Boot API를 호출한다. API URL, 허용 Origin 목록과 캐시 TTL은 비밀정보가 아닌 Worker 구성으로 관리한다.
 - 앱인토스 Worker는 자체 Custom Domain의 유일한 원점으로 공개한다. 사용량 한도나 Worker 오류가 나도 이 호스트가 Spring Boot API로 우회하지 않도록 구성한다.
 - 운영 Worker는 `workers_dev = false`로 자동 `*.workers.dev` 주소를 비활성화하고, `app-api-trendzip.nadoran.com`만 공개한다. 로컬 개발은 `wrangler dev`로 실행한다.
-- 앱인토스 안에서는 YouTube 앱·브라우저로 이동하지 않고, 영상 선택 시 전용 화면 또는 바텀시트에서 YouTube 공식 iframe을 재생한다.
+- 앱인토스 앱 코드는 YouTube 앱·브라우저 이동을 직접 호출하지 않고, 영상 선택 시 전용 화면 또는 바텀시트에서 YouTube 공식 iframe을 재생한다. 다만 공식 플레이어의 내장 `YouTube에서 보기` 사용자 동작은 YouTube 앱을 열 수 있으므로, 첫 심사 전 앱인토스 채널톡으로 허용 여부를 확인한다.
 - 일반 iframe은 사용하지 않으며, 앱인토스가 예외로 허용한 YouTube 공식 iframe만 영상 재생 목적으로 사용한다.
 - YouTube iframe 로드·재생에 실패하면 출처와 오류 안내만 표시하고 외부 URL 열기로 자동 전환하지 않는다.
 - 첫 제출에서는 PWA 서비스 워커와 GTM·GA4를 앱인토스 번들에서 비활성화한다. 앱인토스 콘솔·SDK 분석은 별도 운영 분석 계약에 따라 사용한다.
@@ -68,6 +68,18 @@ AIT Devtools·QR 테스트와 실제 출시 환경은 서로 다른 실행 환�
 - SDK 3.x로 생성한 최소 `.ait` 앱에서 YouTube 공식 iframe 하나를 앱 내부에 재생한다. SDK 3.x에서 변경된 설정 파일명·프로퍼티는 공식 가이드를 기준으로 적용한다.
 - AIT Devtools 로컬 브라우저에서 재생, 닫기, 오류 화면과 외부 앱·브라우저 미이동을 먼저 확인한다. 이후 iOS·Android 실제 토스 앱의 QR 테스트에서 같은 흐름을 확인한다.
 - iframe 재생이 실패하면 Worker BFF·피드 화면 이식을 진행하지 않고 앱인토스 채널톡 확인 또는 기능 범위 변경을 결정한다.
+
+현재 `apps-in-toss/`에는 WebView SDK `3.1.1`, AIT Devtools, `appName=trendzip`과
+정적 검증용 YouTube iframe 화면을 구현했다. 이 화면은 11자리 video ID만 embed
+URL로 만들고, 10초 안에 iframe 문서를 불러오지 못하면 외부 이동 없이 재시도 상태를
+표시한다. iOS 인라인 재생을 위해 `webView.allowsInlineMediaPlayback=true`를 설정했고,
+`npm run build`로 `trendzip.ait` 생성까지 확인했다. 실제 iOS 토스 앱에서 인라인 재생,
+전체화면 `X` 복귀, 미니앱 뒤로 가기와 Safe Area도 확인했다.
+
+테스트 번들 `20260830-1`은 콘솔에서 SDK `3.1.1` 컴파일 상태 `CREATED`를 확인했고,
+요청자 계정으로 테스트 푸시를 보냈다. 전체화면 재생이 확인된 `20260830-1` 뒤에
+인라인 재생 설정을 추가한 `20260830-2`도 테스트 푸시했다. 이 상태는 테스트 전용이며
+심사 제출·정식 출시와 무관하다.
 
 ### 2. 앱인토스 전용 WebView 프로젝트 초기화
 
@@ -134,7 +146,7 @@ https://trendzip.private-web.tossmini.com
 
 ### QR·실제 토스 앱 검증
 
-- iOS·Android 실제 토스 앱에서 네트워크, 폰트, Safe Area, 뒤로 가기와 YouTube iframe 재생·닫기를 확인한다.
+- iOS·Android 실제 토스 앱에서 네트워크, 폰트, Safe Area, 뒤로 가기와 YouTube iframe 인라인 재생·닫기를 확인한다.
 - `.ait` 파일을 콘솔에 업로드하고 QR 코드로 실제 토스 앱에서 같은 흐름을 확인한다.
 - QR 테스트 Origin `https://trendzip.private-web.tossmini.com`의 CORS와 실제 출시 Origin `https://trendzip.web.tossmini.com`의 CORS를 각각 확인하고, Worker 요청이 Vercel이 아닌 Custom Domain으로만 향하는지 확인한다.
 - Cloudflare Worker 로그에서 API 오류·cache status·사용량을 확인하고, 사용량 한도 상황에서도 보호된 API가 직접 노출되지 않는지 확인한다. Workers Free 한도 초과는 앱이 통제한 오류가 아닐 수 있음을 운영 절차에 기록한다.
@@ -145,7 +157,7 @@ https://trendzip.private-web.tossmini.com
 
 - 앱 정보·노출 정보·서류를 콘솔 정보와 대조한다.
 - YouTube 공식 iframe만 사용하는지, 개인정보처리방침 접근성, 재생 오류 화면과 고객 문의 경로를 확인한다.
-- 외부 앱·브라우저 이동을 새로 추가하지 않는다. 불가피한 외부 이동 요구가 생기면 구현 전에 앱인토스 채널톡으로 심사 허용 여부를 확인한다.
+- 외부 앱·브라우저 이동을 새로 추가하지 않는다. YouTube 공식 iframe의 내장 `YouTube에서 보기`처럼 공급자 컨트롤이 유발하는 외부 이동은 첫 심사 전 앱인토스 채널톡으로 심사 허용 여부를 확인한다.
 - 기능·디자인·보안 검수에 필요한 테스트 계정이나 재현 절차가 있으면 제출 메모에 포함한다.
 - 심사 승인 후 콘솔에서 출시하고 초기 Worker 오류·요청량·cache hit·사용자 흐름을 관찰한다.
 
