@@ -26,10 +26,10 @@
 ### APPINTOSS-001 앱인토스 출시 준비
 
 - 상태: IN_PROGRESS
-- 브랜치: `codex/appintoss-001-launch-preparation`
+- 브랜치: codex/appintoss-001-launch-preparation
 - 시작일: 2026-08-29
-- 마지막 갱신: 2026-08-29
-- 다음 행동: 앱인토스의 현재 출시·SDK 요구사항과 Trendzip의 Next.js·Vercel·Cloudflare Access 구성을 대조해 연동·검증·심사 준비 계획을 확정한다.
+- 마지막 갱신: 2026-08-30
+- 다음 행동: YouTube 공식 iframe의 내장 `YouTube에서 보기` 동작이 심사에서 허용되는지 앱인토스 채널톡으로 확인한 뒤 Cloudflare Worker BFF 구현을 시작한다.
 
 #### 목적
 
@@ -41,18 +41,55 @@
 - 앱인토스의 앱 등록, 배포 경로, 필수 메타데이터, SDK·웹뷰 요구사항을 확인한다.
 - 현재 Next.js PWA, Vercel 배포, Cloudflare Access로 보호한 운영 API가 앱인토스 환경에서 동작하는 조건을 점검한다.
 - 필요한 앱인토스 설정과 코드 변경을 작업 단위로 나누고, 로컬·운영 검증과 심사 제출 기준을 정의한다.
+- 앱인토스 콘솔·SDK·Cloudflare Worker의 분석 책임을 분리하고, 광고 도입 판단에 필요한 4주 관찰 기준을 정의한다.
+- WebView SDK 3.x 전환 공지와 새 서비스·QR CORS Origin을 반영해 출시 전 검증 경계를 고정한다.
 
 #### 제외 범위
 
-- 토스 로그인·결제·광고 등 출시 준비와 직접 관련 없는 토스 기능 도입
+- 토스 로그인·결제·광고 SDK·광고 배치 등 출시 준비와 직접 관련 없는 토스 기능 구현
 - 기존 백엔드·Vercel·Cloudflare 인프라의 전면 교체
 - 앱인토스 심사 결과가 확인되기 전의 기능 확장
+
+#### 진행 상황
+
+- `develop`을 `main`에 병합한 뒤 앱인토스 출시 준비 작업을 등록하고 전용 브랜치를 만들었다.
+- 최신 공식 요구사항과 현재 Next.js·Vercel·Cloudflare Access 구성을 대조해 출시 아키텍처와 콘솔·코드·검증 로드맵을 `docs/ops/appintoss-deployment.md`에 정리했다.
+- 외부 앱·브라우저 이동은 심사 리스크가 있어 제외하고, 앱인토스에서 예외적으로 허용하는 YouTube 공식 iframe 재생 어댑터를 적용하기로 했다.
+- 앱인토스 요청은 Vercel을 경유하지 않고 Cloudflare Worker BFF가 Cloudflare Access Secret으로 보호된 Spring Boot API를 호출하도록 연동 방식을 확정했다.
+- YouTube iframe 선행 검증, Worker upstream 헤더 allowlist·토큰 분리, 캐시와 CORS 결합 규칙, Workers Free 한도 오류 처리 기준을 로드맵에 반영했다.
+- 앱인토스 콘솔을 사용자 지표 기준으로, SDK 이벤트를 최소 행동 분석으로, Worker Metrics를 운영 관측으로 분리하고 4주 광고 판단 기준을 `docs/ops/appintoss-analytics.md`에 정리했다.
+- 앱인토스 콘솔에서 비게임 미니앱 `trendzip`을 생성했다. 2026-08-18 SDK 3.x 전환 공지를 기준으로 SDK 3.x, AIT Devtools, 새 서비스·QR CORS Origin을 출시 문서에 반영했다.
+- `apps-in-toss/`에 콘솔 `appName=trendzip`과 일치하는 WebView SDK `3.1.1` 최소 프로젝트를 추가했고, AIT Devtools unplugin과 `ait build` 번들 생성을 확인했다.
+- 검증용 YouTube 공식 iframe 화면에서 video ID 형식 제한, 10초 로드 제한, 재시도 상태와 외부 이동 없는 실패 처리를 구현했다. 운영 API·Worker BFF·기존 Next.js 화면은 아직 연결하지 않았다.
+- 테스트 번들 `20260830-1`(deployment `01a052d4-e049-7a1b-8252-e7cd9c382399`)을 콘솔에 업로드해 SDK `3.1.1` 컴파일 상태 `CREATED`를 확인했고, 요청자 토스 계정으로 테스트 푸시를 보냈다. 심사 제출과 출시는 수행하지 않았다.
+- iOS에서 `20260830-1` 재생이 전체화면으로 전환되는 것을 확인해, WebView 기본값이 `false`인 `allowsInlineMediaPlayback`을 `true`로 설정했다. 테스트 번들 `20260830-2`(deployment `01a052e6-f4dd-7fdd-8408-68d471eebd27`)를 SDK `3.1.1` 상태 `CREATED`로 컴파일하고 요청자 계정에 테스트 푸시했다. iOS 토스 앱에서 인라인 재생, 전체화면 `X` 복귀, 미니앱 뒤로 가기와 Safe Area를 확인했으며 심사 제출은 아직 수행하지 않았다.
+- 기존 테스트에서 YouTube 공식 플레이어의 내장 `YouTube에서 보기`가 사용자 동작으로 YouTube 앱을 열 수 있음을 확인했다. 앱 자체는 `window.open`, `target=_blank`, SDK `openURL`을 사용하지 않으며, 이 공급자 내장 동작의 심사 허용 여부는 앱인토스 채널톡 확인이 필요하다.
 
 #### 완료 조건
 
 - 운영자 설정, 코드 구현, 테스트·심사 준비 항목이 구분된 실행 계획이 있다.
 - 앱인토스 실행 환경에서 필요한 도메인·인증·API 접근 방식의 결정과 검증 방법이 문서화돼 있다.
+- 광고 도입 여부를 판단할 사용자·행동·운영 지표와 관찰 기간이 문서화돼 있다.
 - 후속 구현 작업이 독립적인 커밋 단위로 나뉘어 있다.
+
+#### 관련 코드
+
+- `frontend/src/app/layout.tsx`
+- `frontend/src/lib/api-client.ts`
+- `frontend/vercel.json`
+- `docs/ops/frontend-deployment.md`
+- `docs/ops/appintoss-deployment.md`
+- `docs/ops/appintoss-analytics.md`
+
+#### 검증
+
+- 상태: SDK 3.x 최소 WebView 구현·실제 토스 앱 재생 검증 완료, YouTube 공식 플레이어 내장 외부 이동의 심사 허용 여부 확인 대기
+- `./dev/check-context`, `git diff --check`, staged Gitleaks 검사를 통과해야 한다.
+
+#### 인계 메모
+
+- 앱인토스의 공식 문서와 콘솔 요구사항은 시간에 따라 바뀔 수 있으므로, 구현 계획 수립 단계에서 최신 공식 자료를 다시 확인한다.
+- 출시 준비의 운영자 설정과 코드 변경은 별도 작업계획에서 명확히 나눈다.
 
 ## READY
 
